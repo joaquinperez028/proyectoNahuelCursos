@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
-import { FaSave, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaSave, FaTimes, FaSpinner, FaUpload, FaVideo } from 'react-icons/fa';
 
 export default function NuevoCurso() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const videoPreviewInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     titulo: '',
@@ -19,6 +21,11 @@ export default function NuevoCurso() {
     videoPreview: '',
     categorias: ''
   });
+  
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewFile, setVideoPreviewFile] = useState<File | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingPreview, setUploadingPreview] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,9 +48,44 @@ export default function NuevoCurso() {
     });
   };
 
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setVideoFile(e.target.files[0]);
+    }
+  };
+
+  const handleVideoPreviewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setVideoPreviewFile(e.target.files[0]);
+    }
+  };
+
+  const uploadVideoFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    const response = await axios.post('/api/upload/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data.filePath;
+  };
+
   const validateForm = () => {
-    if (!formData.titulo || !formData.descripcion || !formData.precio || !formData.video || !formData.videoPreview) {
-      setError('Todos los campos marcados con * son obligatorios');
+    if (!formData.titulo || !formData.descripcion || !formData.precio) {
+      setError('Los campos de título, descripción y precio son obligatorios');
+      return false;
+    }
+    
+    if (!formData.video && !videoFile) {
+      setError('Debes proporcionar un video completo (ya sea URL o archivo)');
+      return false;
+    }
+    
+    if (!formData.videoPreview && !videoPreviewFile) {
+      setError('Debes proporcionar un video de vista previa (ya sea URL o archivo)');
       return false;
     }
     
@@ -67,10 +109,29 @@ export default function NuevoCurso() {
       setLoading(true);
       setError('');
       
+      // Subir archivos de video si se proporcionaron
+      let videoPath = formData.video;
+      let videoPreviewPath = formData.videoPreview;
+      
+      if (videoFile) {
+        setUploadingVideo(true);
+        videoPath = await uploadVideoFile(videoFile);
+        setUploadingVideo(false);
+      }
+      
+      if (videoPreviewFile) {
+        setUploadingPreview(true);
+        videoPreviewPath = await uploadVideoFile(videoPreviewFile);
+        setUploadingPreview(false);
+      }
+      
       // Preparar datos para enviar
       const cursoData = {
-        ...formData,
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
         precio: parseFloat(formData.precio),
+        video: videoPath,
+        videoPreview: videoPreviewPath,
         categorias: formData.categorias ? formData.categorias.split(',').map(cat => cat.trim()) : []
       };
       
@@ -169,37 +230,115 @@ export default function NuevoCurso() {
             </div>
             
             <div>
-              <label htmlFor="video" className="block text-sm font-medium text-gray-700 mb-1">
-                URL del Video Completo *
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Video Completo del Curso *
               </label>
-              <input
-                type="url"
-                id="video"
-                name="video"
-                value={formData.video}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="URL del video completo (YouTube, Vimeo, etc.)"
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">Introduce la URL de embebido del video completo del curso.</p>
+              
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1">
+                    <div 
+                      className="border border-gray-300 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-50"
+                      onClick={() => videoInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={videoInputRef}
+                        onChange={handleVideoChange}
+                        accept="video/*"
+                        className="hidden"
+                      />
+                      <div className="flex flex-col items-center">
+                        <FaUpload className="text-blue-500 text-2xl mb-2" />
+                        <span className="text-sm text-gray-700">
+                          {videoFile ? videoFile.name : 'Subir archivo de video completo'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {uploadingVideo && (
+                    <div className="flex items-center text-blue-600">
+                      <FaSpinner className="animate-spin mr-2" />
+                      <span>Subiendo...</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center">
+                  <span className="text-gray-500 text-sm mx-auto">O</span>
+                </div>
+                
+                <div>
+                  <input
+                    type="url"
+                    id="video"
+                    name="video"
+                    value={formData.video}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="URL del video completo (opcional si subes archivo)"
+                  />
+                </div>
+              </div>
+              
+              <p className="mt-1 text-sm text-gray-500">Sube un archivo de video o proporciona una URL externa.</p>
             </div>
             
             <div>
-              <label htmlFor="videoPreview" className="block text-sm font-medium text-gray-700 mb-1">
-                URL del Video de Vista Previa *
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Video de Vista Previa *
               </label>
-              <input
-                type="url"
-                id="videoPreview"
-                name="videoPreview"
-                value={formData.videoPreview}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="URL del video de vista previa (YouTube, Vimeo, etc.)"
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">Introduce la URL de embebido para la vista previa del curso.</p>
+              
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1">
+                    <div 
+                      className="border border-gray-300 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-50"
+                      onClick={() => videoPreviewInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={videoPreviewInputRef}
+                        onChange={handleVideoPreviewChange}
+                        accept="video/*"
+                        className="hidden"
+                      />
+                      <div className="flex flex-col items-center">
+                        <FaUpload className="text-blue-500 text-2xl mb-2" />
+                        <span className="text-sm text-gray-700">
+                          {videoPreviewFile ? videoPreviewFile.name : 'Subir archivo de vista previa'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {uploadingPreview && (
+                    <div className="flex items-center text-blue-600">
+                      <FaSpinner className="animate-spin mr-2" />
+                      <span>Subiendo...</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center">
+                  <span className="text-gray-500 text-sm mx-auto">O</span>
+                </div>
+                
+                <div>
+                  <input
+                    type="url"
+                    id="videoPreview"
+                    name="videoPreview"
+                    value={formData.videoPreview}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="URL del video de vista previa (opcional si subes archivo)"
+                  />
+                </div>
+              </div>
+              
+              <p className="mt-1 text-sm text-gray-500">Sube un archivo de video corto para vista previa o proporciona una URL externa.</p>
             </div>
             
             <div>
@@ -218,16 +357,16 @@ export default function NuevoCurso() {
               <p className="mt-1 text-sm text-gray-500">Introduce las categorías separadas por comas.</p>
             </div>
             
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={loading}
-                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                disabled={loading || uploadingVideo || uploadingPreview}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {(loading || uploadingVideo || uploadingPreview) ? (
                   <>
                     <FaSpinner className="animate-spin mr-2" />
-                    Creando...
+                    {uploadingVideo || uploadingPreview ? 'Subiendo archivos...' : 'Guardando...'}
                   </>
                 ) : (
                   <>

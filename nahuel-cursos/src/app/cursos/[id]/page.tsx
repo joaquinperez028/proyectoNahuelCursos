@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FaPlay, FaLock, FaSpinner, FaShoppingCart } from 'react-icons/fa';
+import VideoPlayer from '@/components/VideoPlayer';
 
 interface CursoProps {
   params: {
@@ -118,22 +119,10 @@ export default function DetalleCurso({ params }: CursoProps) {
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
               {tieneAcceso ? (
-                <iframe 
-                  src={curso.video} 
-                  className="w-full aspect-video"
-                  title={curso.titulo}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                <VideoPlayer src={curso.video!} controls={true} autoPlay={false} />
               ) : (
                 <div className="relative">
-                  <iframe 
-                    src={curso.videoPreview} 
-                    className="w-full aspect-video"
-                    title={`${curso.titulo} (Vista previa)`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  <VideoPlayer src={curso.videoPreview} controls={true} autoPlay={false} />
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                     <div className="text-center">
                       <FaLock className="text-white text-5xl mx-auto mb-4" />
@@ -200,44 +189,28 @@ export default function DetalleCurso({ params }: CursoProps) {
                       <span>Video curso completo</span>
                     </li>
                     <li className="flex items-start">
-                      <svg className="text-blue-600 h-5 w-5 mt-1 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Acceso de por vida</span>
+                      <FaPlay className="text-blue-600 mt-1 mr-2" />
+                      <span>Acceso desde cualquier dispositivo</span>
                     </li>
                     <li className="flex items-start">
-                      <svg className="text-blue-600 h-5 w-5 mt-1 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Actualizaciones del contenido</span>
+                      <FaPlay className="text-blue-600 mt-1 mr-2" />
+                      <span>Actualizaciones gratuitas</span>
                     </li>
                   </ul>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-green-50 rounded-xl p-6 mb-6">
+            <div className="bg-green-50 rounded-xl shadow-md overflow-hidden p-6">
               <div className="text-center">
-                <svg className="mx-auto h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="mt-2 text-lg font-semibold text-gray-900">¡Ya tienes acceso a este curso!</h3>
-                <p className="mt-1 text-gray-600">Disfruta del contenido completo</p>
+                <div className="text-green-600 text-4xl mb-4">✓</div>
+                <h3 className="text-xl font-semibold text-green-800 mb-2">¡Ya tienes acceso!</h3>
+                <p className="text-green-700 mb-0">
+                  Disfruta del contenido completo del curso.
+                </p>
               </div>
             </div>
           )}
-          
-          <div className="bg-gray-50 rounded-xl p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Información adicional</h3>
-            <ul className="space-y-3 text-sm text-gray-600">
-              <li className="flex justify-between">
-                <span>Fecha de publicación:</span>
-                <span className="font-medium">
-                  {new Date(curso.fechaCreacion).toLocaleDateString('es-ES')}
-                </span>
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

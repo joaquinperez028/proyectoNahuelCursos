@@ -47,7 +47,7 @@ npm run dev
 yarn dev
 ```
 
-5. Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación.
+5. Abre [http://26.176.79.169:3000](http://26.176.79.169:3000) en tu navegador para ver la aplicación.
 
 ## Estructura del proyecto
 
