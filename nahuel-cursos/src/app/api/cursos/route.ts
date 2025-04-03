@@ -83,36 +83,88 @@ export async function POST(request: Request) {
     }
     
     const data = await request.json();
+    console.log('Datos recibidos para crear curso:', data);
     
     // Validar datos requeridos
-    if (!data.titulo || !data.descripcion || data.precio === undefined || !data.video || !data.videoPreview) {
+    const erroresValidacion = [];
+    if (!data.titulo || typeof data.titulo !== 'string' || data.titulo.trim() === '') {
+      erroresValidacion.push('El título es requerido');
+    }
+    
+    if (!data.descripcion || typeof data.descripcion !== 'string' || data.descripcion.trim() === '') {
+      erroresValidacion.push('La descripción es requerida');
+    }
+    
+    if (data.precio === undefined || isNaN(parseFloat(data.precio)) || parseFloat(data.precio) < 0) {
+      erroresValidacion.push('El precio debe ser un número mayor o igual a 0');
+    }
+    
+    if (!data.video || typeof data.video !== 'string' || data.video.trim() === '') {
+      erroresValidacion.push('La URL del video completo es requerida');
+    }
+    
+    if (!data.videoPreview || typeof data.videoPreview !== 'string' || data.videoPreview.trim() === '') {
+      erroresValidacion.push('La URL del video de vista previa es requerida');
+    }
+    
+    if (erroresValidacion.length > 0) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
+        { error: 'Datos inválidos', detalles: erroresValidacion },
         { status: 400 }
       );
     }
     
-    const { db } = await connectToDatabase();
-    
-    // Crear el nuevo curso
-    const resultado = await db.collection('cursos').insertOne({
-      ...data,
-      fechaCreacion: new Date(),
-      categorias: data.categorias || []
-    });
-    
-    if (!resultado.acknowledged) {
-      throw new Error('Error al crear el curso');
+    try {
+      const { db } = await connectToDatabase();
+      console.log('Conexión a base de datos exitosa');
+      
+      // Normalizar y validar datos
+      const cursoParaGuardar = {
+        titulo: data.titulo.trim(),
+        descripcion: data.descripcion.trim(),
+        precio: parseFloat(data.precio),
+        video: data.video.trim(),
+        videoPreview: data.videoPreview.trim(),
+        fechaCreacion: new Date(),
+        categorias: Array.isArray(data.categorias) 
+          ? data.categorias.filter(cat => cat && typeof cat === 'string' && cat.trim() !== '')
+          : []
+      };
+      
+      console.log('Insertando curso en la base de datos');
+      
+      // Crear el nuevo curso
+      const resultado = await db.collection('cursos').insertOne(cursoParaGuardar);
+      
+      if (!resultado.acknowledged) {
+        console.error('Error al insertar en la base de datos: operación no reconocida');
+        throw new Error('Error al crear el curso en la base de datos');
+      }
+      
+      console.log('Curso creado exitosamente, ID:', resultado.insertedId);
+      
+      return NextResponse.json(
+        { 
+          mensaje: 'Curso creado exitosamente', 
+          id: resultado.insertedId,
+          curso: {
+            _id: resultado.insertedId,
+            ...cursoParaGuardar
+          }
+        },
+        { status: 201 }
+      );
+    } catch (dbError) {
+      console.error('Error de base de datos al crear curso:', dbError);
+      return NextResponse.json(
+        { error: 'Error al guardar el curso en la base de datos' },
+        { status: 500 }
+      );
     }
-    
-    return NextResponse.json(
-      { mensaje: 'Curso creado exitosamente', id: resultado.insertedId },
-      { status: 201 }
-    );
   } catch (error) {
-    console.error('Error al crear curso:', error);
+    console.error('Error general al crear curso:', error);
     return NextResponse.json(
-      { error: 'Error al crear el curso' },
+      { error: 'Error interno del servidor al procesar la solicitud' },
       { status: 500 }
     );
   }

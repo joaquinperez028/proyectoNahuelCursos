@@ -61,16 +61,31 @@ export default function NuevoCurso() {
   };
 
   const uploadVideoFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('video', file);
-    
-    const response = await axios.post('/api/upload/video', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    return response.data.filePath;
+    try {
+      console.log('Iniciando subida del archivo:', file.name);
+      const formData = new FormData();
+      formData.append('video', file);
+      
+      const response = await axios.post('/api/upload/video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        // Añadir timeout y seguimiento de progreso
+        timeout: 120000, // 2 minutos
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || file.size));
+          console.log(`Progreso de subida: ${percentCompleted}%`);
+        }
+      });
+      
+      console.log('Archivo subido exitosamente:', response.data);
+      return response.data.filePath;
+    } catch (error: any) {
+      console.error('Error en subida de archivo:', error);
+      const errorMsg = error.response?.data?.error || error.message || 'Error desconocido en la subida del archivo';
+      setError(`Error al subir video: ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
   };
 
   const validateForm = () => {
@@ -113,16 +128,29 @@ export default function NuevoCurso() {
       let videoPath = formData.video;
       let videoPreviewPath = formData.videoPreview;
       
-      if (videoFile) {
-        setUploadingVideo(true);
-        videoPath = await uploadVideoFile(videoFile);
+      try {
+        if (videoFile) {
+          setUploadingVideo(true);
+          console.log('Subiendo video principal...');
+          videoPath = await uploadVideoFile(videoFile);
+          console.log('Video principal subido correctamente:', videoPath);
+          setUploadingVideo(false);
+        }
+        
+        if (videoPreviewFile) {
+          setUploadingPreview(true);
+          console.log('Subiendo video de vista previa...');
+          videoPreviewPath = await uploadVideoFile(videoPreviewFile);
+          console.log('Video de vista previa subido correctamente:', videoPreviewPath);
+          setUploadingPreview(false);
+        }
+      } catch (uploadError) {
+        console.error('Error durante la subida de videos:', uploadError);
+        // No continuamos con la creación del curso si hay un error en la subida
+        setLoading(false);
         setUploadingVideo(false);
-      }
-      
-      if (videoPreviewFile) {
-        setUploadingPreview(true);
-        videoPreviewPath = await uploadVideoFile(videoPreviewFile);
         setUploadingPreview(false);
+        return;
       }
       
       // Preparar datos para enviar
@@ -135,8 +163,12 @@ export default function NuevoCurso() {
         categorias: formData.categorias ? formData.categorias.split(',').map(cat => cat.trim()) : []
       };
       
+      console.log('Enviando datos del curso al backend:', cursoData);
+      
       // Enviar datos al backend
       const response = await axios.post('/api/cursos', cursoData);
+      
+      console.log('Respuesta del servidor:', response.data);
       
       if (response.status === 201) {
         // Redireccionar al panel de administración
@@ -145,8 +177,11 @@ export default function NuevoCurso() {
     } catch (err: any) {
       console.error('Error al crear curso:', err);
       setError(err.response?.data?.error || 'Ocurrió un error al crear el curso');
+      // Mantener los datos del formulario para que el usuario pueda corregirlos
     } finally {
       setLoading(false);
+      setUploadingVideo(false);
+      setUploadingPreview(false);
     }
   };
 
