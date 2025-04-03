@@ -54,67 +54,83 @@ export async function GET(request: Request, context: RouteParams) {
         cursoId: cursoId
       });
       
-      try {
-        // Métodos mejorados para buscar al usuario
-        let usuario = null;
-        
-        // Primera comprobación: buscar usuario por ID si es válido
-        if (!session.user.id.startsWith('temp_') && ObjectId.isValid(session.user.id)) {
-          usuario = await db.collection('usuarios').findOne({
-            _id: new ObjectId(session.user.id)
-          });
-        }
-        
-        // Si no encontramos el usuario por ID, intentar por email
-        if (!usuario && session.user.email) {
-          console.log('Usuario no encontrado por ID, probando con email:', session.user.email);
-          usuario = await db.collection('usuarios').findOne({
-            email: session.user.email
-          });
-        }
-        
-        if (!usuario) {
-          console.log('No se encontró el usuario ni por ID ni por email');
-        } else if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados)) {
-          console.log('El usuario no tiene la propiedad cursosComprados o no es un array:', usuario);
-        } else {
-          console.log('Verificando acceso entre', usuario.cursosComprados.length, 'cursos comprados');
+      // Si el ID es temporal, el usuario aún no está sincronizado
+      if (session.user.id.startsWith('temp_')) {
+        console.log('ID temporal detectado, usuario aún no sincronizado');
+        // No asignamos acceso, retornamos el curso sin video
+      } else {
+        try {
+          // Métodos mejorados para buscar al usuario
+          let usuario = null;
           
-          // Normalizar ID del curso a string para comparaciones consistentes
-          const cursoIdString = cursoId.toString();
-          
-          // Verificar si el curso está en la lista de cursos comprados (multiples formatos)
-          const tieneCurso = usuario.cursosComprados.some((id: any) => {
-            // Convertir el ID a string para comparación
-            const idCursoComprado = id?.toString() || '';
-            return (
-              idCursoComprado === cursoIdString || 
-              idCursoComprado === cursoId
-            );
-          });
-          
-          console.log('¿Usuario tiene el curso?', tieneCurso, {
-            cursosComprados: usuario.cursosComprados.map((id: any) => id?.toString() || 'id_inválido')
-          });
-          
-          cursoComprado = tieneCurso ? usuario : null;
-          
-          // Log adicional para diagnóstico si no se encontró el curso
-          if (!tieneCurso) {
-            console.log('IDs de cursos comprados:', usuario.cursosComprados);
-            console.log('ID del curso solicitado:', cursoId, '(tipo:', typeof cursoId, ')');
+          // Primera comprobación: buscar usuario por ID si es válido
+          if (ObjectId.isValid(session.user.id)) {
+            try {
+              usuario = await db.collection('usuarios').findOne({
+                _id: new ObjectId(session.user.id)
+              });
+            } catch (error) {
+              console.error('Error al buscar usuario por ID:', error);
+            }
           }
+          
+          // Si no encontramos el usuario por ID, intentar por email
+          if (!usuario && session.user.email) {
+            console.log('Usuario no encontrado por ID, probando con email:', session.user.email);
+            try {
+              usuario = await db.collection('usuarios').findOne({
+                email: session.user.email
+              });
+            } catch (error) {
+              console.error('Error al buscar usuario por email:', error);
+            }
+          }
+          
+          if (!usuario) {
+            console.log('No se encontró el usuario ni por ID ni por email');
+          } else if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados)) {
+            console.log('El usuario no tiene la propiedad cursosComprados o no es un array:', usuario);
+          } else {
+            console.log('Verificando acceso entre', usuario.cursosComprados.length, 'cursos comprados');
+            
+            // Normalizar ID del curso a string para comparaciones consistentes
+            const cursoIdString = cursoId.toString();
+            
+            // Verificar si el curso está en la lista de cursos comprados (multiples formatos)
+            const tieneCurso = usuario.cursosComprados.some((id: any) => {
+              if (!id) return false;
+              // Convertir el ID a string para comparación
+              const idCursoComprado = id?.toString() || '';
+              return (
+                idCursoComprado === cursoIdString || 
+                idCursoComprado === cursoId
+              );
+            });
+            
+            console.log('¿Usuario tiene el curso?', tieneCurso, {
+              cursosComprados: usuario.cursosComprados.map((id: any) => id?.toString() || 'id_inválido')
+            });
+            
+            cursoComprado = tieneCurso ? usuario : null;
+            
+            // Log adicional para diagnóstico si no se encontró el curso
+            if (!tieneCurso) {
+              console.log('IDs de cursos comprados:', usuario.cursosComprados);
+              console.log('ID del curso solicitado:', cursoId, '(tipo:', typeof cursoId, ')');
+            }
+          }
+        } catch (error) {
+          console.error('Error al verificar cursos comprados:', error);
+          // No interrumpimos el flujo, simplemente logueamos el error
         }
-      } catch (error) {
-        console.error('Error al verificar cursos comprados:', error);
-        // No interrumpimos el flujo, simplemente logueamos el error
       }
       
       // Log para el diagnóstico final
       console.log('Resultado final de verificación de acceso:', {
         tieneAcceso: !!cursoComprado,
         userId: session.user.id,
-        cursoId: cursoId
+        cursoId: cursoId,
+        idTemporal: session.user.id.startsWith('temp_')
       });
     }
       

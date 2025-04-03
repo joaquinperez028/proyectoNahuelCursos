@@ -91,6 +91,14 @@ export default function DetalleCurso({ params }: CursoProps) {
       console.log('Recargando datos del curso...');
       setLoading(true);
       
+      // Verificar primero si la sesión está actualizada
+      if (session?.user?.id?.startsWith('temp_')) {
+        console.log('ID de usuario temporal detectado, esperando actualización de sesión');
+        setMensajeCompra('Tu sesión está siendo procesada. Por favor, espera unos segundos o cierra sesión y vuelve a iniciar.');
+        setLoading(false);
+        return;
+      }
+      
       const response = await axios.get(`/api/cursos/${id}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -111,20 +119,18 @@ export default function DetalleCurso({ params }: CursoProps) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
       
-      // Si después de la recarga aún no tiene acceso, intentar una vez más después de un breve retraso
-      if (!tieneAcceso) {
-        setMensajeCompra('Finalizando configuración de acceso. Esto puede tardar unos segundos...');
-        
-        setTimeout(async () => {
-          await recargarCurso();
-          
-          if (!tieneAcceso) {
-            setMensajeCompra('Tu compra ha sido registrada correctamente. El acceso al curso estará disponible en unos minutos. Puedes verificar tu acceso con el botón.');
-          }
-        }, 3000);
+      // Actualizar mensaje según resultado
+      if (tieneVideoCompleto) {
+        setMensajeCompra('¡Ya tienes acceso al curso! El contenido completo está disponible ahora.');
+        // Ocultar el mensaje después de unos segundos
+        setTimeout(() => setMensajeCompra(''), 5000);
+      } else if (window.location.search.includes('comprado=true')) {
+        // Si es después de una compra y aún no tiene acceso
+        setMensajeCompra('Tu compra ha sido registrada, pero el acceso puede tardar unos momentos. Puedes intentar verificar de nuevo.');
       }
     } catch (err) {
       console.error('Error al recargar curso:', err);
+      setMensajeCompra('Error al verificar el acceso. Por favor, intenta de nuevo en unos momentos.');
       // No mostramos error, mantenemos los datos que ya teníamos
     } finally {
       setLoading(false);
@@ -135,6 +141,12 @@ export default function DetalleCurso({ params }: CursoProps) {
     if (status === 'unauthenticated') {
       // Redirigir al login si el usuario no está autenticado
       router.push(`/auth/login?redirect=/cursos/${id}`);
+      return;
+    }
+    
+    // Verificar si el ID de usuario es temporal
+    if (session?.user?.id?.startsWith('temp_')) {
+      setMensajeCompra('Tu cuenta aún está siendo procesada. Por favor, espera unos segundos o cierra sesión y vuelve a iniciar.');
       return;
     }
     
@@ -161,27 +173,44 @@ export default function DetalleCurso({ params }: CursoProps) {
 
       // Si después de la recarga aún no tiene acceso, intentar una vez más después de un breve retraso
       if (!tieneAcceso) {
-        setMensajeCompra('Finalizando configuración de acceso. Esto puede tardar unos segundos...');
+        setMensajeCompra('Finalizando configuración de acceso. Puede tardar unos segundos...');
         
         setTimeout(async () => {
           await recargarCurso();
           
           if (!tieneAcceso) {
-            setMensajeCompra('Tu compra ha sido registrada correctamente. El acceso al curso estará disponible en unos minutos. Puedes verificar tu acceso con el botón.');
+            setMensajeCompra('Tu compra ha sido registrada correctamente. Si no ves el contenido en unos minutos, cierra sesión y vuelve a iniciar.');
           }
         }, 3000);
       }
     } catch (err: any) {
       console.error('Error al comprar curso:', err);
       
-      // Si la respuesta indica que ya tiene el curso
-      if (err.response?.status === 200 || (err.response?.data?.mensaje && err.response?.data?.mensaje.includes('Ya has comprado'))) {
-        // Si ya tiene el curso, mostrar mensaje positivo e intentar recargar
-        setMensajeCompra('Ya tienes este curso. Verificando acceso al contenido...');
+      // Respuesta con mensaje específico
+      if (err.response?.data?.mensaje) {
+        // Si ya tiene el curso o cualquier otro mensaje de éxito
+        setMensajeCompra(err.response.data.mensaje);
         setTimeout(() => recargarCurso(), 1000);
-      } else {
-        // Para otros errores, mostrar mensaje de error
-        setMensajeCompra(`Error: ${err.response?.data?.error || 'Error al procesar la compra del curso'}`);
+      } 
+      // Respuesta con error pero con mensaje específico
+      else if (err.response?.data?.error) {
+        let mensajeError = err.response.data.error;
+        
+        // Si incluye un mensaje adicional, mostrarlo
+        if (err.response.data.message) {
+          mensajeError += ': ' + err.response.data.message;
+        }
+        
+        // Si es un error de procesamiento (cuenta temporal) dar instrucciones específicas
+        if (mensajeError.includes('cuenta') || mensajeError.includes('procesada') || err.response.status === 202) {
+          mensajeError += ' Intenta cerrar sesión y volver a iniciar.';
+        }
+        
+        setMensajeCompra('Error: ' + mensajeError);
+      } 
+      // Error general sin detalles
+      else {
+        setMensajeCompra('Error: No se pudo procesar la compra. Por favor, intenta más tarde.');
       }
     } finally {
       setLoadingCompra(false);

@@ -34,6 +34,13 @@ export default function Perfil() {
 
   useEffect(() => {
     if (status === 'authenticated') {
+      // Verificar si el ID es temporal antes de intentar cargar cursos
+      if (session?.user?.id?.startsWith('temp_')) {
+        setLoading(false);
+        setError('Tu cuenta está siendo procesada. Por favor, espera unos momentos o cierra sesión y vuelve a iniciar.');
+        return;
+      }
+      
       obtenerCursosComprados();
       // Establecer el teléfono desde la sesión
       setTelefono(session.user.telefono || '');
@@ -55,12 +62,45 @@ export default function Perfil() {
     }
   }, [status, session, router]);
 
+  // Función para intentar recargar la sesión
+  const recargarSesion = async () => {
+    try {
+      setLoading(true);
+      setError('Actualizando sesión...');
+      
+      // Intentar actualizar la sesión mediante el endpoint específico
+      await axios.post('/api/auth/actualizar-sesion');
+      
+      // Forzar actualización de la sesión
+      if (update) {
+        await update();
+        setError('');
+        obtenerCursosComprados();
+      } else {
+        // Si no podemos actualizar, recargar la página
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Error al recargar sesión:', err);
+      setError('No se pudo actualizar la sesión. Intenta cerrar sesión y volver a iniciar.');
+      setLoading(false);
+    }
+  };
+
   const obtenerCursosComprados = async (mostrarCarga = true) => {
     try {
       if (mostrarCarga) {
         setLoading(true);
       }
       setError('');
+      
+      // Si el ID es temporal, mostrar mensaje y no intentar cargar
+      if (session?.user?.id?.startsWith('temp_')) {
+        setError('Tu cuenta está siendo procesada. Por favor, espera unos momentos o cierra sesión y vuelve a iniciar.');
+        setLoading(false);
+        return;
+      }
+      
       console.log('Solicitando cursos comprados...');
       
       const response = await axios.get('/api/usuario/cursos', {
@@ -108,6 +148,14 @@ export default function Perfil() {
       } else if (err.response?.status === 404) {
         mensajeError = 'No se encontró tu información de usuario.';
         mensajeDetalle = 'Por favor, cierra sesión y vuelve a iniciar sesión.';
+      } else if (err.response?.status === 202) {
+        mensajeError = 'Tu cuenta está siendo procesada.';
+        mensajeDetalle = 'Por favor, espera unos momentos o cierra sesión y vuelve a iniciar.';
+        
+        // Programar un reintento después de unos segundos para sesiones en proceso
+        setTimeout(() => {
+          obtenerCursosComprados(false);
+        }, 5000);
       }
       
       setError(mensajeError + (mensajeDetalle ? ` - ${mensajeDetalle}` : ''));
@@ -360,12 +408,23 @@ export default function Perfil() {
             {error && (
               <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-6">
                 <p className="font-medium mb-2">{error}</p>
-                <button 
-                  onClick={handleRetryLoading}
-                  className="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors flex items-center"
-                >
-                  <FaSyncAlt className="mr-1" size={12} /> Reintentar
-                </button>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={handleRetryLoading}
+                    className="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors flex items-center"
+                  >
+                    <FaSyncAlt className="mr-1" size={12} /> Reintentar
+                  </button>
+                  
+                  {session?.user?.id?.startsWith('temp_') && (
+                    <button 
+                      onClick={recargarSesion}
+                      className="text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded transition-colors flex items-center"
+                    >
+                      <FaSyncAlt className="mr-1" size={12} /> Actualizar sesión
+                    </button>
+                  )}
+                </div>
               </div>
             )}
             
