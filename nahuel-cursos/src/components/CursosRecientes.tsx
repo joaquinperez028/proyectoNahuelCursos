@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo } from 'react-icons/fa';
+import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo, FaSyncAlt } from 'react-icons/fa';
 import ValoracionEstrellas from './ValoracionEstrellas';
-import Image from 'next/image';
 
 interface Curso {
   _id: string;
@@ -18,13 +17,17 @@ interface Curso {
   totalValoraciones?: number;
 }
 
-// Componente para la vista previa de video con manejo de errores
-function VideoPreview({ url, titulo }: { url: string; titulo: string }) {
+// Componente optimizado para la vista previa de video con mejor manejo de errores
+function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: string; className?: string }) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [retry, setRetry] = useState(0);
   
   // Función para validar URL de video (YouTube, Vimeo, etc.)
   const esURLVideoValida = (url: string): boolean => {
+    if (!url) return false;
+    
     const patronesURL = [
       /^https?:\/\/(www\.)?youtube\.com\/embed\//,
       /^https?:\/\/player\.vimeo\.com\/video\//,
@@ -34,11 +37,29 @@ function VideoPreview({ url, titulo }: { url: string; titulo: string }) {
     return patronesURL.some(patron => patron.test(url));
   };
   
+  // Reintentar cargar el video
+  const handleRetry = () => {
+    setError(false);
+    setLoading(true);
+    setRetry(prev => prev + 1);
+    
+    // Recargar el iframe
+    if (iframeRef.current) {
+      const currentSrc = iframeRef.current.src;
+      iframeRef.current.src = '';
+      setTimeout(() => {
+        if (iframeRef.current) {
+          iframeRef.current.src = currentSrc;
+        }
+      }, 50);
+    }
+  };
+  
   // Si la URL no es válida, mostrar un placeholder
   if (!url || !esURLVideoValida(url)) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-blue-100">
-        <div className="text-center">
+      <div className={`w-full h-full flex items-center justify-center bg-blue-100 ${className}`}>
+        <div className="text-center p-2">
           <FaVideo className="text-4xl text-blue-500 mx-auto mb-2" />
           <p className="text-sm text-blue-700">Vista previa no disponible</p>
         </div>
@@ -47,23 +68,31 @@ function VideoPreview({ url, titulo }: { url: string; titulo: string }) {
   }
   
   return (
-    <>
+    <div className={`relative w-full h-full ${className}`}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-100">
+        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 z-10">
           <FaSpinner className="animate-spin text-2xl text-blue-500" />
         </div>
       )}
       
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-100">
+        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 z-10">
           <div className="text-center">
             <FaPlayCircle className="text-4xl text-blue-500 mx-auto mb-2" />
-            <p className="text-sm text-blue-700">Clic para reproducir</p>
+            <p className="text-sm text-blue-700 mb-2">Error al cargar el video</p>
+            <button 
+              onClick={handleRetry}
+              className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full flex items-center mx-auto"
+            >
+              <FaSyncAlt className="mr-1" size={10} /> Reintentar
+            </button>
           </div>
         </div>
       )}
       
       <iframe 
+        ref={iframeRef}
+        key={`video-${retry}`}
         src={url}
         className="w-full h-full absolute inset-0"
         title={titulo}
@@ -76,7 +105,7 @@ function VideoPreview({ url, titulo }: { url: string; titulo: string }) {
         }}
         style={{ opacity: loading || error ? 0 : 1 }}
       />
-    </>
+    </div>
   );
 }
 
@@ -86,29 +115,33 @@ export default function CursosRecientes() {
   const [error, setError] = useState('');
   const [esReciente, setEsReciente] = useState(false);
   const haReintentado = useRef(false);
+  const [generandoDatos, setGenerandoDatos] = useState(false);
   
   // Función para obtener los cursos con reintentos
   const obtenerCursosRecientes = async (esReintento = false) => {
     try {
       setLoading(true);
+      setError('');
       const response = await axios.get('/api/cursos/recientes');
       setCursos(response.data.cursos);
       setEsReciente(response.data.esReciente);
-      setError('');
     } catch (err) {
       console.error('Error al obtener cursos recientes:', err);
       
-      // Si no hay cursos, podemos intentar sembrar datos de ejemplo (solo si eres admin)
+      // Si no hay cursos y es un reintento, podemos intentar sembrar datos de ejemplo
       if (!haReintentado.current && esReintento) {
         haReintentado.current = true;
         try {
-          // Intentar sembrar datos (solo funcionará si el usuario es admin)
-          await axios.get('/api/seed');
+          // Intentar sembrar datos
+          setGenerandoDatos(true);
+          await axios.get('/api/seed-public');
           // Esperar un momento y reintentar obtener cursos
-          setTimeout(() => obtenerCursosRecientes(), 1500);
+          setTimeout(() => obtenerCursosRecientes(), 2000);
           return;
         } catch (seedError) {
           console.error('Error al intentar sembrar datos:', seedError);
+        } finally {
+          setGenerandoDatos(false);
         }
       }
       
@@ -122,7 +155,7 @@ export default function CursosRecientes() {
     obtenerCursosRecientes();
   }, []);
   
-  // Botón para reintentar con siembra de datos (solo visible para administradores)
+  // Botón para reintentar con siembra de datos
   const handleRetry = () => {
     obtenerCursosRecientes(true);
   };
@@ -130,27 +163,47 @@ export default function CursosRecientes() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
-        <FaSpinner className="animate-spin text-blue-600 text-3xl" />
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-blue-600 text-3xl mx-auto mb-3" />
+          <p className="text-blue-800">Cargando cursos...</p>
+        </div>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="bg-red-50 text-red-800 p-4 rounded-lg">
-        <p>{error}</p>
-        <button 
-          onClick={handleRetry}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-        >
-          Reintentar carga
-        </button>
+      <div className="bg-red-50 text-red-800 p-6 rounded-lg">
+        <p className="mb-4">{error}</p>
+        {generandoDatos ? (
+          <div className="flex items-center">
+            <FaSpinner className="animate-spin text-blue-600 mr-2" />
+            <span>Generando datos de ejemplo...</span>
+          </div>
+        ) : (
+          <button 
+            onClick={handleRetry}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
+          >
+            <FaSyncAlt className="mr-2" /> Reintentar y generar datos
+          </button>
+        )}
       </div>
     );
   }
   
   if (cursos.length === 0) {
-    return null;
+    return (
+      <div className="bg-yellow-50 text-yellow-800 p-6 rounded-lg">
+        <p>No hay cursos disponibles actualmente.</p>
+        <button 
+          onClick={handleRetry}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Generar cursos de ejemplo
+        </button>
+      </div>
+    );
   }
   
   return (

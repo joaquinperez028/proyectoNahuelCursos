@@ -1,6 +1,7 @@
 import { connectToDatabase } from './connection';
 import { ObjectId } from 'mongodb';
 
+// Datos de prueba: Cursos sobre criptomonedas
 const cursosDePrueba = [
   {
     _id: new ObjectId(),
@@ -44,56 +45,113 @@ const cursosDePrueba = [
   }
 ];
 
+// Valoraciones de ejemplo para los cursos
+const valoracionesEjemplo = [
+  {
+    cursoId: cursosDePrueba[0]._id,
+    usuarioId: new ObjectId(),
+    calificacion: 5,
+    comentario: '¡Excelente curso para principiantes! Me ayudó a entender Bitcoin desde cero.',
+    fechaCreacion: new Date()
+  },
+  {
+    cursoId: cursosDePrueba[0]._id,
+    usuarioId: new ObjectId(),
+    calificacion: 4,
+    comentario: 'Muy buen contenido, aunque algunas partes podrían profundizarse más.',
+    fechaCreacion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+  },
+  {
+    cursoId: cursosDePrueba[1]._id,
+    usuarioId: new ObjectId(),
+    calificacion: 5,
+    comentario: 'Las estrategias de trading presentadas son muy efectivas, ya estoy viendo resultados.',
+    fechaCreacion: new Date()
+  }
+];
+
+/**
+ * Función para verificar y crear la colección si no existe
+ */
+async function asegurarColecciones(db) {
+  const colecciones = await db.listCollections().toArray();
+  const coleccionesExistentes = colecciones.map(c => c.name);
+  
+  const coleccionesRequeridas = ['cursos', 'valoraciones', 'usuarios'];
+  
+  for (const coleccion of coleccionesRequeridas) {
+    if (!coleccionesExistentes.includes(coleccion)) {
+      console.log(`Creando colección: ${coleccion}`);
+      await db.createCollection(coleccion);
+    }
+  }
+}
+
 /**
  * Función para crear cursos de ejemplo en la base de datos
+ * Con manejo mejorado de errores y reintentos
  */
-export async function sembrarCursos() {
-  try {
-    const { db } = await connectToDatabase();
-    
-    // Verificar si ya hay cursos en la base de datos
-    const cursosExistentes = await db.collection('cursos').countDocuments();
-    
-    if (cursosExistentes > 0) {
-      console.log(`Ya existen ${cursosExistentes} cursos en la base de datos. No se sembrarán datos adicionales.`);
-      return { success: true, message: 'Ya existen cursos en la base de datos' };
-    }
-    
-    // Insertar los cursos de prueba
-    const resultado = await db.collection('cursos').insertMany(cursosDePrueba);
-    console.log(`${resultado.insertedCount} cursos han sido creados con éxito`);
-    
-    // Crear algunas valoraciones de ejemplo
-    const valoraciones = [
-      {
-        cursoId: cursosDePrueba[0]._id,
-        usuarioId: new ObjectId(),
-        calificacion: 5,
-        comentario: '¡Excelente curso para principiantes! Me ayudó a entender Bitcoin desde cero.',
-        fechaCreacion: new Date()
-      },
-      {
-        cursoId: cursosDePrueba[0]._id,
-        usuarioId: new ObjectId(),
-        calificacion: 4,
-        comentario: 'Muy buen contenido, aunque algunas partes podrían profundizarse más.',
-        fechaCreacion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-      },
-      {
-        cursoId: cursosDePrueba[1]._id,
-        usuarioId: new ObjectId(),
-        calificacion: 5,
-        comentario: 'Las estrategias de trading presentadas son muy efectivas, ya estoy viendo resultados.',
-        fechaCreacion: new Date()
+export async function sembrarCursos(forzar = false) {
+  console.log("Iniciando proceso de sembrado de datos...");
+  let intentos = 0;
+  const maxIntentos = 3;
+  
+  while (intentos < maxIntentos) {
+    try {
+      intentos++;
+      console.log(`Intento ${intentos} de ${maxIntentos}...`);
+      
+      // Conectar a la base de datos
+      const { db } = await connectToDatabase();
+      
+      // Asegurar que las colecciones existan
+      await asegurarColecciones(db);
+      
+      // Verificar si ya hay cursos en la base de datos
+      const cursosExistentes = await db.collection('cursos').countDocuments();
+      
+      if (cursosExistentes > 0 && !forzar) {
+        console.log(`Ya existen ${cursosExistentes} cursos en la base de datos. No se sembrarán datos adicionales.`);
+        return { 
+          success: true, 
+          message: 'Ya existen cursos en la base de datos',
+          cursosExistentes
+        };
       }
-    ];
-    
-    await db.collection('valoraciones').insertMany(valoraciones);
-    console.log(`${valoraciones.length} valoraciones han sido creadas con éxito`);
-    
-    return { success: true, message: 'Datos sembrados correctamente' };
-  } catch (error) {
-    console.error('Error al sembrar datos:', error);
-    return { success: false, message: error.message };
+      
+      if (forzar && cursosExistentes > 0) {
+        console.log('Forzando creación de cursos aunque ya existan algunos...');
+      }
+      
+      // Insertar los cursos de prueba
+      const resultado = await db.collection('cursos').insertMany(cursosDePrueba);
+      console.log(`${resultado.insertedCount} cursos han sido creados con éxito`);
+      
+      // Crear las valoraciones de ejemplo
+      const resultadoValoraciones = await db.collection('valoraciones').insertMany(valoracionesEjemplo);
+      console.log(`${resultadoValoraciones.insertedCount} valoraciones han sido creadas con éxito`);
+      
+      return { 
+        success: true, 
+        message: 'Datos sembrados correctamente',
+        cursos: resultado.insertedCount,
+        valoraciones: resultadoValoraciones.insertedCount 
+      };
+    } catch (error) {
+      console.error(`Error al sembrar datos (intento ${intentos}):`, error);
+      
+      if (intentos >= maxIntentos) {
+        return { 
+          success: false, 
+          message: `Error después de ${maxIntentos} intentos: ${error.message}` 
+        };
+      }
+      
+      // Esperar antes de reintentar (tiempo exponencial)
+      const retryDelay = Math.min(1000 * Math.pow(2, intentos), 10000);
+      console.log(`Reintentando en ${retryDelay/1000} segundos...`);
+      
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
   }
 } 

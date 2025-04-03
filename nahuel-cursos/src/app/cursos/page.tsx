@@ -31,6 +31,8 @@ export default function Cursos() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [cargandoDatos, setCargandoDatos] = useState(false);
+  const [datosGenerados, setDatosGenerados] = useState(false);
   
   // Filtros y ordenamiento
   const [busqueda, setBusqueda] = useState('');
@@ -47,6 +49,7 @@ export default function Cursos() {
   const obtenerCursos = async () => {
     try {
       setLoading(true);
+      setError('');
       const params = new URLSearchParams();
       params.append('pagina', pagina.toString());
       
@@ -65,12 +68,33 @@ export default function Cursos() {
       const response = await axios.get<CursosResponse>(`/api/cursos?${params.toString()}`);
       setCursos(response.data.cursos);
       setTotalPaginas(response.data.meta.totalPaginas);
-      setError('');
     } catch (err) {
       console.error('Error al obtener cursos:', err);
       setError('Ocurrió un error al cargar los cursos. Intenta de nuevo más tarde.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para generar datos de ejemplo
+  const generarDatosEjemplo = async () => {
+    try {
+      setCargandoDatos(true);
+      const response = await axios.get('/api/seed-public');
+      if (response.data.success) {
+        setDatosGenerados(true);
+        // Esperar un momento y luego recargar los cursos
+        setTimeout(() => {
+          obtenerCursos();
+        }, 1500);
+      } else {
+        setError('No se pudieron generar los datos de ejemplo: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Error al generar datos de ejemplo:', err);
+      setError('No se pudieron generar los datos de ejemplo.');
+    } finally {
+      setCargandoDatos(false);
     }
   };
 
@@ -181,12 +205,42 @@ export default function Cursos() {
         </div>
       ) : error ? (
         <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-8">
-          {error}
+          <p>{error}</p>
+          <button 
+            onClick={obtenerCursos}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Reintentar
+          </button>
         </div>
       ) : cursos.length === 0 ? (
-        <div className="text-center py-20">
-          <h3 className="text-xl font-medium text-gray-600 mb-4">No se encontraron cursos</h3>
-          <p className="text-gray-500">Intenta con otros filtros de búsqueda</p>
+        <div className="text-center py-20 bg-gray-50 rounded-lg p-8">
+          <h3 className="text-xl font-medium text-gray-600 mb-4">No hay cursos disponibles</h3>
+          <p className="text-gray-500 mb-8">Parece que aún no hay cursos en la base de datos.</p>
+          
+          {datosGenerados ? (
+            <div className="text-green-600 mb-4">
+              ¡Datos generados con éxito! Cargando cursos...
+              <div className="flex justify-center mt-2">
+                <FaSpinner className="animate-spin text-green-600 text-xl" />
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={generarDatosEjemplo}
+              disabled={cargandoDatos}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+            >
+              {cargandoDatos ? (
+                <>
+                  <FaSpinner className="animate-spin inline-block mr-2" />
+                  Generando datos...
+                </>
+              ) : (
+                'Generar datos de ejemplo'
+              )}
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
