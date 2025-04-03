@@ -16,11 +16,29 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const db = await connectToDatabase();
-    const usuario = await db.collection('usuarios').findOne(
-      { _id: new ObjectId(session.user.id) },
-      { projection: { password: 0 } } // Excluir la contraseña
-    );
+    const { db } = await connectToDatabase();
+    
+    // Intentar buscar por ID primero
+    let usuario = null;
+    
+    try {
+      if (session.user.id && !session.user.id.startsWith('temp_')) {
+        usuario = await db.collection('usuarios').findOne(
+          { _id: new ObjectId(session.user.id) },
+          { projection: { password: 0 } }
+        );
+      }
+    } catch (idError) {
+      console.warn('Error al buscar usuario por ID, intentando por email:', idError);
+    }
+    
+    // Si no encontramos por ID, intentar por email
+    if (!usuario && session.user.email) {
+      usuario = await db.collection('usuarios').findOne(
+        { email: session.user.email },
+        { projection: { password: 0 } }
+      );
+    }
 
     if (!usuario) {
       return NextResponse.json(
@@ -41,6 +59,7 @@ export async function GET(req: NextRequest) {
 
 // Endpoint para actualizar el perfil
 export async function PUT(req: NextRequest) {
+  console.log('API Perfil: Iniciando actualización de perfil');
   try {
     // Verificar autenticación
     const session = await getServerSession(authOptions);
@@ -52,9 +71,21 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    console.log('Usuario autenticado:', session.user.id);
+    console.log('Usuario autenticado:', session.user.id, 'Email:', session.user.email);
     
-    const { telefono } = await req.json();
+    // Validar datos recibidos
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      console.error('Error al parsear el cuerpo de la solicitud:', parseError);
+      return NextResponse.json(
+        { error: 'Formato de solicitud inválido' },
+        { status: 400 }
+      );
+    }
+    
+    const { telefono } = body;
     console.log('Teléfono recibido para actualizar:', telefono);
 
     // Validar que el teléfono tenga un formato válido (si se proporciona)
@@ -71,16 +102,34 @@ export async function PUT(req: NextRequest) {
 
     try {
       // Obtener conexión a la base de datos
-      const db = await connectToDatabase();
+      console.log('Conectando a la base de datos...');
+      const { db } = await connectToDatabase();
       console.log('Conexión a la base de datos establecida');
       
+      // Preparar criterio de búsqueda (ID o email)
+      let criterio = {};
+      let usuarioExistente = null;
+      
+      // Si es un ID temporal o no es un ObjectId válido, buscar por email
+      if (!session.user.id || session.user.id.startsWith('temp_') || !ObjectId.isValid(session.user.id)) {
+        console.log('Usando email como criterio de búsqueda:', session.user.email);
+        criterio = { email: session.user.email };
+      } else {
+        console.log('Usando ID como criterio de búsqueda:', session.user.id);
+        try {
+          criterio = { _id: new ObjectId(session.user.id) };
+        } catch (idError) {
+          console.error('Error al convertir ID a ObjectId, usando email:', idError);
+          criterio = { email: session.user.email };
+        }
+      }
+      
       // Verificar si el usuario existe en la base de datos antes de actualizar
-      const usuarioExistente = await db.collection('usuarios').findOne(
-        { _id: new ObjectId(session.user.id) }
-      );
+      console.log('Buscando usuario con criterio:', JSON.stringify(criterio));
+      usuarioExistente = await db.collection('usuarios').findOne(criterio);
       
       if (!usuarioExistente) {
-        console.log('Usuario no encontrado en la base de datos:', session.user.id);
+        console.log('Usuario no encontrado en la base de datos');
         return NextResponse.json(
           { error: 'Usuario no encontrado' },
           { status: 404 }
@@ -95,9 +144,10 @@ export async function PUT(req: NextRequest) {
       const telefonoNormalizado = telefono?.toString() || '';
       console.log('Teléfono normalizado para guardar en BD:', telefonoNormalizado);
       
-      // Actualizar los datos del perfil - usamos una actualización directa y verificamos el resultado
+      // Actualizar los datos del perfil
+      console.log('Actualizando usuario con criterio:', JSON.stringify(criterio));
       const updateResult = await db.collection('usuarios').updateOne(
-        { _id: new ObjectId(session.user.id) },
+        criterio,
         { 
           $set: { 
             telefono: telefonoNormalizado,
@@ -123,9 +173,8 @@ export async function PUT(req: NextRequest) {
       }
 
       // Obtener el usuario actualizado para verificar
-      const usuarioActualizado = await db.collection('usuarios').findOne(
-        { _id: new ObjectId(session.user.id) }
-      );
+      console.log('Verificando actualización con criterio:', JSON.stringify(criterio));
+      const usuarioActualizado = await db.collection('usuarios').findOne(criterio);
       
       console.log('Teléfono después de la actualización:', usuarioActualizado?.telefono);
       
@@ -163,14 +212,20 @@ export async function PUT(req: NextRequest) {
     } catch (dbError) {
       console.error('Error al interactuar con la base de datos:', dbError);
       return NextResponse.json(
-        { error: 'Error interno de la base de datos' },
+        { 
+          error: 'Error interno de la base de datos', 
+          mensaje: dbError.message || 'Detalles no disponibles'
+        },
         { status: 500 }
       );
     }
   } catch (error: any) {
     console.error('Error general al actualizar perfil:', error);
     return NextResponse.json(
-      { error: 'Error al actualizar el perfil' },
+      { 
+        error: 'Error al actualizar el perfil',
+        mensaje: error.message || 'Detalles no disponibles'
+      },
       { status: 500 }
     );
   }

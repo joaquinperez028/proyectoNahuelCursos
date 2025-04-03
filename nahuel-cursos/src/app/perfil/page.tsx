@@ -132,7 +132,20 @@ export default function Perfil() {
       } else {
         // En caso de error, mostrar el mensaje de error
         console.error('Error durante la actualización:', resultado.message);
-        setTelefonoError(resultado.message);
+        
+        // Comprobar si el error es de autenticación/sesión
+        if (resultado.message.includes('sesión') || 
+            resultado.message.includes('iniciar sesión') || 
+            resultado.message.includes('autorización')) {
+          setTelefonoError(`${resultado.message} Se intentará recargar la página en unos segundos.`);
+          
+          // Si es un error de sesión, intentar recargar después de un momento
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        } else {
+          setTelefonoError(resultado.message);
+        }
       }
     } catch (error) {
       console.error('Error en el proceso de actualización:', error);
@@ -229,28 +242,38 @@ export default function Perfil() {
                         onChange={(e) => setTelefono(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Ingresa tu teléfono"
+                        disabled={guardandoTelefono}
                       />
                       
                       {telefonoError && (
-                        <p className="text-red-600 text-xs font-medium">{telefonoError}</p>
+                        <div className="bg-red-50 p-2 rounded text-red-600 text-xs font-medium">
+                          <p>{telefonoError}</p>
+                        </div>
                       )}
                       
                       {telefonoSuccess && (
-                        <p className="text-green-600 text-xs font-medium">{telefonoSuccess}</p>
+                        <div className="bg-green-50 p-2 rounded text-green-600 text-xs font-medium">
+                          <p>{telefonoSuccess}</p>
+                        </div>
                       )}
                       
                       <div className="flex space-x-2">
                         <button
                           onClick={handleGuardarTelefono}
                           disabled={guardandoTelefono}
-                          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm font-medium"
+                          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm font-medium disabled:bg-blue-300"
                         >
                           {guardandoTelefono ? (
-                            <FaSpinner className="animate-spin mr-1" />
+                            <>
+                              <FaSpinner className="animate-spin mr-1" />
+                              Guardando...
+                            </>
                           ) : (
-                            <FaSave className="mr-1" />
+                            <>
+                              <FaSave className="mr-1" />
+                              Guardar
+                            </>
                           )}
-                          Guardar
                         </button>
                         
                         <button
@@ -261,6 +284,7 @@ export default function Perfil() {
                             setTelefonoSuccess('');
                           }}
                           className="flex items-center text-black hover:text-gray-800 px-3 py-1 rounded-md text-sm font-medium"
+                          disabled={guardandoTelefono}
                         >
                           <FaTimes className="mr-1" />
                           Cancelar
