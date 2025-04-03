@@ -214,11 +214,70 @@ export const isAuthenticated = (session: any) => {
 // Middleware para verificar si un usuario tiene acceso a un curso
 export const hasCourseAccess = async (userId: string, courseId: string) => {
   try {
-    const { db } = await connectToDatabase();
-    const user = await db.collection('usuarios').findOne({ _id: new ObjectId(userId) });
+    console.log('Verificando acceso a curso:', { userId, courseId });
     
-    // Si el usuario es administrador o ha comprado el curso, tiene acceso
-    return user?.admin || user?.cursosComprados?.includes(courseId);
+    // Validaciones iniciales
+    if (!userId || !courseId) {
+      console.log('ID de usuario o curso no proporcionado');
+      return false;
+    }
+    
+    // Si es un ID temporal, no tiene acceso
+    if (userId.startsWith('temp_')) {
+      console.log('ID temporal, sin acceso');
+      return false;
+    }
+    
+    // Intentar encontrar al usuario
+    const { db } = await connectToDatabase();
+    
+    // Validar formato de ObjectId para el ID de usuario
+    let usuario = null;
+    
+    try {
+      if (ObjectId.isValid(userId)) {
+        usuario = await db.collection('usuarios').findOne({ _id: new ObjectId(userId) });
+      }
+    } catch (error) {
+      console.error('Error al buscar usuario por ID:', error);
+    }
+    
+    // Log para diagnóstico
+    if (!usuario) {
+      console.log('Usuario no encontrado por ID');
+      return false;
+    }
+    
+    // Si el usuario es administrador, tiene acceso a todo
+    if (usuario.admin) {
+      console.log('Usuario es administrador, acceso concedido');
+      return true;
+    }
+    
+    // Si el usuario no tiene cursos comprados, no tiene acceso
+    if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados)) {
+      console.log('Usuario no tiene cursos comprados');
+      return false;
+    }
+    
+    // Normalizar el ID del curso para comparación
+    const courseIdStr = courseId.toString();
+    
+    // Verificar si el curso está en la lista de cursos comprados
+    const tieneCurso = usuario.cursosComprados.some((id: any) => {
+      if (!id) return false;
+      
+      // Convertir a string para comparaciones simples
+      const idStr = typeof id === 'string' ? id : id.toString();
+      return idStr === courseIdStr;
+    });
+    
+    console.log('Resultado de verificación de acceso a curso:', {
+      tieneAcceso: tieneCurso,
+      cursosComprados: usuario.cursosComprados.length
+    });
+    
+    return tieneCurso;
   } catch (error) {
     console.error('Error al verificar acceso al curso:', error);
     return false;

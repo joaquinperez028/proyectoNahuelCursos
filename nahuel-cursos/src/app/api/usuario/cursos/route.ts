@@ -107,11 +107,18 @@ export async function GET(request: Request) {
             if (ObjectId.isValid(id)) {
               cursoIds.push(new ObjectId(id));
             } else {
-              console.warn(`API: Ignorando ID de curso inválido: ${id}`);
+              console.warn(`API: Ignorando ID de curso inválido (string): ${id}`);
             }
           } else if (id instanceof ObjectId) {
             // Si ya es un ObjectId, usarlo directamente
             cursoIds.push(id);
+          } else if (id && typeof id === 'object' && id._id) {
+            // Si es un objeto con _id, usar ese valor
+            if (ObjectId.isValid(id._id)) {
+              cursoIds.push(new ObjectId(id._id.toString()));
+            }
+          } else {
+            console.warn(`API: Ignorando ID de curso con formato desconocido:`, id);
           }
         } catch (error) {
           console.error(`API: Error al procesar ID de curso (${id}):`, error);
@@ -119,22 +126,61 @@ export async function GET(request: Request) {
         }
       }
       
+      // Si no hay IDs válidos, intentar buscar usando strings también
       if (cursoIds.length === 0) {
+        console.log('API: No hay ObjectIds válidos, intentando otra estrategia');
+        
+        // Crear un array de strings para comparar
+        const cursoIdsString = usuario.cursosComprados
+          .filter(id => id) // Filtrar valores nulos o undefined
+          .map(id => typeof id === 'string' ? id : id.toString());
+        
+        if (cursoIdsString.length > 0) {
+          console.log('API: Buscando cursos con IDs (string):', cursoIdsString);
+          
+          // Buscar usando $or para comparar tanto ObjectId como strings
+          const cursosPorString = await db.collection('cursos')
+            .find({
+              $or: [
+                { _id: { $in: cursoIdsString.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id) } },
+                { id: { $in: cursoIdsString } } // Por si acaso hay un campo "id" en lugar de "_id"
+              ]
+            })
+            .toArray();
+          
+          console.log('API: Se encontraron', cursosPorString.length, 'cursos por string de', cursoIdsString.length, 'IDs');
+          
+          if (cursosPorString.length > 0) {
+            return NextResponse.json({ cursos: cursosPorString });
+          }
+        }
+        
         console.log('API: No hay IDs de cursos válidos para buscar');
         return NextResponse.json({ cursos: [] });
       }
       
-      console.log('API: Buscando cursos con IDs:', cursoIds.map(id => id.toString()));
+      console.log('API: Buscando cursos con IDs (ObjectId):', cursoIds.map(id => id.toString()));
       
-      // Obtener los detalles de los cursos comprados
+      // Obtener los detalles de los cursos comprados usando $or para mayor flexibilidad
       const cursos = await db.collection('cursos')
-        .find({ _id: { $in: cursoIds } })
+        .find({ 
+          $or: [
+            { _id: { $in: cursoIds } },
+            { _id: { $in: cursoIds.map(id => id.toString()) } } // Probar también con strings
+          ]
+        })
         .toArray();
       
       console.log('API: Se encontraron', cursos.length, 'cursos de', cursoIds.length, 'IDs');
       
       // Mapear los IDs para debuggeo
       console.log('IDs de cursos encontrados:', cursos.map(c => c._id.toString()));
+      
+      // Si no encontramos todos los cursos, loguear advertencia
+      if (cursos.length < cursoIds.length) {
+        console.warn('API: No se encontraron todos los cursos comprados. Faltan:', 
+          cursoIds.length - cursos.length);
+      }
       
       return NextResponse.json({ cursos });
     } catch (error) {

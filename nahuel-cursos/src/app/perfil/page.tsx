@@ -55,13 +55,20 @@ export default function Perfil() {
     }
   }, [status, session, router]);
 
-  const obtenerCursosComprados = async () => {
+  const obtenerCursosComprados = async (mostrarCarga = true) => {
     try {
-      setLoading(true);
+      if (mostrarCarga) {
+        setLoading(true);
+      }
       setError('');
       console.log('Solicitando cursos comprados...');
       
-      const response = await axios.get('/api/usuario/cursos');
+      const response = await axios.get('/api/usuario/cursos', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       // Verificar la estructura de la respuesta y asegurarse de que cursosComprados sea un array
       const cursos = response.data.cursos || [];
@@ -91,10 +98,24 @@ export default function Perfil() {
         }
       }
       
+      // Personalizar mensaje para errores específicos
+      if (err.response?.status === 401) {
+        mensajeError = 'Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.';
+        // Redirigir a login después de un breve retraso
+        setTimeout(() => {
+          router.push('/auth/login?redirect=/perfil');
+        }, 3000);
+      } else if (err.response?.status === 404) {
+        mensajeError = 'No se encontró tu información de usuario.';
+        mensajeDetalle = 'Por favor, cierra sesión y vuelve a iniciar sesión.';
+      }
+      
       setError(mensajeError + (mensajeDetalle ? ` - ${mensajeDetalle}` : ''));
       setCursosComprados([]); // Establecer un array vacío en caso de error
     } finally {
-      setLoading(false);
+      if (mostrarCarga) {
+        setLoading(false);
+      }
     }
   };
 
@@ -164,6 +185,15 @@ export default function Perfil() {
       obtenerCursosComprados();
     }, 500);
   };
+
+  // También vamos a añadir un efecto para recargar cursos cuando el usuario actualiza la sesión
+  useEffect(() => {
+    // Si cambió el ID del usuario, volver a cargar los cursos
+    if (status === 'authenticated' && session?.user?.id) {
+      console.log('ID de usuario en sesión:', session.user.id);
+      obtenerCursosComprados();
+    }
+  }, [session?.user?.id]);
 
   if (status === 'loading' || loading) {
     return (
@@ -339,12 +369,12 @@ export default function Perfil() {
               </div>
             )}
             
-            {!cursosComprados || cursosComprados.length === 0 ? (
+            {!error && !loading && (!cursosComprados || cursosComprados.length === 0) ? (
               <div className="text-center py-10">
                 <p className="text-black font-medium mb-4">Aún no has comprado ningún curso</p>
                 <Link 
                   href="/cursos" 
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                  className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors font-medium"
                 >
                   Ver cursos disponibles
                 </Link>
@@ -373,7 +403,7 @@ export default function Perfil() {
                         {curso.descripcion}
                       </p>
                       <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                        <span className="text-sm text-blue-600 font-medium">Curso comprado</span>
+                        <span className="text-sm text-green-600 font-medium">Curso comprado</span>
                         <Link 
                           href={`/cursos/${curso._id}`}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center"

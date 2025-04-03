@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { FaPlay, FaLock, FaSpinner, FaShoppingCart, FaCheckCircle } from 'react-icons/fa';
+import { FaPlay, FaLock, FaSpinner, FaShoppingCart, FaCheckCircle, FaTimes, FaSyncAlt } from 'react-icons/fa';
 import VideoPlayer from '@/components/VideoPlayer';
 import ValoracionEstrellas from '@/components/ValoracionEstrellas';
 import ValoracionesCurso from '@/components/ValoracionesCurso';
@@ -50,10 +50,28 @@ export default function DetalleCurso({ params }: CursoProps) {
       try {
         setLoading(true);
         console.log('Obteniendo detalles del curso:', id);
-        const response = await axios.get(`/api/cursos/${id}`);
+        
+        // Hacer la solicitud con cabeceras para evitar caché
+        const response = await axios.get(`/api/cursos/${id}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
         setCurso(response.data);
-        setTieneAcceso(!!response.data.video);
-        console.log('Tiene acceso al video:', !!response.data.video);
+        
+        // Verificar si tenemos acceso al video completo
+        const tieneVideoCompleto = !!response.data.video;
+        setTieneAcceso(tieneVideoCompleto);
+        
+        console.log('Tiene acceso al video completo:', tieneVideoCompleto);
+        
+        // Si viene de una compra pero no tiene el video, intentar cargar de nuevo
+        if (window.location.search.includes('comprado=true') && !tieneVideoCompleto) {
+          console.log('Compra reciente detectada, pero aún no tiene acceso. Recargando en 2 segundos...');
+          setTimeout(() => recargarCurso(), 2000);
+        }
       } catch (err) {
         console.error('Error al obtener curso:', err);
         setError('Ocurrió un error al cargar el curso. Intenta de nuevo más tarde.');
@@ -65,7 +83,53 @@ export default function DetalleCurso({ params }: CursoProps) {
     if (id) {
       obtenerCurso();
     }
-  }, [id, session]); // Añadir session a las dependencias para recargar cuando cambie
+  }, [id]); // Eliminamos session de las dependencias para evitar recargas innecesarias
+
+  // Función para recargar los datos del curso (después de una compra o error)
+  const recargarCurso = async () => {
+    try {
+      console.log('Recargando datos del curso...');
+      setLoading(true);
+      
+      const response = await axios.get(`/api/cursos/${id}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      setCurso(response.data);
+      
+      // Verificar si tenemos acceso al video completo
+      const tieneVideoCompleto = !!response.data.video;
+      setTieneAcceso(tieneVideoCompleto);
+      
+      console.log('Curso recargado, tiene acceso al video:', tieneVideoCompleto);
+      
+      // Limpiar URL sin recargar la página
+      if (window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      
+      // Si después de la recarga aún no tiene acceso, intentar una vez más después de un breve retraso
+      if (!tieneAcceso) {
+        setMensajeCompra('Finalizando configuración de acceso. Esto puede tardar unos segundos...');
+        
+        setTimeout(async () => {
+          await recargarCurso();
+          
+          if (!tieneAcceso) {
+            setMensajeCompra('Tu compra ha sido registrada correctamente. El acceso al curso estará disponible en unos minutos. Puedes verificar tu acceso con el botón.');
+          }
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('Error al recargar curso:', err);
+      // No mostramos error, mantenemos los datos que ya teníamos
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleComprarCurso = async () => {
     if (status === 'unauthenticated') {
@@ -79,7 +143,9 @@ export default function DetalleCurso({ params }: CursoProps) {
       setMensajeCompra('');
       console.log('Enviando compra con cursoId:', id);
       
-      const response = await axios.post('/api/cursos/comprar', { cursoId: id });
+      const response = await axios.post('/api/cursos/comprar', { 
+        cursoId: id 
+      });
       
       console.log('Respuesta de compra:', response.data);
       
@@ -87,22 +153,36 @@ export default function DetalleCurso({ params }: CursoProps) {
       setMensajeCompra('¡Curso comprado con éxito! Cargando contenido...');
       
       // Recargar los datos del curso después de la compra
-      const cursoResponse = await axios.get(`/api/cursos/${id}`);
-      setCurso(cursoResponse.data);
-      setTieneAcceso(!!cursoResponse.data.video);
+      await recargarCurso();
       
+      // Modificar la URL para indicar que el curso ha sido comprado
+      const newUrl = window.location.pathname + '?comprado=true';
+      window.history.replaceState({}, document.title, newUrl);
+
       // Si después de la recarga aún no tiene acceso, intentar una vez más después de un breve retraso
-      if (!cursoResponse.data.video) {
+      if (!tieneAcceso) {
+        setMensajeCompra('Finalizando configuración de acceso. Esto puede tardar unos segundos...');
+        
         setTimeout(async () => {
-          const finalResponse = await axios.get(`/api/cursos/${id}`);
-          setCurso(finalResponse.data);
-          setTieneAcceso(!!finalResponse.data.video);
-        }, 2000);
+          await recargarCurso();
+          
+          if (!tieneAcceso) {
+            setMensajeCompra('Tu compra ha sido registrada correctamente. El acceso al curso estará disponible en unos minutos. Puedes verificar tu acceso con el botón.');
+          }
+        }, 3000);
       }
     } catch (err: any) {
       console.error('Error al comprar curso:', err);
-      setMensajeCompra('');
-      alert(err.response?.data?.error || 'Error al procesar la compra del curso');
+      
+      // Si la respuesta indica que ya tiene el curso
+      if (err.response?.status === 200 || (err.response?.data?.mensaje && err.response?.data?.mensaje.includes('Ya has comprado'))) {
+        // Si ya tiene el curso, mostrar mensaje positivo e intentar recargar
+        setMensajeCompra('Ya tienes este curso. Verificando acceso al contenido...');
+        setTimeout(() => recargarCurso(), 1000);
+      } else {
+        // Para otros errores, mostrar mensaje de error
+        setMensajeCompra(`Error: ${err.response?.data?.error || 'Error al procesar la compra del curso'}`);
+      }
     } finally {
       setLoadingCompra(false);
     }
@@ -146,8 +226,22 @@ export default function DetalleCurso({ params }: CursoProps) {
       </div>
       
       {mensajeCompra && (
-        <div className="bg-green-50 text-green-800 p-4 rounded-lg mb-6 flex items-center">
-          <FaCheckCircle className="text-green-600 mr-2" /> {mensajeCompra}
+        <div className={`${mensajeCompra.includes('error') ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'} p-4 rounded-lg mb-6 flex items-center justify-between flex-wrap`}>
+          <div className="flex items-center">
+            {mensajeCompra.includes('error') 
+              ? <FaTimes className="text-red-600 mr-2" /> 
+              : <FaCheckCircle className="text-green-600 mr-2" />} 
+            {mensajeCompra}
+          </div>
+          
+          {!tieneAcceso && mensajeCompra.includes('compra') && (
+            <button 
+              onClick={recargarCurso} 
+              className="mt-2 sm:mt-0 bg-green-200 hover:bg-green-300 text-green-800 px-3 py-1 rounded text-sm"
+            >
+              <FaSyncAlt className="inline mr-1" /> Verificar acceso
+            </button>
+          )}
         </div>
       )}
       

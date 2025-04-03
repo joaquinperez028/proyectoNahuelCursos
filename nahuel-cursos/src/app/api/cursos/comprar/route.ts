@@ -50,15 +50,43 @@ export async function POST(request: Request) {
     }
     
     // Verificar que el usuario no haya comprado ya el curso
-    const usuario = await db.collection('usuarios').findOne({ 
-      _id: new ObjectId(session.user.id),
-      cursosComprados: { $in: [cursoId, cursoObjectId] }
-    });
-    
-    if (usuario) {
+    const usuarioQuery = { _id: new ObjectId(session.user.id) };
+    console.log('Buscando usuario con ID:', session.user.id);
+
+    let usuario = await db.collection('usuarios').findOne(usuarioQuery);
+
+    if (!usuario) {
+      console.log('Usuario no encontrado en base de datos');
       return NextResponse.json(
-        { error: 'Ya has comprado este curso' },
-        { status: 400 }
+        { error: 'No se encontró el usuario en la base de datos' },
+        { status: 404 }
+      );
+    }
+
+    console.log('Usuario encontrado, revisando cursos comprados');
+
+    // Verificar si el usuario ya tiene el curso (comparación más robusta)
+    let tieneCursoComprado = false;
+
+    if (usuario.cursosComprados && Array.isArray(usuario.cursosComprados)) {
+      // Normalizar el ID del curso para la comparación
+      const cursoIdStr = cursoId.toString();
+      
+      // Verificar si el curso ya está en la lista (en cualquier formato)
+      tieneCursoComprado = usuario.cursosComprados.some((id: any) => {
+        if (!id) return false;
+        const idStr = id.toString();
+        return idStr === cursoIdStr;
+      });
+      
+      console.log('¿El usuario ya tiene el curso?', tieneCursoComprado);
+      console.log('Cursos comprados:', usuario.cursosComprados.map((id: any) => id?.toString() || 'id_inválido'));
+    }
+
+    if (tieneCursoComprado) {
+      return NextResponse.json(
+        { mensaje: 'Ya has comprado este curso' },
+        { status: 200 }
       );
     }
     
@@ -68,78 +96,92 @@ export async function POST(request: Request) {
     // Simulación de procesamiento de pago exitoso
     // En un escenario real, solo se agregaría el curso al usuario tras confirmar el pago
     
-    // Añadir el curso a la lista de cursos comprados por el usuario
-    console.log('Registrando compra del curso para el usuario:', {
-      userId: session.user.id,
-      cursoId: cursoId.toString()
-    });
-    
-    // Verificar primero si el usuario ya tiene el curso (doble verificación)
-    const usuarioExistente = await db.collection('usuarios').findOne({
-      _id: new ObjectId(session.user.id),
-      cursosComprados: { $in: [cursoId.toString()] }
-    });
-    
-    if (usuarioExistente) {
-      console.log('El usuario ya tiene este curso, omitiendo actualización');
-      return NextResponse.json({
-        mensaje: 'Curso ya adquirido anteriormente',
-        curso: {
-          id: curso._id,
-          titulo: curso.titulo
-        }
-      });
-    }
-    
     // Asegurarnos de que siempre almacenamos el ID como string para consistencia
+    // También actualizamos en un campo nuevo para futuras búsquedas más eficientes
+    console.log('Registrando compra con ID:', cursoId.toString());
+
+    // Preparar la actualización con operadores más seguros
     const resultado = await db.collection('usuarios').updateOne(
       { _id: new ObjectId(session.user.id) },
-      { $addToSet: { cursosComprados: cursoId.toString() } }
+      { 
+        $addToSet: { 
+          cursosComprados: cursoId.toString()
+        },
+        $set: {
+          ultimaCompra: new Date()
+        }
+      }
     );
-    
+
     if (!resultado.acknowledged) {
-      throw new Error('Error al registrar la compra');
+      console.log('Error: operación no reconocida por MongoDB');
+      throw new Error('Error al registrar la compra: operación no reconocida');
     }
-    
+
+    console.log('Resultado de la actualización:', {
+      acknowledged: resultado.acknowledged,
+      modifiedCount: resultado.modifiedCount,
+      matchedCount: resultado.matchedCount,
+      upsertedCount: resultado.upsertedCount
+    });
+
+    if (resultado.matchedCount === 0) {
+      console.log('Error: no se encontró el usuario durante la actualización');
+      throw new Error('No se encontró el usuario para registrar la compra');
+    }
+
     if (resultado.modifiedCount === 0) {
-      console.log('No se modificó ningún documento. Verificando si el curso ya estaba registrado...');
+      console.log('Advertencia: No se modificó ningún documento');
       
-      // Verificar si el usuario ya tenía el curso (quizás en otro formato)
+      // Verificar si el curso realmente se agregó (doble chequeo)
+      console.log('Verificando si el curso realmente se agregó...');
       const usuarioActualizado = await db.collection('usuarios').findOne({
         _id: new ObjectId(session.user.id)
       });
       
-      if (usuarioActualizado && usuarioActualizado.cursosComprados) {
-        const tieneCurso = usuarioActualizado.cursosComprados.some((id: any) => 
-          id.toString() === cursoId.toString()
-        );
-        
-        if (tieneCurso) {
-          console.log('El curso ya estaba registrado en otro formato');
-          return NextResponse.json({
-            mensaje: 'Curso ya adquirido anteriormente', 
-            curso: { 
-              id: curso._id,
-              titulo: curso.titulo
-            } 
+      if (usuarioActualizado) {
+        if (usuarioActualizado.cursosComprados && Array.isArray(usuarioActualizado.cursosComprados)) {
+          // Normalizar el ID del curso para la comparación
+          const cursoIdStr = cursoId.toString();
+          
+          // Verificar si el curso está en la lista después de todo
+          const tieneCursoAhora = usuarioActualizado.cursosComprados.some((id: any) => {
+            if (!id) return false;
+            const idStr = id.toString();
+            return idStr === cursoIdStr;
           });
+          
+          if (tieneCursoAhora) {
+            console.log('El curso ya estaba en la lista aunque no se registró modificación');
+            return NextResponse.json({
+              mensaje: 'Curso ya registrado anteriormente', 
+              curso: { 
+                id: curso._id.toString(),
+                titulo: curso.titulo
+              } 
+            });
+          }
         }
+        
+        console.log('El curso NO se encuentra en la lista del usuario después de la operación');
       }
       
       // Si llegamos aquí es porque hubo un problema real
-      throw new Error('No se pudo registrar la compra');
+      throw new Error('No se pudo registrar la compra: el documento no fue modificado');
     }
-    
+
     console.log('Compra registrada con éxito:', {
-      modifiedCount: resultado.modifiedCount,
-      matchedCount: resultado.matchedCount
+      userId: session.user.id,
+      cursoId: cursoId.toString(),
+      modifiedCount: resultado.modifiedCount
     });
-    
+
+    // Devolver respuesta de éxito
     return NextResponse.json(
       { 
         mensaje: 'Curso comprado exitosamente', 
         curso: { 
-          id: curso._id,
+          id: curso._id.toString(),
           titulo: curso.titulo
         } 
       }
