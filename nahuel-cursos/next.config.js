@@ -8,13 +8,10 @@ const nextConfig = {
     // Ignorar los errores de TypeScript durante la compilación
     ignoreBuildErrors: true,
   },
-  // Desactivar las comprobaciones de React para resolver el error de useSearchParams y Suspense
+  // Desactivar las comprobaciones de React para resolver problemas de compatibilidad
   reactStrictMode: false,
-  experimental: {
-    // Desactivar la validación de React Server Components para el despliegue
-    serverComponentsExternalPackages: [],
-    missingSuspenseWithCSRBailout: false
-  },
+  // Configuración para paquetes externos en el servidor (actualizada para Next.js 15)
+  serverExternalPackages: [],
   // Otras configuraciones existentes...
 };
 
