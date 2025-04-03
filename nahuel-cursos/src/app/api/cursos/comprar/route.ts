@@ -307,7 +307,14 @@ export async function POST(request: Request) {
         curso: { 
           id: curso._id.toString(),
           titulo: curso.titulo
-        } 
+        },
+        success: true,
+        tieneAcceso: true
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
     } catch (compraError) {
       console.error('API: Error durante el proceso de compra:', compraError);

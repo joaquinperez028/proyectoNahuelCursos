@@ -99,10 +99,63 @@ export default function DetalleCurso({ params }: CursoProps) {
         return;
       }
       
+      // Intentar verificar directamente si tiene cursos comprados a través del endpoint de usuario
+      try {
+        const cursosResponse = await axios.get('/api/usuario/cursos', {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        console.log('Respuesta de cursos del usuario:', cursosResponse.data);
+        
+        // Verificar si el curso actual está en la lista de comprados
+        if (cursosResponse.data.cursos && Array.isArray(cursosResponse.data.cursos)) {
+          const cursoComprado = cursosResponse.data.cursos.some(
+            (curso: any) => curso._id === id || curso._id.toString() === id
+          );
+          
+          console.log('¿Curso encontrado en la lista de comprados?', cursoComprado);
+          
+          if (cursoComprado) {
+            console.log('Curso ya comprado según endpoint de usuario');
+            setTieneAcceso(true);
+            setMensajeCompra('¡Ya tienes acceso al curso! El contenido completo está disponible ahora.');
+            
+            // Recargar la info del curso para obtener el enlace al video completo
+            const cursoResponse = await axios.get(`/api/cursos/${id}`, {
+              headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+              }
+            });
+            
+            setCurso(cursoResponse.data);
+            
+            // Limpiar URL sin recargar la página
+            if (window.location.search) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            // Ocultar el mensaje después de unos segundos
+            setTimeout(() => setMensajeCompra(''), 5000);
+            
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (cursosErr) {
+        console.error('Error al verificar cursos del usuario:', cursosErr);
+        // Continuamos con el método alternativo
+      }
+      
+      // Método estándar: obtener el curso y verificar si tiene video
       const response = await axios.get(`/api/cursos/${id}`, {
         headers: {
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          'X-Force-Check': 'true' // Cabecera personalizada para forzar verificación
         }
       });
       
@@ -190,6 +243,7 @@ export default function DetalleCurso({ params }: CursoProps) {
       if (err.response?.data?.mensaje) {
         // Si ya tiene el curso o cualquier otro mensaje de éxito
         setMensajeCompra(err.response.data.mensaje);
+        // Verificar acceso de todos modos, porque podría ser que ya tenga el curso
         setTimeout(() => recargarCurso(), 1000);
       } 
       // Respuesta con error pero con mensaje específico
@@ -207,10 +261,16 @@ export default function DetalleCurso({ params }: CursoProps) {
         }
         
         setMensajeCompra('Error: ' + mensajeError);
+        
+        // IMPORTANTE: Aún con errores, verificar acceso
+        // porque podría ser que la compra se haya registrado a pesar del error
+        setTimeout(() => recargarCurso(), 2000);
       } 
       // Error general sin detalles
       else {
         setMensajeCompra('Error: No se pudo procesar la compra. Por favor, intenta más tarde.');
+        // Verificar acceso de todos modos
+        setTimeout(() => recargarCurso(), 2000);
       }
     } finally {
       setLoadingCompra(false);

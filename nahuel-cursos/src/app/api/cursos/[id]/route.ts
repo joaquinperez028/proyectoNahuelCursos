@@ -24,6 +24,12 @@ export async function GET(request: Request, context: RouteParams) {
     const cursoId = params.id;
     const session = await getServerSession(authOptions);
     
+    // Verificar si se solicita una comprobación forzada
+    const headers = request.headers;
+    const forceCheck = headers.get('X-Force-Check') === 'true';
+    
+    console.log('API Curso: Obteniendo curso', cursoId, 'con verificación forzada:', forceCheck);
+    
     // Validar el ID del curso
     if (!ObjectId.isValid(cursoId)) {
       return NextResponse.json(
@@ -47,96 +53,115 @@ export async function GET(request: Request, context: RouteParams) {
     }
     
     // Verificar si el usuario ha comprado el curso
-    let cursoComprado = null;
+    let tieneAcceso = false;
     if (session?.user?.id) {
-      console.log('Verificando si el usuario tiene acceso al curso:', {
+      console.log('API Curso: Verificando si el usuario tiene acceso al curso:', {
         userId: session.user.id,
         cursoId: cursoId
       });
       
       // Si el ID es temporal, el usuario aún no está sincronizado
       if (session.user.id.startsWith('temp_')) {
-        console.log('ID temporal detectado, usuario aún no sincronizado');
-        // No asignamos acceso, retornamos el curso sin video
+        console.log('API Curso: ID temporal detectado, usuario aún no sincronizado');
+        // Intentamos buscar por email de todas formas
+        if (session.user.email) {
+          try {
+            const usuarioEmail = await db.collection('usuarios').findOne({
+              email: session.user.email
+            });
+            
+            if (usuarioEmail) {
+              console.log('API Curso: Usuario encontrado por email a pesar de ID temporal');
+              
+              // Verificar cursos comprados
+              if (usuarioEmail.cursosComprados && Array.isArray(usuarioEmail.cursosComprados)) {
+                const cursoIdString = cursoId.toString();
+                const tieneCurso = usuarioEmail.cursosComprados.some((id: any) => 
+                  id && id.toString() === cursoIdString
+                );
+                
+                if (tieneCurso) {
+                  console.log('API Curso: Usuario con ID temporal tiene acceso por email');
+                  tieneAcceso = true;
+                }
+              }
+            }
+          } catch (emailError) {
+            console.error('API Curso: Error al intentar verificar por email:', emailError);
+          }
+        }
       } else {
         try {
-          // Métodos mejorados para buscar al usuario
+          // Buscar primero por email (más confiable)
           let usuario = null;
           
-          // Primera comprobación: buscar usuario por ID si es válido
-          if (ObjectId.isValid(session.user.id)) {
-            try {
-              usuario = await db.collection('usuarios').findOne({
-                _id: new ObjectId(session.user.id)
-              });
-            } catch (error) {
-              console.error('Error al buscar usuario por ID:', error);
+          if (session.user.email) {
+            usuario = await db.collection('usuarios').findOne({
+              email: session.user.email
+            });
+            
+            if (usuario) {
+              console.log('API Curso: Usuario encontrado por email:', usuario._id.toString());
             }
           }
           
-          // Si no encontramos el usuario por ID, intentar por email
-          if (!usuario && session.user.email) {
-            console.log('Usuario no encontrado por ID, probando con email:', session.user.email);
-            try {
-              usuario = await db.collection('usuarios').findOne({
-                email: session.user.email
-              });
-            } catch (error) {
-              console.error('Error al buscar usuario por email:', error);
+          // Si no encontramos por email, intentar por ID
+          if (!usuario && ObjectId.isValid(session.user.id)) {
+            usuario = await db.collection('usuarios').findOne({
+              _id: new ObjectId(session.user.id)
+            });
+            
+            if (usuario) {
+              console.log('API Curso: Usuario encontrado por ID:', usuario._id.toString());
             }
           }
           
           if (!usuario) {
-            console.log('No se encontró el usuario ni por ID ni por email');
+            console.log('API Curso: No se encontró el usuario');
           } else if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados)) {
-            console.log('El usuario no tiene la propiedad cursosComprados o no es un array:', usuario);
+            console.log('API Curso: El usuario no tiene la propiedad cursosComprados o no es un array');
           } else {
-            console.log('Verificando acceso entre', usuario.cursosComprados.length, 'cursos comprados');
+            console.log('API Curso: Verificando acceso entre', usuario.cursosComprados.length, 'cursos comprados');
             
             // Normalizar ID del curso a string para comparaciones consistentes
             const cursoIdString = cursoId.toString();
             
-            // Verificar si el curso está en la lista de cursos comprados (multiples formatos)
+            // Verificar si el curso está en la lista de cursos comprados
             const tieneCurso = usuario.cursosComprados.some((id: any) => {
               if (!id) return false;
-              // Convertir el ID a string para comparación
-              const idCursoComprado = id?.toString() || '';
-              return (
-                idCursoComprado === cursoIdString || 
-                idCursoComprado === cursoId
-              );
+              return id?.toString() === cursoIdString;
             });
             
-            console.log('¿Usuario tiene el curso?', tieneCurso, {
-              cursosComprados: usuario.cursosComprados.map((id: any) => id?.toString() || 'id_inválido')
-            });
-            
-            cursoComprado = tieneCurso ? usuario : null;
-            
-            // Log adicional para diagnóstico si no se encontró el curso
-            if (!tieneCurso) {
-              console.log('IDs de cursos comprados:', usuario.cursosComprados);
-              console.log('ID del curso solicitado:', cursoId, '(tipo:', typeof cursoId, ')');
-            }
+            console.log('API Curso: ¿Usuario tiene el curso?', tieneCurso);
+            tieneAcceso = tieneCurso;
           }
         } catch (error) {
-          console.error('Error al verificar cursos comprados:', error);
-          // No interrumpimos el flujo, simplemente logueamos el error
+          console.error('API Curso: Error al verificar cursos comprados:', error);
         }
       }
       
-      // Log para el diagnóstico final
-      console.log('Resultado final de verificación de acceso:', {
-        tieneAcceso: !!cursoComprado,
+      // Log del resultado final
+      console.log('API Curso: Resultado final de verificación de acceso:', {
+        tieneAcceso: tieneAcceso,
         userId: session.user.id,
-        cursoId: cursoId,
-        idTemporal: session.user.id.startsWith('temp_')
+        cursoId: cursoId
       });
     }
       
     // Si el usuario ha comprado el curso, incluir el video completo
-    if (cursoComprado) {
-      return NextResponse.json(curso);
+    if (tieneAcceso) {
+      // Añadir indicadores para el frontend
+      const cursoCompleto = {
+        ...curso,
+        tieneAcceso: true
+      };
+      
+      return NextResponse.json(cursoCompleto, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
     }
     
     // Si no ha comprado el curso, omitir el video completo
@@ -162,7 +187,18 @@ export async function GET(request: Request, context: RouteParams) {
       }
     }
     
-    return NextResponse.json(cursoSinVideo);
+    // Indicar explícitamente que no tiene acceso
+    const cursoRestringido = {
+      ...cursoSinVideo,
+      tieneAcceso: false
+    };
+    
+    return NextResponse.json(cursoRestringido, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
   } catch (error) {
     console.error('Error al obtener curso:', error);
     return NextResponse.json(
