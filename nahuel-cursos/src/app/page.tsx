@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { FaGraduationCap, FaChartLine, FaLock, FaVideo } from 'react-icons/fa';
+import CursosRecientes from '@/components/CursosRecientes';
 
 export default function Home() {
   return (
@@ -55,6 +56,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Cursos Recientes */}
+      <CursosRecientes />
+      
       {/* Características */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

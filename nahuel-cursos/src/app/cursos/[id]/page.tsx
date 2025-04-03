@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { FaPlay, FaLock, FaSpinner, FaShoppingCart } from 'react-icons/fa';
+import { FaPlay, FaLock, FaSpinner, FaShoppingCart, FaCheckCircle } from 'react-icons/fa';
 import VideoPlayer from '@/components/VideoPlayer';
+import ValoracionEstrellas from '@/components/ValoracionEstrellas';
+import ValoracionesCurso from '@/components/ValoracionesCurso';
+import { useParams } from 'next/navigation';
 
 interface CursoProps {
   params: {
@@ -22,10 +25,15 @@ interface Curso {
   videoPreview: string;
   fechaCreacion: string;
   categorias: string[];
+  calificacionPromedio?: number;
+  totalValoraciones?: number;
 }
 
 export default function DetalleCurso({ params }: CursoProps) {
-  const { id } = params;
+  // Usar useParams para obtener los parámetros de la ruta
+  const routeParams = useParams();
+  const id = routeParams.id as string;
+  
   const { data: session, status } = useSession();
   const router = useRouter();
   
@@ -34,14 +42,18 @@ export default function DetalleCurso({ params }: CursoProps) {
   const [error, setError] = useState('');
   const [loadingCompra, setLoadingCompra] = useState(false);
   const [tieneAcceso, setTieneAcceso] = useState(false);
+  const [mensajeCompra, setMensajeCompra] = useState('');
 
+  // Cargar los datos del curso cuando el componente se monta
   useEffect(() => {
     const obtenerCurso = async () => {
       try {
         setLoading(true);
+        console.log('Obteniendo detalles del curso:', id);
         const response = await axios.get(`/api/cursos/${id}`);
         setCurso(response.data);
         setTieneAcceso(!!response.data.video);
+        console.log('Tiene acceso al video:', !!response.data.video);
       } catch (err) {
         console.error('Error al obtener curso:', err);
         setError('Ocurrió un error al cargar el curso. Intenta de nuevo más tarde.');
@@ -50,8 +62,10 @@ export default function DetalleCurso({ params }: CursoProps) {
       }
     };
     
-    obtenerCurso();
-  }, [id]);
+    if (id) {
+      obtenerCurso();
+    }
+  }, [id, session]); // Añadir session a las dependencias para recargar cuando cambie
 
   const handleComprarCurso = async () => {
     if (status === 'unauthenticated') {
@@ -62,14 +76,32 @@ export default function DetalleCurso({ params }: CursoProps) {
     
     try {
       setLoadingCompra(true);
+      setMensajeCompra('');
+      console.log('Enviando compra con cursoId:', id);
+      
       const response = await axios.post('/api/cursos/comprar', { cursoId: id });
       
-      if (response.status === 200) {
-        // Refrescar la página para mostrar el contenido completo del curso
-        window.location.reload();
+      console.log('Respuesta de compra:', response.data);
+      
+      // Mostrar mensaje de éxito
+      setMensajeCompra('¡Curso comprado con éxito! Cargando contenido...');
+      
+      // Recargar los datos del curso después de la compra
+      const cursoResponse = await axios.get(`/api/cursos/${id}`);
+      setCurso(cursoResponse.data);
+      setTieneAcceso(!!cursoResponse.data.video);
+      
+      // Si después de la recarga aún no tiene acceso, intentar una vez más después de un breve retraso
+      if (!cursoResponse.data.video) {
+        setTimeout(async () => {
+          const finalResponse = await axios.get(`/api/cursos/${id}`);
+          setCurso(finalResponse.data);
+          setTieneAcceso(!!finalResponse.data.video);
+        }, 2000);
       }
     } catch (err: any) {
       console.error('Error al comprar curso:', err);
+      setMensajeCompra('');
       alert(err.response?.data?.error || 'Error al procesar la compra del curso');
     } finally {
       setLoadingCompra(false);
@@ -102,9 +134,9 @@ export default function DetalleCurso({ params }: CursoProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{curso.titulo}</h1>
-        <div className="flex flex-wrap gap-2 mb-4">
+      <div className="bg-blue-900 py-4 px-6 rounded-t-xl mb-6">
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-0">{curso.titulo}</h1>
+        <div className="flex flex-wrap gap-2 mt-2">
           {curso.categorias.map((categoria, index) => (
             <span key={index} className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
               {categoria}
@@ -112,6 +144,12 @@ export default function DetalleCurso({ params }: CursoProps) {
           ))}
         </div>
       </div>
+      
+      {mensajeCompra && (
+        <div className="bg-green-50 text-green-800 p-4 rounded-lg mb-6 flex items-center">
+          <FaCheckCircle className="text-green-600 mr-2" /> {mensajeCompra}
+        </div>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Contenido Principal */}
@@ -159,6 +197,9 @@ export default function DetalleCurso({ params }: CursoProps) {
               )}
             </div>
           </div>
+          
+          {/* Valoraciones del curso */}
+          {id && <ValoracionesCurso cursoId={id} tieneAcceso={tieneAcceso} />}
         </div>
         
         {/* Sidebar */}
@@ -168,6 +209,18 @@ export default function DetalleCurso({ params }: CursoProps) {
               <div className="p-6">
                 <div className="font-bold text-3xl text-gray-900 mb-2">${curso.precio.toFixed(2)}</div>
                 <p className="text-gray-600 mb-6">Acceso de por vida al contenido del curso</p>
+                
+                {/* Mostrar valoraciones en la sidebar */}
+                {(curso.calificacionPromedio !== undefined && curso.calificacionPromedio > 0) && (
+                  <div className="mb-6">
+                    <ValoracionEstrellas 
+                      calificacion={curso.calificacionPromedio} 
+                      totalValoraciones={curso.totalValoraciones} 
+                      tamano="lg"
+                    />
+                  </div>
+                )}
+                
                 <button
                   onClick={handleComprarCurso}
                   disabled={loadingCompra}

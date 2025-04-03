@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/connection';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
 import { ObjectId } from 'mongodb';
 
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       );
     }
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Obtener el usuario con sus cursos comprados
     const usuario = await db.collection('usuarios').findOne({ 
@@ -31,21 +31,26 @@ export async function GET(request: Request) {
     }
     
     // Si el usuario no tiene cursos comprados, devolver un array vacío
-    if (!usuario.cursosComprados || usuario.cursosComprados.length === 0) {
+    if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados) || usuario.cursosComprados.length === 0) {
       return NextResponse.json({ cursos: [] });
     }
     
-    // Convertir los IDs de string a ObjectId
-    const cursoIds = usuario.cursosComprados.map((id: string) => 
-      new ObjectId(id)
-    );
-    
-    // Obtener los detalles de los cursos comprados
-    const cursos = await db.collection('cursos')
-      .find({ _id: { $in: cursoIds } })
-      .toArray();
-    
-    return NextResponse.json({ cursos });
+    try {
+      // Convertir los IDs de string a ObjectId
+      const cursoIds = usuario.cursosComprados.map((id: string) => 
+        new ObjectId(id)
+      );
+      
+      // Obtener los detalles de los cursos comprados
+      const cursos = await db.collection('cursos')
+        .find({ _id: { $in: cursoIds } })
+        .toArray();
+      
+      return NextResponse.json({ cursos });
+    } catch (error) {
+      console.error('Error al procesar los IDs de cursos:', error);
+      return NextResponse.json({ cursos: [] });
+    }
   } catch (error) {
     console.error('Error al obtener cursos del usuario:', error);
     return NextResponse.json(

@@ -10,15 +10,15 @@ let db: Db;
  * Función para conectar a la base de datos de MongoDB
  * @returns Una promesa que resuelve a la instancia de la base de datos
  */
-export async function connectToDatabase(): Promise<Db> {
+export async function connectToDatabase() {
   if (db) {
-    return db;
+    return { db };
   }
   
   try {
     const client = await clientPromise;
     db = client.db(process.env.MONGODB_DB || 'nahuel-cursos');
-    return db;
+    return { db };
   } catch (error) {
     console.error('Error al conectar a MongoDB:', error);
     throw new Error('No se pudo conectar a la base de datos');

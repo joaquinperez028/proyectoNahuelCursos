@@ -19,17 +19,29 @@ export async function POST(request: Request) {
     const data = await request.json();
     const { cursoId } = data;
     
-    if (!cursoId || !ObjectId.isValid(cursoId)) {
+    if (!cursoId) {
+      return NextResponse.json(
+        { error: 'ID de curso no proporcionado' },
+        { status: 400 }
+      );
+    }
+    
+    // Intentar convertir el ID a un formato válido para ObjectId
+    let cursoObjectId;
+    try {
+      cursoObjectId = new ObjectId(cursoId);
+    } catch (error) {
+      console.error('Error al convertir ID del curso:', error);
       return NextResponse.json(
         { error: 'ID de curso inválido' },
         { status: 400 }
       );
     }
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Verificar que el curso exista
-    const curso = await db.collection('cursos').findOne({ _id: new ObjectId(cursoId) });
+    const curso = await db.collection('cursos').findOne({ _id: cursoObjectId });
     if (!curso) {
       return NextResponse.json(
         { error: 'Curso no encontrado' },
@@ -40,7 +52,7 @@ export async function POST(request: Request) {
     // Verificar que el usuario no haya comprado ya el curso
     const usuario = await db.collection('usuarios').findOne({ 
       _id: new ObjectId(session.user.id),
-      cursosComprados: cursoId
+      cursosComprados: { $in: [cursoId, cursoObjectId] }
     });
     
     if (usuario) {
@@ -57,14 +69,21 @@ export async function POST(request: Request) {
     // En un escenario real, solo se agregaría el curso al usuario tras confirmar el pago
     
     // Añadir el curso a la lista de cursos comprados por el usuario
+    console.log('Registrando compra del curso para el usuario:', {
+      userId: session.user.id,
+      cursoId: cursoId.toString()
+    });
+    
     const resultado = await db.collection('usuarios').updateOne(
       { _id: new ObjectId(session.user.id) },
-      { $addToSet: { cursosComprados: cursoId } }
+      { $addToSet: { cursosComprados: cursoId.toString() } }
     );
     
     if (!resultado.acknowledged || resultado.modifiedCount === 0) {
       throw new Error('Error al registrar la compra');
     }
+    
+    console.log('Compra registrada con éxito:', resultado.modifiedCount);
     
     return NextResponse.json(
       { 

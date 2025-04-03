@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const ordenPrecio = searchParams.get('ordenPrecio') || '';
     const ordenFecha = searchParams.get('ordenFecha') || 'desc';
 
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Construir el filtro de búsqueda
     const filtro: any = {};
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       );
     }
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Crear el nuevo curso
     const resultado = await db.collection('cursos').insertOne({

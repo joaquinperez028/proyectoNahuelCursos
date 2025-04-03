@@ -1,0 +1,101 @@
+/* Estilos personalizados para mejorar la legibilidad */
+
+/* Hacer que todos los textos sean negros por defecto */
+body {
+  color: #000000; /* Negro puro */
+}
+
+/* Aumentar el peso de la fuente para textos principales */
+p, span, div, td, li {
+  color: #000000 !important; /* Forzar color negro */
+  font-weight: 500; /* Medio */
+}
+
+/* Asegurar que las etiquetas tengan suficiente contraste */
+label, th {
+  color: #000000 !important;
+  font-weight: 600; /* Semi-bold */
+}
+
+/* Hacer que los títulos sean más claros */
+h1, h2, h3, h4, h5, h6 {
+  color: #000000 !important;
+  font-weight: 700; /* Bold */
+}
+
+/* Contenedores con fondos oscuros deben tener texto blanco */
+.bg-black *, .bg-blue-900 *, .bg-gray-900 *,
+.bg-blue-800 *, .bg-gray-800 *, 
+div[class*="bg-blue-9"] *, div[class*="bg-gray-9"] *,
+div[class*="bg-blue-8"] *, div[class*="bg-gray-8"] * {
+  color: #ffffff !important;
+}
+
+/* El título principal en páginas con fondo negro debe ser blanco */
+.bg-black h1, .bg-blue-900 h1, .bg-gray-900 h1, 
+.bg-blue-800 h1, .bg-gray-800 h1,
+main[style*="background:#000000"] h1, main[style*="background-color:#000000"] h1,
+main[style*="background:#0D0D0D"] h1, main[style*="background-color:#0D0D0D"] h1,
+main[style*="background:#121212"] h1, main[style*="background-color:#121212"] h1,
+main[style*="background:rgb(0,0,0)"] h1, main[style*="background-color:rgb(0,0,0)"] h1,
+main[style*="background:rgba(0,0,0,"] h1, main[style*="background-color:rgba(0,0,0,"] h1,
+main[style*="background:black"] h1, main[style*="background-color:black"] h1 {
+  color: #ffffff !important; /* Texto blanco */
+}
+
+/* Página específica de perfil */
+main > div > h1:first-of-type {
+  color: #ffffff !important; /* Texto blanco para el título principal */
+}
+
+/* Excepción para el menú de navegación y footer */
+.bg-blue-900 *, .bg-blue-900 a, .bg-blue-900 span, .bg-blue-900 div,
+.bg-blue-900 h1, .bg-blue-900 h2, .bg-blue-900 h3, .bg-blue-900 p,
+.bg-gray-900 *, .bg-gray-900 a, .bg-gray-900 span, .bg-gray-900 div,
+.bg-gray-900 h1, .bg-gray-900 h2, .bg-gray-900 h3, .bg-gray-900 p {
+  color: #ffffff !important; /* Texto blanco para el menú y footer */
+}
+
+/* Excepción para los enlaces en el menú y footer */
+.bg-blue-900 a, .bg-gray-900 a {
+  font-weight: 500;
+  color: #ffffff !important;
+}
+
+/* Clase de utilidad para forzar texto negro */
+.text-force-black {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+/* Clase de utilidad para forzar texto blanco */
+.text-force-white {
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+/* Mantener texto blanco en botones con fondo de color */
+button.bg-blue-600 *, 
+button.bg-blue-700 *,
+a.bg-blue-600 *,
+a.bg-blue-700 * {
+  color: #ffffff !important;
+}
+
+/* Clase para mejorar textos en controles de formulario */
+input, textarea, select {
+  color: #000000 !important;
+  font-weight: 500;
+}
+
+/* Asegurar que los textos de placeholder sean legibles */
+::placeholder {
+  color: #666666 !important;
+  font-weight: 400;
+}
+
+/* Mantener el azul para los enlaces en fondos claros */
+a:not(.bg-blue-600):not(.bg-blue-700):not(.text-white):not(.bg-blue-900 a):not(.bg-gray-900 a):not([class*="bg-blue"]):not([class*="bg-gray-9"]) {
+  color: #2563eb !important; /* Azul para enlaces */
+  font-weight: 500;
+} 

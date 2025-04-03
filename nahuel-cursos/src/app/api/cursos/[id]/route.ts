@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/connection';
-import { getServerSession } from 'next-auth';
-import { authOptions, isAdmin, hasCourseAccess } from '@/lib/auth/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth/auth';
 import { ObjectId } from 'mongodb';
 
 interface RouteParams {
@@ -11,19 +11,33 @@ interface RouteParams {
 }
 
 // GET /api/cursos/[id] - Obtener un curso específico
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: Request, context: RouteParams) {
   try {
-    const { id } = params;
+    const params = await context.params;
+    if (!params || !params.id) {
+      return NextResponse.json(
+        { error: 'ID de curso no proporcionado' },
+        { status: 400 }
+      );
+    }
+
+    const cursoId = params.id;
+    const session = await getServerSession(authOptions);
     
-    if (!ObjectId.isValid(id)) {
+    // Validar el ID del curso
+    if (!ObjectId.isValid(cursoId)) {
       return NextResponse.json(
         { error: 'ID de curso inválido' },
         { status: 400 }
       );
     }
-
-    const db = await connectToDatabase();
-    const curso = await db.collection('cursos').findOne({ _id: new ObjectId(id) });
+    
+    const { db } = await connectToDatabase();
+    
+    // Obtener el curso de la base de datos
+    const curso = await db.collection('cursos').findOne({
+      _id: new ObjectId(cursoId)
+    });
     
     if (!curso) {
       return NextResponse.json(
@@ -31,22 +45,52 @@ export async function GET(request: Request, { params }: RouteParams) {
         { status: 404 }
       );
     }
-
-    // Verificar acceso al contenido del curso si no es sólo la vista previa
-    const session = await getServerSession(authOptions);
-    const isFullAccess = session && (
-      isAdmin(session) || 
-      (session.user?.id && await hasCourseAccess(session.user.id, id))
-    );
     
-    // Si el usuario no tiene acceso completo, solo enviar información limitada
-    if (!isFullAccess) {
-      // No enviar la URL completa del video del curso, solo la vista previa
-      const { video, ...cursoInfo } = curso;
-      return NextResponse.json(cursoInfo);
+    // Verificar si el usuario ha comprado el curso
+    let cursoComprado = null;
+    if (session?.user?.id) {
+      console.log('Verificando si el usuario tiene acceso al curso:', {
+        userId: session.user.id,
+        cursoId: cursoId
+      });
+      
+      cursoComprado = await db.collection('usuarios').findOne({ 
+        _id: new ObjectId(session.user.id),
+        cursosComprados: { $in: [cursoId, new ObjectId(cursoId)] }
+      });
+      
+      console.log('Resultado de verificación de acceso:', !!cursoComprado);
+    }
+      
+    // Si el usuario ha comprado el curso, incluir el video completo
+    if (cursoComprado) {
+      return NextResponse.json(curso);
     }
     
-    return NextResponse.json(curso);
+    // Si no ha comprado el curso, omitir el video completo
+    const { video, ...cursoSinVideo } = curso;
+    
+    // Obtener valoraciones si no existen en el documento del curso
+    if (!curso.calificacionPromedio) {
+      // Obtener las valoraciones del curso
+      const valoraciones = await db
+        .collection('valoraciones')
+        .find({ cursoId: new ObjectId(cursoId) })
+        .toArray();
+      
+      // Calcular la calificación promedio
+      let promedio = 0;
+      if (valoraciones.length > 0) {
+        const suma = valoraciones.reduce((acc: number, val: any) => acc + val.calificacion, 0);
+        promedio = suma / valoraciones.length;
+        
+        // Añadir la información de valoraciones al curso
+        cursoSinVideo.calificacionPromedio = promedio;
+        cursoSinVideo.totalValoraciones = valoraciones.length;
+      }
+    }
+    
+    return NextResponse.json(cursoSinVideo);
   } catch (error) {
     console.error('Error al obtener curso:', error);
     return NextResponse.json(
@@ -57,9 +101,17 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // PUT /api/cursos/[id] - Actualizar un curso (solo admin)
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(request: Request, context: RouteParams) {
   try {
-    const { id } = params;
+    const params = await context.params;
+    if (!params || !params.id) {
+      return NextResponse.json(
+        { error: 'ID de curso no proporcionado' },
+        { status: 400 }
+      );
+    }
+
+    const id = params.id;
     
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -70,6 +122,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     // Verificar autenticación y permisos de administrador
     const session = await getServerSession(authOptions);
+    const { isAdmin } = await import('@/lib/auth/auth');
+    
     if (!session || !isAdmin(session)) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -87,7 +141,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Actualizar el curso
     const resultado = await db.collection('cursos').updateOne(
@@ -128,9 +182,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
 }
 
 // DELETE /api/cursos/[id] - Eliminar un curso (solo admin)
-export async function DELETE(request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, context: RouteParams) {
   try {
-    const { id } = params;
+    const params = await context.params;
+    if (!params || !params.id) {
+      return NextResponse.json(
+        { error: 'ID de curso no proporcionado' },
+        { status: 400 }
+      );
+    }
+
+    const id = params.id;
     
     if (!ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -141,6 +203,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     // Verificar autenticación y permisos de administrador
     const session = await getServerSession(authOptions);
+    const { isAdmin } = await import('@/lib/auth/auth');
+    
     if (!session || !isAdmin(session)) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -148,7 +212,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       );
     }
     
-    const db = await connectToDatabase();
+    const { db } = await connectToDatabase();
     
     // Eliminar el curso
     const resultado = await db.collection('cursos').deleteOne({ _id: new ObjectId(id) });

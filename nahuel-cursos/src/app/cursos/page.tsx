@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
 import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner } from 'react-icons/fa';
+import ValoracionEstrellas from '@/components/ValoracionEstrellas';
 
 interface Curso {
   _id: string;
@@ -12,6 +13,8 @@ interface Curso {
   precio: number;
   videoPreview: string;
   fechaCreacion: string;
+  calificacionPromedio?: number;
+  totalValoraciones?: number;
 }
 
 interface CursosResponse {
@@ -109,9 +112,9 @@ export default function Cursos() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Explora nuestros cursos</h1>
-        <p className="text-lg text-gray-600">
+      <div className="bg-blue-900 py-4 px-6 rounded-t-xl mb-6">
+        <h1 className="text-3xl font-bold text-white mb-0">Explora nuestros cursos</h1>
+        <p className="text-lg text-white mb-0">
           Descubre los mejores cursos para aprender sobre inversiones en criptomonedas
         </p>
       </div>
@@ -205,7 +208,17 @@ export default function Cursos() {
                 <h3 className="text-xl font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
                 <p className="text-gray-600 mb-4 line-clamp-3">{curso.descripcion}</p>
                 <div className="flex justify-between items-center">
-                  <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
+                  <div className="flex flex-col">
+                    <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
+                    {curso.calificacionPromedio !== undefined && (
+                      <ValoracionEstrellas 
+                        calificacion={curso.calificacionPromedio} 
+                        totalValoraciones={curso.totalValoraciones} 
+                        tamano="sm"
+                        className="mt-1" 
+                      />
+                    )}
+                  </div>
                   <Link
                     href={`/cursos/${curso._id}`}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"

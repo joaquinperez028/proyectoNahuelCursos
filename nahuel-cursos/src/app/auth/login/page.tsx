@@ -1,53 +1,50 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { FaEnvelope, FaLock, FaSpinner } from 'react-icons/fa';
+import { FaSpinner, FaGoogle } from 'react-icons/fa';
 
 export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/cursos';
+  const { status } = useSession();
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !password) {
-      setError('Por favor ingresa email y contraseña');
-      return;
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push(redirect);
     }
-    
+  }, [status, router, redirect]);
+
+  const handleGoogleLogin = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const result = await signIn('credentials', {
-        redirect: false,
-        email,
-        password,
+      await signIn('google', {
+        callbackUrl: redirect
       });
       
-      if (result?.error) {
-        setError(result.error);
-        return;
-      }
-      
-      // Redireccionar después del login exitoso
-      router.push(redirect);
     } catch (err) {
-      console.error('Error en login:', err);
-      setError('Ocurrió un error durante el inicio de sesión');
-    } finally {
+      console.error('Error en login con Google:', err);
+      setError('Ocurrió un error durante el inicio de sesión con Google');
       setLoading(false);
     }
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <FaSpinner className="animate-spin text-blue-600 text-4xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -59,85 +56,56 @@ export default function Login() {
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <div className="mt-8 space-y-6">
           {error && (
             <div className="bg-red-50 text-red-800 p-4 rounded-lg text-sm">
               {error}
             </div>
           )}
           
-          <div className="rounded-md shadow-sm space-y-4">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaEnvelope className="text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Email"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Contraseña
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Contraseña"
-                />
-              </div>
-            </div>
-          </div>
-          
+          {/* Botón de Google */}
           <div>
             <button
-              type="submit"
+              onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex justify-center items-center bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg transition-colors font-medium"
+              className="w-full flex justify-center items-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-lg transition-colors font-medium shadow-sm"
             >
               {loading ? (
                 <>
                   <FaSpinner className="animate-spin mr-2" />
-                  Iniciando sesión...
+                  Conectando con Google...
                 </>
               ) : (
-                'Iniciar Sesión'
+                <>
+                  <FaGoogle className="text-red-500 mr-3" />
+                  Iniciar sesión con Google
+                </>
               )}
             </button>
           </div>
-        </form>
-        
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-600">
-            ¿No tienes una cuenta?{' '}
-            <Link href="/auth/registro" className="text-blue-600 hover:text-blue-800 font-medium">
-              Regístrate aquí
+          
+          <div className="relative flex py-5 items-center">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink mx-4 text-gray-400 text-sm">O</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+          
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-4">
+              Al iniciar sesión, aceptas nuestros{' '}
+              <Link href="/terminos" className="text-blue-600 hover:text-blue-800">
+                términos y condiciones
+              </Link>
+              {' '}y{' '}
+              <Link href="/privacidad" className="text-blue-600 hover:text-blue-800">
+                política de privacidad
+              </Link>
+            </p>
+            
+            <Link href="/" className="text-sm text-gray-600 hover:text-gray-800 block mt-4">
+              Volver a la página principal
             </Link>
-          </p>
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-800 block mt-2">
-            Volver a la página principal
-          </Link>
+          </div>
         </div>
       </div>
     </div>
