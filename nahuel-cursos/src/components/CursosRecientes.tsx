@@ -21,6 +21,7 @@ interface Curso {
 function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: string; className?: string }) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [retry, setRetry] = useState(0);
   
@@ -37,19 +38,64 @@ function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: st
     return patronesURL.some(patron => patron.test(url));
   };
   
+  // Agregar parámetros para evitar autoplay en la URL
+  const prepararURL = (url: string): string => {
+    if (!url) return '';
+    
+    // Asegurar que el video no se reproduce automáticamente
+    let urlModificada = url;
+    
+    // Para YouTube
+    if (url.includes('youtube.com/embed/')) {
+      const tieneSeparador = url.includes('?') ? '&' : '?';
+      urlModificada = `${url}${tieneSeparador}autoplay=0&mute=0`;
+    }
+    
+    // Para Vimeo
+    else if (url.includes('player.vimeo.com/video/')) {
+      const tieneSeparador = url.includes('?') ? '&' : '?';
+      urlModificada = `${url}${tieneSeparador}autoplay=0&muted=0`;
+    }
+    
+    return urlModificada;
+  };
+  
+  // Iniciar reproducción del video
+  const handlePlay = () => {
+    setPlaying(true);
+    
+    // Cargar iframe con autoplay=1
+    if (iframeRef.current) {
+      let playUrl = url;
+      
+      // Modificar URL para incluir autoplay
+      if (url.includes('youtube.com/embed/')) {
+        playUrl = url.includes('?') 
+          ? `${url}&autoplay=1` 
+          : `${url}?autoplay=1`;
+      } else if (url.includes('player.vimeo.com/video/')) {
+        playUrl = url.includes('?') 
+          ? `${url}&autoplay=1` 
+          : `${url}?autoplay=1`;
+      }
+      
+      iframeRef.current.src = playUrl;
+    }
+  };
+  
   // Reintentar cargar el video
   const handleRetry = () => {
     setError(false);
     setLoading(true);
+    setPlaying(false);
     setRetry(prev => prev + 1);
     
     // Recargar el iframe
     if (iframeRef.current) {
-      const currentSrc = iframeRef.current.src;
-      iframeRef.current.src = '';
+      const urlSegura = prepararURL(url);
       setTimeout(() => {
         if (iframeRef.current) {
-          iframeRef.current.src = currentSrc;
+          iframeRef.current.src = urlSegura;
         }
       }, 50);
     }
@@ -66,6 +112,9 @@ function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: st
       </div>
     );
   }
+  
+  // URL segura sin autoplay
+  const urlSegura = prepararURL(url);
   
   return (
     <div className={`relative w-full h-full ${className}`}>
@@ -90,10 +139,21 @@ function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: st
         </div>
       )}
       
+      {!playing && !error && !loading && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10 cursor-pointer hover:bg-opacity-40 transition-all"
+          onClick={handlePlay}
+        >
+          <div className="rounded-full bg-blue-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
+            <FaPlayCircle className="text-white text-4xl" />
+          </div>
+        </div>
+      )}
+      
       <iframe 
         ref={iframeRef}
         key={`video-${retry}`}
-        src={url}
+        src={urlSegura}
         className="w-full h-full absolute inset-0"
         title={titulo}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

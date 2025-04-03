@@ -74,16 +74,66 @@ export async function POST(request: Request) {
       cursoId: cursoId.toString()
     });
     
+    // Verificar primero si el usuario ya tiene el curso (doble verificación)
+    const usuarioExistente = await db.collection('usuarios').findOne({
+      _id: new ObjectId(session.user.id),
+      cursosComprados: { $in: [cursoId.toString()] }
+    });
+    
+    if (usuarioExistente) {
+      console.log('El usuario ya tiene este curso, omitiendo actualización');
+      return NextResponse.json({
+        mensaje: 'Curso ya adquirido anteriormente',
+        curso: {
+          id: curso._id,
+          titulo: curso.titulo
+        }
+      });
+    }
+    
+    // Asegurarnos de que siempre almacenamos el ID como string para consistencia
     const resultado = await db.collection('usuarios').updateOne(
       { _id: new ObjectId(session.user.id) },
       { $addToSet: { cursosComprados: cursoId.toString() } }
     );
     
-    if (!resultado.acknowledged || resultado.modifiedCount === 0) {
+    if (!resultado.acknowledged) {
       throw new Error('Error al registrar la compra');
     }
     
-    console.log('Compra registrada con éxito:', resultado.modifiedCount);
+    if (resultado.modifiedCount === 0) {
+      console.log('No se modificó ningún documento. Verificando si el curso ya estaba registrado...');
+      
+      // Verificar si el usuario ya tenía el curso (quizás en otro formato)
+      const usuarioActualizado = await db.collection('usuarios').findOne({
+        _id: new ObjectId(session.user.id)
+      });
+      
+      if (usuarioActualizado && usuarioActualizado.cursosComprados) {
+        const tieneCurso = usuarioActualizado.cursosComprados.some((id: any) => 
+          id.toString() === cursoId.toString()
+        );
+        
+        if (tieneCurso) {
+          console.log('El curso ya estaba registrado en otro formato');
+          return NextResponse.json({
+            mensaje: 'Curso ya adquirido anteriormente', 
+            curso: { 
+              id: curso._id,
+              titulo: curso.titulo
+            } 
+          });
+        }
+      }
+      
+      // Si llegamos aquí es porque hubo un problema real
+      throw new Error('No se pudo registrar la compra');
+    }
+    
+    console.log('Compra registrada con éxito:', {
+      modifiedCount: resultado.modifiedCount,
+      matchedCount: resultado.matchedCount
+    });
     
     return NextResponse.json(
       { 

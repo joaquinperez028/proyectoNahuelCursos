@@ -54,10 +54,31 @@ export async function GET(request: Request, context: RouteParams) {
         cursoId: cursoId
       });
       
-      cursoComprado = await db.collection('usuarios').findOne({ 
-        _id: new ObjectId(session.user.id),
-        cursosComprados: { $in: [cursoId, new ObjectId(cursoId)] }
-      });
+      try {
+        // Buscar usuario por ID
+        const usuario = await db.collection('usuarios').findOne({
+          _id: new ObjectId(session.user.id)
+        });
+        
+        if (usuario && usuario.cursosComprados && Array.isArray(usuario.cursosComprados)) {
+          // Verificar si el curso está en la lista de cursos comprados (comparando como strings)
+          const tieneCurso = usuario.cursosComprados.some((id: any) => 
+            id.toString() === cursoId || 
+            (id instanceof ObjectId ? id.toString() === cursoId : false)
+          );
+          
+          console.log('¿Usuario tiene el curso?', tieneCurso, {
+            cursosComprados: usuario.cursosComprados.map((id: any) => id.toString())
+          });
+          
+          cursoComprado = tieneCurso ? usuario : null;
+        } else {
+          console.log('Usuario no encontrado o no tiene cursos comprados');
+        }
+      } catch (error) {
+        console.error('Error al verificar cursos comprados:', error);
+        // No interrumpimos el flujo, simplemente logueamos el error
+      }
       
       console.log('Resultado de verificación de acceso:', !!cursoComprado);
     }
