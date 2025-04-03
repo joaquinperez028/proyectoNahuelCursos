@@ -34,9 +34,9 @@ npm install
 yarn install
 ```
 
-3. Crea un archivo `.env.local` basado en `.env.local.example` con tus variables de entorno:
+3. Crea un archivo `.env.local` basado en `.env.example` con tus variables de entorno:
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 # Edita el archivo .env.local con tus credenciales
 ```
 
@@ -47,7 +47,7 @@ npm run dev
 yarn dev
 ```
 
-5. Abre [http://26.176.79.169:3000](http://26.176.79.169:3000) en tu navegador para ver la aplicación.
+5. Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación.
 
 ## Estructura del proyecto
 
@@ -67,6 +67,45 @@ nahuel-cursos/
 ├── tailwind.config.js # Configuración de Tailwind CSS
 └── ...
 ```
+
+## Despliegue en Vercel
+
+Para desplegar esta aplicación en Vercel, sigue estos pasos:
+
+1. Haz push de tus cambios a tu repositorio de GitHub.
+
+2. Inicia sesión en [Vercel](https://vercel.com) con tu cuenta de GitHub.
+
+3. Selecciona "Import Project" y elige el repositorio de GitHub.
+
+4. Configura el proyecto:
+   - Framework Preset: Next.js
+   - Root Directory: ./nahuel-cursos (si tu proyecto está en un subdirectorio)
+   - Build Command: (dejarlo en blanco para usar el predeterminado)
+   - Output Directory: (dejarlo en blanco para usar el predeterminado)
+
+5. Configura las Variables de Entorno (desde Settings > Environment Variables):
+   ```
+   MONGODB_URI=mongodb+srv://usuario:contraseña@cluster0.mongodb.net/nahuel-cursos
+   MONGODB_DB=nahuel-cursos
+   NEXTAUTH_URL=https://tu-app.vercel.app (después de la primera implementación)
+   NEXTAUTH_SECRET=un_valor_secreto_aleatorio
+   GOOGLE_CLIENT_ID=tu_client_id
+   GOOGLE_CLIENT_SECRET=tu_client_secret
+   ADMIN_EMAIL=tu_email_administrador
+   ```
+
+6. Haz clic en "Deploy" para iniciar el despliegue.
+
+7. Una vez completado, actualiza la variable de entorno NEXTAUTH_URL con la URL proporcionada por Vercel.
+
+8. Actualiza la configuración de OAuth de Google para incluir la URL de callback de Vercel:
+   - Añadir `https://tu-app.vercel.app/api/auth/callback/google` en URIs de redirección autorizados.
+
+### Solución de problemas comunes de despliegue
+
+- Si hay errores de ESLint durante la compilación, el archivo `next.config.js` incluido en este repositorio ya está configurado para ignorarlos durante la compilación.
+- Para la conexión de MongoDB Atlas, asegúrate de configurar el Network Access para permitir conexiones desde cualquier IP (0.0.0.0/0).
 
 ## Desarrollo
 
