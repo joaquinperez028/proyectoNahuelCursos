@@ -152,16 +152,35 @@ export default function CursosRecientes() {
       setErrorDetail(detalleError);
       
       // Si no hay cursos y es un reintento, podemos intentar sembrar datos de ejemplo
-      if (intentosDeConexion < intentosMaximos && !haReintentado.current && esReintento) {
+      if (!haReintentado.current && esReintento) {
         haReintentado.current = true;
         try {
           // Intentar sembrar datos
           setGenerandoDatos(true);
           console.log('Intentando generar datos de ejemplo...');
-          await axios.get('/api/seed-public');
-          console.log('Datos de ejemplo generados correctamente');
+          
+          // Agregar un parámetro de cache-busting para evitar problemas de caché
+          const timestamp = new Date().getTime();
+          const respuestaSeed = await axios.get(`/api/seed-public?t=${timestamp}`);
+          
+          console.log('Respuesta de generación de datos:', respuestaSeed.data);
+          
           // Esperar un momento y reintentar obtener cursos
-          setTimeout(() => obtenerCursosRecientes(), 2000);
+          console.log('Esperando para reintentar obtener cursos...');
+          setTimeout(async () => {
+            try {
+              // Intentar verificar si los datos fueron creados
+              const healthCheck = await axios.get('/api/health');
+              console.log('Servicio disponible:', healthCheck.data);
+              
+              // Reintentar obtener cursos
+              obtenerCursosRecientes();
+            } catch (error) {
+              console.error('Error en la verificación posterior:', error);
+              obtenerCursosRecientes(); // Intentar de todos modos
+            }
+          }, 3000); // Aumentado a 3 segundos
+          
           return;
         } catch (seedError: any) {
           console.error('Error al intentar sembrar datos:', seedError);
@@ -182,6 +201,9 @@ export default function CursosRecientes() {
   
   // Botón para reintentar con siembra de datos
   const handleRetry = () => {
+    // Resetear intentos al usar el botón manual
+    haReintentado.current = false;
+    setIntentosDeConexion(0);
     obtenerCursosRecientes(true);
   };
   

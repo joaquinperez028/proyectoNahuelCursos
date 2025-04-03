@@ -11,14 +11,15 @@ if (!MONGODB_URI) {
 
 // Opciones de conexión optimizadas
 const options = {
-  connectTimeoutMS: 10000,           // 10 segundos para timeout de conexión
-  socketTimeoutMS: 45000,           // 45 segundos para operaciones
-  serverSelectionTimeoutMS: 10000,   // 10 segundos para selección de servidor
+  connectTimeoutMS: 20000,           // 20 segundos para timeout de conexión (aumentado)
+  socketTimeoutMS: 60000,           // 60 segundos para operaciones (aumentado)
+  serverSelectionTimeoutMS: 20000,   // 20 segundos para selección de servidor (aumentado)
   maxPoolSize: 10,                   // Máximo 10 conexiones simultáneas
   minPoolSize: 3,                    // Mantener al menos 3 conexiones
   maxIdleTimeMS: 60000,              // Cerrar conexiones inactivas después de 1 minuto
   retryWrites: true,                 // Reintentar escrituras fallidas
   w: 1,                              // Escribir a 1 nodo primario (en lugar de "majority")
+  retryReads: true,                  // Añadido: reintentar lecturas fallidas
 };
 
 let client;
@@ -26,7 +27,7 @@ let clientPromise;
 let cachedConnection = null;
 let connectionPromise = null;
 let connectionAttempt = 0;
-const MAX_RETRY_ATTEMPTS = 3;
+const MAX_RETRY_ATTEMPTS = 5;       // Aumentado de 3 a 5 intentos
 
 /**
  * Función para conectar a la base de datos con reintentos
