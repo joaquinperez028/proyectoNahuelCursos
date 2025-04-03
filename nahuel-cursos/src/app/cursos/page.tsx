@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
-import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner, FaSort, FaSortUp, FaSortDown, FaSyncAlt } from 'react-icons/fa';
 import ValoracionEstrellas from '@/components/ValoracionEstrellas';
+import VideoPlayer from '@/components/VideoPlayer';
 
 interface Curso {
   _id: string;
@@ -162,7 +164,7 @@ export default function Cursos() {
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
               }`}
             >
-              {ordenPrecio === 'asc' ? <FaSortAmountUp className="mr-2" /> : <FaSortAmountDown className="mr-2" />}
+              {ordenPrecio === 'asc' ? <FaSortUp className="mr-2" /> : <FaSortDown className="mr-2" />}
               Precio {ordenPrecio === 'asc' ? '↑' : ordenPrecio === 'desc' ? '↓' : ''}
             </button>
             
@@ -170,7 +172,7 @@ export default function Cursos() {
               onClick={toggleOrdenFecha}
               className="flex items-center bg-gray-100 text-gray-800 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors"
             >
-              {ordenFecha === 'asc' ? <FaSortAmountUp className="mr-2" /> : <FaSortAmountDown className="mr-2" />}
+              {ordenFecha === 'asc' ? <FaSortUp className="mr-2" /> : <FaSortDown className="mr-2" />}
               Fecha {ordenFecha === 'asc' ? 'Antiguos primero' : 'Recientes primero'}
             </button>
           </div>
@@ -247,15 +249,19 @@ export default function Cursos() {
           {cursos.map((curso) => (
             <div key={curso._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
               <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                {/* Aquí iría el video de vista previa */}
-                <div className="w-full h-48 bg-blue-100 flex items-center justify-center">
-                  <iframe 
-                    src={curso.videoPreview} 
-                    className="w-full h-full object-cover"
-                    title={curso.titulo}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                {/* Video de vista previa con VideoPlayer */}
+                <div className="w-full h-48 bg-blue-100 relative">
+                  {curso.videoPreview ? (
+                    <VideoPlayer 
+                      src={curso.videoPreview} 
+                      className="absolute inset-0" 
+                      autoPlay={false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-blue-600">Vista previa no disponible</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-6">

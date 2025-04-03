@@ -5,8 +5,9 @@ import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
-import { FaSpinner, FaEdit, FaUser, FaPhone, FaEnvelope, FaSave, FaTimes, FaPlayCircle } from 'react-icons/fa';
+import { FaSpinner, FaEdit, FaUser, FaPhone, FaEnvelope, FaSave, FaTimes, FaPlayCircle, FaSyncAlt } from 'react-icons/fa';
 import { actualizarTelefono } from './actualizarTelefono';
+import VideoPlayer from '@/components/VideoPlayer';
 
 interface Curso {
   _id: string;
@@ -79,15 +80,18 @@ export default function Perfil() {
       
       // Extraer mensaje de error específico si está disponible
       let mensajeError = 'No se pudieron cargar tus cursos. Intenta de nuevo más tarde.';
+      let mensajeDetalle = '';
       
       if (err.response?.data?.error) {
         mensajeError = err.response.data.error;
+        mensajeDetalle = err.response.data.message || err.response.data.detalles || '';
+        
         if (err.response.data.detalles) {
           console.error('Detalles del error:', err.response.data.detalles);
         }
       }
       
-      setError(mensajeError);
+      setError(mensajeError + (mensajeDetalle ? ` - ${mensajeDetalle}` : ''));
       setCursosComprados([]); // Establecer un array vacío en caso de error
     } finally {
       setLoading(false);
@@ -140,7 +144,12 @@ export default function Perfil() {
 
   // Función para reintentar la carga de cursos
   const handleRetryLoading = () => {
-    obtenerCursosComprados();
+    setError('');
+    setLoading(true);
+    // Esperar un momento para dar la sensación de que se está recargando
+    setTimeout(() => {
+      obtenerCursosComprados();
+    }, 500);
   };
 
   if (status === 'loading' || loading) {
@@ -299,9 +308,9 @@ export default function Perfil() {
                 <p className="font-medium mb-2">{error}</p>
                 <button 
                   onClick={handleRetryLoading}
-                  className="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors"
+                  className="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded transition-colors flex items-center"
                 >
-                  Reintentar
+                  <FaSyncAlt className="mr-1" size={12} /> Reintentar
                 </button>
               </div>
             )}
@@ -323,21 +332,11 @@ export default function Perfil() {
                     <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col">
                       <div className="relative pb-[56.25%] bg-gray-100">
                         {curso.videoPreview ? (
-                          <div className="absolute inset-0">
-                            <iframe 
-                              src={`${curso.videoPreview}${curso.videoPreview.includes('?') ? '&' : '?'}autoplay=0`}
-                              className="w-full h-full"
-                              frameBorder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              title={curso.titulo}
-                            />
-                            <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center hover:bg-opacity-30 transition-opacity">
-                              <div className="rounded-full bg-blue-600 bg-opacity-80 p-3 transform hover:scale-110 transition-transform">
-                                <FaPlayCircle className="text-white text-3xl" />
-                              </div>
-                            </div>
-                          </div>
+                          <VideoPlayer 
+                            src={curso.videoPreview} 
+                            className="absolute inset-0" 
+                            autoPlay={false}
+                          />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                             <span className="text-black font-medium">Vista previa no disponible</span>

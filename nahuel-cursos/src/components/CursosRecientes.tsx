@@ -5,6 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo, FaSyncAlt } from 'react-icons/fa';
 import ValoracionEstrellas from './ValoracionEstrellas';
+import VideoPlayer from './VideoPlayer';
 
 interface Curso {
   _id: string;
@@ -15,158 +16,6 @@ interface Curso {
   fechaCreacion: string;
   calificacionPromedio?: number;
   totalValoraciones?: number;
-}
-
-// Componente optimizado para la vista previa de video con mejor manejo de errores
-function VideoPreview({ url, titulo, className = '' }: { url: string; titulo: string; className?: string }) {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [playing, setPlaying] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [retry, setRetry] = useState(0);
-  
-  // Función para validar URL de video (YouTube, Vimeo, etc.)
-  const esURLVideoValida = (url: string): boolean => {
-    if (!url) return false;
-    
-    const patronesURL = [
-      /^https?:\/\/(www\.)?youtube\.com\/embed\//,
-      /^https?:\/\/player\.vimeo\.com\/video\//,
-      /^https?:\/\/(www\.)?dailymotion\.com\/embed\/video\//
-    ];
-    
-    return patronesURL.some(patron => patron.test(url));
-  };
-  
-  // Agregar parámetros para evitar autoplay en la URL
-  const prepararURL = (url: string): string => {
-    if (!url) return '';
-    
-    // Asegurar que el video no se reproduce automáticamente
-    let urlModificada = url;
-    
-    // Para YouTube
-    if (url.includes('youtube.com/embed/')) {
-      const tieneSeparador = url.includes('?') ? '&' : '?';
-      urlModificada = `${url}${tieneSeparador}autoplay=0&mute=0`;
-    }
-    
-    // Para Vimeo
-    else if (url.includes('player.vimeo.com/video/')) {
-      const tieneSeparador = url.includes('?') ? '&' : '?';
-      urlModificada = `${url}${tieneSeparador}autoplay=0&muted=0`;
-    }
-    
-    return urlModificada;
-  };
-  
-  // Iniciar reproducción del video
-  const handlePlay = () => {
-    setPlaying(true);
-    
-    // Cargar iframe con autoplay=1
-    if (iframeRef.current) {
-      let playUrl = url;
-      
-      // Modificar URL para incluir autoplay
-      if (url.includes('youtube.com/embed/')) {
-        playUrl = url.includes('?') 
-          ? `${url}&autoplay=1` 
-          : `${url}?autoplay=1`;
-      } else if (url.includes('player.vimeo.com/video/')) {
-        playUrl = url.includes('?') 
-          ? `${url}&autoplay=1` 
-          : `${url}?autoplay=1`;
-      }
-      
-      iframeRef.current.src = playUrl;
-    }
-  };
-  
-  // Reintentar cargar el video
-  const handleRetry = () => {
-    setError(false);
-    setLoading(true);
-    setPlaying(false);
-    setRetry(prev => prev + 1);
-    
-    // Recargar el iframe
-    if (iframeRef.current) {
-      const urlSegura = prepararURL(url);
-      setTimeout(() => {
-        if (iframeRef.current) {
-          iframeRef.current.src = urlSegura;
-        }
-      }, 50);
-    }
-  };
-  
-  // Si la URL no es válida, mostrar un placeholder
-  if (!url || !esURLVideoValida(url)) {
-    return (
-      <div className={`w-full h-full flex items-center justify-center bg-blue-100 ${className}`}>
-        <div className="text-center p-2">
-          <FaVideo className="text-4xl text-blue-500 mx-auto mb-2" />
-          <p className="text-sm text-blue-700">Vista previa no disponible</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // URL segura sin autoplay
-  const urlSegura = prepararURL(url);
-  
-  return (
-    <div className={`relative w-full h-full ${className}`}>
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 z-10">
-          <FaSpinner className="animate-spin text-2xl text-blue-500" />
-        </div>
-      )}
-      
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-blue-100 z-10">
-          <div className="text-center">
-            <FaPlayCircle className="text-4xl text-blue-500 mx-auto mb-2" />
-            <p className="text-sm text-blue-700 mb-2">Error al cargar el video</p>
-            <button 
-              onClick={handleRetry}
-              className="text-xs bg-blue-600 text-white px-3 py-1 rounded-full flex items-center mx-auto"
-            >
-              <FaSyncAlt className="mr-1" size={10} /> Reintentar
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {!playing && !error && !loading && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10 cursor-pointer hover:bg-opacity-40 transition-all"
-          onClick={handlePlay}
-        >
-          <div className="rounded-full bg-blue-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
-            <FaPlayCircle className="text-white text-4xl" />
-          </div>
-        </div>
-      )}
-      
-      <iframe 
-        ref={iframeRef}
-        key={`video-${retry}`}
-        src={urlSegura}
-        className="w-full h-full absolute inset-0"
-        title={titulo}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        onLoad={() => setLoading(false)}
-        onError={() => {
-          setError(true);
-          setLoading(false);
-        }}
-        style={{ opacity: loading || error ? 0 : 1 }}
-      />
-    </div>
-  );
 }
 
 export default function CursosRecientes() {
@@ -348,7 +197,20 @@ export default function CursosRecientes() {
             <Link href={`/cursos/${curso._id}`} key={curso._id} className="block">
               <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
                 <div className="w-full h-48 bg-blue-100 relative">
-                  <VideoPreview url={curso.videoPreview} titulo={curso.titulo} />
+                  {curso.videoPreview ? (
+                    <VideoPlayer 
+                      src={curso.videoPreview} 
+                      className="absolute inset-0" 
+                      autoPlay={false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-blue-100">
+                      <div className="text-center p-2">
+                        <FaVideo className="text-4xl text-blue-500 mx-auto mb-2" />
+                        <p className="text-sm text-blue-700">Vista previa no disponible</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
                   <h3 className="text-lg font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
