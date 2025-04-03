@@ -2,15 +2,81 @@
 
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { useState } from 'react';
-import { FaUser, FaSignOutAlt, FaShoppingCart, FaBars, FaTimes } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { FaUser, FaSignOutAlt, FaShoppingCart, FaBars, FaTimes, FaSync, FaExclamationTriangle } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, status, update } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+  const [isSyncNeeded, setSyncNeeded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const router = useRouter();
+
+  // Verificar si el usuario tiene un ID temporal
+  useEffect(() => {
+    if (session?.user?.id && session.user.id.startsWith('temp_')) {
+      console.log('ID temporal detectado en Navbar:', session.user.id);
+      setSyncNeeded(true);
+    } else {
+      setSyncNeeded(false);
+    }
+  }, [session]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  // Función para actualizar la sesión
+  const handleRefreshSession = async () => {
+    setIsRefreshing(true);
+    try {
+      // Actualizar la sesión de NextAuth
+      await update();
+      
+      // Esperar un momento para dar tiempo a la sincronización
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Verificar si todavía es necesaria la sincronización
+      if (session?.user?.id && session.user.id.startsWith('temp_')) {
+        // Si sigue siendo temporal, intentar cerrar sesión y volver a iniciarla
+        await signOut({ redirect: false });
+        router.push('/auth/login?reason=sync');
+      } else {
+        // Recargar la página para refrescar todos los componentes
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error al sincronizar la sesión:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Renderizar el indicador de sincronización
+  const renderSyncIndicator = () => {
+    if (!isSyncNeeded) return null;
+    
+    return (
+      <div className="bg-yellow-500 px-2 py-1 text-xs md:text-sm rounded flex items-center justify-between">
+        <div className="flex items-center">
+          <FaExclamationTriangle className="mr-1" />
+          <span className="mr-2">Sincronización necesaria</span>
+        </div>
+        <button 
+          onClick={handleRefreshSession}
+          disabled={isRefreshing}
+          className="bg-white text-yellow-700 px-2 py-1 rounded text-xs flex items-center hover:bg-yellow-100 transition-colors"
+        >
+          {isRefreshing ? 'Actualizando...' : (
+            <>
+              <FaSync className={`mr-1 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+              Actualizar
+            </>
+          )}
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -36,6 +102,7 @@ export default function Navbar() {
             
             {session ? (
               <div className="relative ml-3 flex items-center space-x-3">
+                {isSyncNeeded && renderSyncIndicator()}
                 <Link href="/perfil" className="flex items-center text-sm px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
                   <FaUser className="mr-1" /> 
                   {session.user?.name || 'Perfil'}
@@ -73,6 +140,13 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+      
+      {/* Indicador de sincronización para móviles */}
+      {isSyncNeeded && session && (
+        <div className="md:hidden px-4 py-2">
+          {renderSyncIndicator()}
+        </div>
+      )}
       
       {/* Menú móvil desplegable */}
       {isOpen && (

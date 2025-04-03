@@ -7,36 +7,104 @@ import { ObjectId } from 'mongodb';
 // POST /api/cursos/comprar - Comprar un curso
 export async function POST(request: Request) {
   try {
+    console.log('API: Inicio de solicitud de compra de curso');
+    
     // Verificar que el usuario esté autenticado
     const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
+    if (!session || !session.user) {
+      console.log('API: Intento de compra sin sesión activa');
       return NextResponse.json(
         { error: 'Necesitas iniciar sesión para comprar un curso' },
         { status: 401 }
       );
     }
     
+    // Verificar si tenemos la información mínima necesaria
+    if (!session.user.id) {
+      console.log('API: Intento de compra sin ID de usuario en la sesión');
+      return NextResponse.json(
+        { error: 'Sesión incompleta. Por favor, cierra sesión y vuelve a iniciar.' },
+        { status: 400 }
+      );
+    }
+    
     // Verificar si el ID de usuario es temporal
     if (session.user.id.startsWith('temp_')) {
-      console.log('ID temporal detectado durante la compra:', session.user.id);
-      return NextResponse.json(
-        { 
-          error: 'Tu cuenta aún está siendo procesada', 
-          message: 'Por favor, espera unos segundos e intenta nuevamente. Si el problema persiste, cierra sesión y vuelve a iniciar sesión.' 
-        },
-        { status: 202 } // Accepted pero no procesado aún
-      );
+      console.log('API: ID temporal detectado durante la compra:', session.user.id);
+      
+      // Intentar sincronizar el ID del usuario inmediatamente
+      try {
+        const { db } = await connectToDatabase();
+        
+        // Buscar si ya existe el usuario por email
+        if (session.user.email) {
+          const usuarioExistente = await db.collection('usuarios').findOne({ 
+            email: session.user.email 
+          });
+          
+          if (usuarioExistente) {
+            console.log('API: Usuario encontrado por email durante la compra:', usuarioExistente._id.toString());
+            
+            // Continuar con el ID real encontrado
+            session.user.id = usuarioExistente._id.toString();
+            console.log('API: ID de usuario sincronizado en tiempo real:', session.user.id);
+          } else {
+            // Crear nuevo usuario inmediatamente
+            console.log('API: Creando usuario durante la compra para:', session.user.email);
+            const nuevoUsuario = {
+              email: session.user.email,
+              nombre: session.user.nombre || session.user.name?.split(' ')[0] || '',
+              apellido: session.user.apellido || session.user.name?.split(' ').slice(1).join(' ') || '',
+              telefono: session.user.telefono || '',
+              admin: process.env.ADMIN_EMAIL === session.user.email,
+              createdAt: new Date(),
+              lastLogin: new Date(),
+              image: session.user.image || '',
+              cursosComprados: []
+            };
+            
+            const resultado = await db.collection('usuarios').insertOne(nuevoUsuario);
+            if (resultado.acknowledged && resultado.insertedId) {
+              session.user.id = resultado.insertedId.toString();
+              console.log('API: Usuario creado durante la compra con ID:', session.user.id);
+            } else {
+              throw new Error('No se pudo crear el usuario');
+            }
+          }
+        } else {
+          // Si no tenemos email, no podemos hacer mucho
+          return NextResponse.json(
+            { 
+              error: 'Tu cuenta aún está siendo procesada', 
+              message: 'Por favor, espera unos segundos e intenta nuevamente. Si el problema persiste, cierra sesión y vuelve a iniciar sesión.' 
+            },
+            { status: 202 } // Accepted pero no procesado aún
+          );
+        }
+      } catch (syncError) {
+        console.error('API: Error al sincronizar usuario durante la compra:', syncError);
+        return NextResponse.json(
+          { 
+            error: 'Error al procesar tu cuenta', 
+            message: 'Por favor, cierra sesión y vuelve a iniciar sesión.' 
+          },
+          { status: 500 }
+        );
+      }
     }
     
     const data = await request.json();
     const { cursoId } = data;
     
     if (!cursoId) {
+      console.log('API: Solicitud de compra sin ID de curso');
       return NextResponse.json(
         { error: 'ID de curso no proporcionado' },
         { status: 400 }
       );
     }
+
+    console.log('API: Solicitud de compra para curso:', cursoId, 'por usuario:', session.user.id);
 
     // Conectar a la base de datos
     let db;
@@ -44,7 +112,7 @@ export async function POST(request: Request) {
       const dbConnection = await connectToDatabase();
       db = dbConnection.db;
     } catch (dbError) {
-      console.error('Error al conectar a la base de datos:', dbError);
+      console.error('API: Error al conectar a la base de datos:', dbError);
       return NextResponse.json(
         { error: 'Error de conexión a la base de datos. Intenta más tarde.' },
         { status: 500 }
@@ -56,7 +124,7 @@ export async function POST(request: Request) {
     try {
       cursoObjectId = new ObjectId(cursoId);
     } catch (error) {
-      console.error('Error al convertir ID del curso:', error);
+      console.error('API: Error al convertir ID del curso:', error);
       return NextResponse.json(
         { error: 'ID de curso inválido' },
         { status: 400 }
@@ -68,13 +136,15 @@ export async function POST(request: Request) {
     try {
       curso = await db.collection('cursos').findOne({ _id: cursoObjectId });
       if (!curso) {
+        console.log('API: Curso no encontrado:', cursoId);
         return NextResponse.json(
           { error: 'Curso no encontrado' },
           { status: 404 }
         );
       }
+      console.log('API: Curso encontrado:', curso.titulo);
     } catch (cursoError) {
-      console.error('Error al buscar el curso:', cursoError);
+      console.error('API: Error al buscar el curso:', cursoError);
       return NextResponse.json(
         { error: 'Error al buscar el curso solicitado' },
         { status: 500 }
@@ -86,75 +156,77 @@ export async function POST(request: Request) {
     let userObjectId;
     
     try {
-      if (!ObjectId.isValid(session.user.id)) {
-        console.error('ID de usuario inválido:', session.user.id);
-        return NextResponse.json(
-          { error: 'ID de usuario inválido. Cierra sesión y vuelve a iniciar.' },
-          { status: 400 }
-        );
-      }
-      
-      userObjectId = new ObjectId(session.user.id);
-      
-      // Buscar el usuario en la base de datos
-      usuario = await db.collection('usuarios').findOne({ _id: userObjectId });
-      
-      // Si no encontramos por ID, intentar por email como último recurso
-      if (!usuario && session.user.email) {
-        console.log('Usuario no encontrado por ID, intentando por email:', session.user.email);
+      // Primero intentar buscar por email (más confiable que el ID)
+      if (session.user.email) {
+        console.log('API: Buscando usuario por email:', session.user.email);
         usuario = await db.collection('usuarios').findOne({ email: session.user.email });
         
-        // Si encontramos al usuario por email, actualizar userObjectId
         if (usuario) {
           userObjectId = usuario._id;
+          console.log('API: Usuario encontrado por email:', userObjectId.toString());
+          
+          // Si el ID en la sesión no coincide con el real, actualizamos la referencia
+          if (session.user.id !== userObjectId.toString()) {
+            console.log('API: Actualizando ID de sesión de', session.user.id, 'a', userObjectId.toString());
+            session.user.id = userObjectId.toString();
+          }
         }
       }
       
-      if (!usuario) {
-        // No encontramos al usuario ni por ID ni por email
-        console.error('Usuario no encontrado en la base de datos:', session.user.id);
+      // Si no encontramos por email, intentamos por ID
+      if (!usuario && ObjectId.isValid(session.user.id)) {
+        userObjectId = new ObjectId(session.user.id);
+        console.log('API: Buscando usuario por ID:', userObjectId.toString());
         
-        // Crear el usuario si no existe (esto podría ocurrir si hay inconsistencia con la sesión)
-        if (session.user.email) {
-          const nuevoUsuario = {
-            email: session.user.email,
-            nombre: session.user.nombre || session.user.name?.split(' ')[0] || '',
-            apellido: session.user.apellido || session.user.name?.split(' ').slice(1).join(' ') || '',
-            telefono: session.user.telefono || '',
-            admin: false,
-            createdAt: new Date(),
-            lastLogin: new Date(),
-            image: session.user.image || '',
-            cursosComprados: []
-          };
-          
-          console.log('Creando usuario nuevo en la base de datos:', nuevoUsuario.email);
-          
-          const resultado = await db.collection('usuarios').insertOne(nuevoUsuario);
-          
-          if (resultado.acknowledged) {
-            usuario = nuevoUsuario;
-            userObjectId = resultado.insertedId;
-            console.log('Usuario creado exitosamente con ID:', resultado.insertedId);
-          } else {
-            throw new Error('No se pudo crear el usuario');
-          }
-        } else {
+        usuario = await db.collection('usuarios').findOne({ _id: userObjectId });
+        if (usuario) {
+          console.log('API: Usuario encontrado por ID:', userObjectId.toString());
+        }
+      }
+      
+      // Si todavía no encontramos al usuario, lo creamos
+      if (!usuario) {
+        if (!session.user.email) {
+          console.error('API: No se puede crear usuario sin email');
           return NextResponse.json(
-            { error: 'Usuario no encontrado y no se puede crear sin email' },
-            { status: 404 }
+            { error: 'No se puede identificar tu cuenta. Por favor, cierra sesión y vuelve a iniciar.' },
+            { status: 400 }
           );
+        }
+        
+        console.log('API: Creando nuevo usuario para:', session.user.email);
+        const nuevoUsuario = {
+          email: session.user.email,
+          nombre: session.user.nombre || session.user.name?.split(' ')[0] || '',
+          apellido: session.user.apellido || session.user.name?.split(' ').slice(1).join(' ') || '',
+          telefono: session.user.telefono || '',
+          admin: process.env.ADMIN_EMAIL === session.user.email,
+          createdAt: new Date(),
+          lastLogin: new Date(),
+          image: session.user.image || '',
+          cursosComprados: []
+        };
+        
+        const resultado = await db.collection('usuarios').insertOne(nuevoUsuario);
+        
+        if (resultado.acknowledged && resultado.insertedId) {
+          usuario = nuevoUsuario;
+          userObjectId = resultado.insertedId;
+          session.user.id = userObjectId.toString();
+          console.log('API: Usuario creado con ID:', userObjectId.toString());
+        } else {
+          throw new Error('No se pudo crear el usuario');
         }
       }
     } catch (usuarioError) {
-      console.error('Error al buscar o crear el usuario:', usuarioError);
+      console.error('API: Error al buscar o crear el usuario:', usuarioError);
       return NextResponse.json(
         { error: 'Error al verificar o crear tu usuario' },
         { status: 500 }
       );
     }
 
-    // Verificar si el usuario ya tiene el curso (comparación más robusta)
+    // Verificar si el usuario ya tiene el curso
     let tieneCursoComprado = false;
 
     if (usuario.cursosComprados && Array.isArray(usuario.cursosComprados)) {
@@ -168,13 +240,13 @@ export async function POST(request: Request) {
         return idStr === cursoIdStr;
       });
       
-      console.log('¿El usuario ya tiene el curso?', tieneCursoComprado);
-      console.log('Cursos comprados:', usuario.cursosComprados.map((id: any) => id?.toString() || 'id_inválido'));
+      console.log('API: ¿El usuario ya tiene el curso?', tieneCursoComprado);
     }
 
     if (tieneCursoComprado) {
+      console.log('API: El usuario ya tiene este curso');
       return NextResponse.json(
-        { mensaje: 'Ya has comprado este curso' },
+        { mensaje: 'Ya has comprado este curso anteriormente' },
         { status: 200 }
       );
     }
@@ -186,104 +258,66 @@ export async function POST(request: Request) {
     // En un escenario real, solo se agregaría el curso al usuario tras confirmar el pago
     
     // Asegurarnos de que siempre almacenamos el ID como string para consistencia
-    console.log('Registrando compra con ID:', cursoId.toString(), 'para usuario:', userObjectId.toString());
+    console.log('API: Registrando compra del curso:', curso.titulo, 'para usuario:', userObjectId.toString());
 
     try {
-      // Preparar la actualización con operadores más seguros
-      const resultado = await db.collection('usuarios').updateOne(
+      // Preparar la actualización
+      const resultado = await db.collection('usuarios').findOneAndUpdate(
         { _id: userObjectId },
         { 
-          $addToSet: { 
-            cursosComprados: cursoId.toString()
-          },
-          $set: {
-            ultimaCompra: new Date()
-          }
-        }
+          $addToSet: { cursosComprados: cursoId.toString() },
+          $set: { ultimaCompra: new Date() }
+        },
+        { returnDocument: 'after' } // Retornar el documento actualizado
       );
 
-      if (!resultado.acknowledged) {
-        console.log('Error: operación no reconocida por MongoDB');
-        throw new Error('Error al registrar la compra: operación no reconocida');
+      if (!resultado.ok || !resultado.value) {
+        console.error('API: Error al actualizar el documento del usuario');
+        throw new Error('No se pudo actualizar tu información');
       }
 
-      console.log('Resultado de la actualización:', {
-        acknowledged: resultado.acknowledged,
-        modifiedCount: resultado.modifiedCount,
-        matchedCount: resultado.matchedCount,
-        upsertedCount: resultado.upsertedCount
-      });
-
-      if (resultado.matchedCount === 0) {
-        console.log('Error: no se encontró el usuario durante la actualización');
-        throw new Error('No se encontró el usuario para registrar la compra');
-      }
-
-      if (resultado.modifiedCount === 0) {
-        console.log('Advertencia: No se modificó ningún documento');
+      // Verificar si el curso se agregó correctamente
+      const usuarioActualizado = resultado.value;
+      const cursoAgregado = usuarioActualizado.cursosComprados && 
+                          Array.isArray(usuarioActualizado.cursosComprados) &&
+                          usuarioActualizado.cursosComprados.includes(cursoId.toString());
+                          
+      if (!cursoAgregado) {
+        console.log('API: El curso no aparece en la lista después de la actualización');
         
-        // Verificar si el curso realmente se agregó (doble chequeo)
-        console.log('Verificando si el curso realmente se agregó...');
-        const usuarioActualizado = await db.collection('usuarios').findOne({
-          _id: userObjectId
-        });
+        // Intento de corrección: actualizar explícitamente con push
+        const resultadoCorreccion = await db.collection('usuarios').updateOne(
+          { _id: userObjectId },
+          { $push: { cursosComprados: cursoId.toString() } }
+        );
         
-        if (usuarioActualizado) {
-          if (usuarioActualizado.cursosComprados && Array.isArray(usuarioActualizado.cursosComprados)) {
-            // Normalizar el ID del curso para la comparación
-            const cursoIdStr = cursoId.toString();
-            
-            // Verificar si el curso está en la lista después de todo
-            const tieneCursoAhora = usuarioActualizado.cursosComprados.some((id: any) => {
-              if (!id) return false;
-              const idStr = id.toString();
-              return idStr === cursoIdStr;
-            });
-            
-            if (tieneCursoAhora) {
-              console.log('El curso ya estaba en la lista aunque no se registró modificación');
-              return NextResponse.json({
-                mensaje: 'Curso ya registrado anteriormente', 
-                curso: { 
-                  id: curso._id.toString(),
-                  titulo: curso.titulo
-                } 
-              });
-            }
-          }
-          
-          console.log('El curso NO se encuentra en la lista del usuario después de la operación');
+        if (!resultadoCorreccion.acknowledged || resultadoCorreccion.modifiedCount === 0) {
+          console.error('API: No se pudo corregir la lista de cursos');
+          throw new Error('Error al registrar el curso en tu lista');
         }
         
-        // Si llegamos aquí es porque hubo un problema real
-        throw new Error('No se pudo registrar la compra: el documento no fue modificado');
+        console.log('API: Corrección aplicada, curso añadido mediante $push');
       }
 
-      console.log('Compra registrada con éxito:', {
-        userId: userObjectId.toString(),
-        cursoId: cursoId.toString(),
-        modifiedCount: resultado.modifiedCount
-      });
+      console.log('API: Compra registrada con éxito');
 
       // Devolver respuesta de éxito
-      return NextResponse.json(
-        { 
-          mensaje: 'Curso comprado exitosamente', 
-          curso: { 
-            id: curso._id.toString(),
-            titulo: curso.titulo
-          } 
-        }
-      );
+      return NextResponse.json({ 
+        mensaje: 'Curso comprado exitosamente', 
+        curso: { 
+          id: curso._id.toString(),
+          titulo: curso.titulo
+        } 
+      });
     } catch (compraError) {
-      console.error('Error durante el proceso de compra:', compraError);
+      console.error('API: Error durante el proceso de compra:', compraError);
       return NextResponse.json(
         { error: 'Error al registrar la compra: ' + compraError.message },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Error general al procesar la compra:', error);
+    console.error('API: Error general al procesar la compra:', error);
     return NextResponse.json(
       { error: 'Error al procesar la compra del curso' },
       { status: 500 }

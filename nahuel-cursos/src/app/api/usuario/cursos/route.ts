@@ -33,162 +33,84 @@ export async function GET(request: Request) {
     const userId = session.user.id;
     console.log('API: Obteniendo cursos comprados para el usuario:', userId);
     
-    // Si el ID comienza con 'temp_', es un ID temporal y el usuario aún no está sincronizado
+    // Si el ID comienza con 'temp_', es un ID temporal
     if (userId.startsWith('temp_')) {
-      console.log('API: ID temporal detectado, esperando sincronización con la base de datos');
-      return NextResponse.json(
-        { 
-          error: 'Tu sesión está siendo procesada', 
-          message: 'Por favor, espera unos segundos y vuelve a intentarlo.' 
-        },
-        { status: 202 } // Accepted - la solicitud se ha recibido pero aún no se ha actuado
-      );
-    }
-    
-    const { db } = await connectToDatabase();
-    
-    // Buscar el usuario por email si el ID no es un ObjectId válido
-    let usuario;
-    let userQuery = {};
-    
-    try {
-      // Intentar convertir a ObjectId primero
-      if (ObjectId.isValid(userId)) {
-        userQuery = { _id: new ObjectId(userId) };
-      } else {
-        // Si no es un ObjectId válido y tenemos email, buscar por email
+      console.log('API: ID temporal detectado, intentando sincronización inmediata');
+      
+      try {
+        const { db } = await connectToDatabase();
+        
+        // Buscar si ya existe el usuario por email
         if (session.user.email) {
-          console.log('API: ID no válido, buscando por email:', session.user.email);
-          userQuery = { email: session.user.email };
-        } else {
-          throw new Error('No se pudo determinar cómo identificar al usuario');
-        }
-      }
-      
-      usuario = await db.collection('usuarios').findOne(userQuery);
-    } catch (error) {
-      console.error('API: Error al buscar usuario:', error);
-      return NextResponse.json(
-        { 
-          error: 'Error al identificar usuario', 
-          message: 'Por favor, cierra sesión y vuelve a iniciar.' 
-        },
-        { status: 400 }
-      );
-    }
-    
-    if (!usuario) {
-      console.log('API: Usuario no encontrado con la consulta:', userQuery);
-      return NextResponse.json(
-        { 
-          error: 'Usuario no encontrado', 
-          message: 'Por favor, cierra sesión y vuelve a iniciarla.' 
-        },
-        { status: 404 }
-      );
-    }
-    
-    // Si el usuario no tiene cursos comprados, devolver un array vacío
-    if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados) || usuario.cursosComprados.length === 0) {
-      console.log('API: El usuario no tiene cursos comprados');
-      return NextResponse.json({ cursos: [] });
-    }
-    
-    console.log('API: Usuario tiene cursos comprados:', usuario.cursosComprados);
-    
-    try {
-      // Preparar una lista segura de IDs de cursos (manejando tanto strings como ObjectIds)
-      const cursoIds = [];
-      
-      for (const id of usuario.cursosComprados) {
-        try {
-          if (typeof id === 'string') {
-            // Sólo agregar IDs de MongoDB válidos
-            if (ObjectId.isValid(id)) {
-              cursoIds.push(new ObjectId(id));
-            } else {
-              console.warn(`API: Ignorando ID de curso inválido (string): ${id}`);
-            }
-          } else if (id instanceof ObjectId) {
-            // Si ya es un ObjectId, usarlo directamente
-            cursoIds.push(id);
-          } else if (id && typeof id === 'object' && id._id) {
-            // Si es un objeto con _id, usar ese valor
-            if (ObjectId.isValid(id._id)) {
-              cursoIds.push(new ObjectId(id._id.toString()));
-            }
+          const usuarioExistente = await db.collection('usuarios').findOne({ 
+            email: session.user.email 
+          });
+          
+          if (usuarioExistente) {
+            console.log('API: Usuario encontrado por email:', usuarioExistente._id.toString());
+            
+            // Actualizar el ID en la sesión
+            session.user.id = usuarioExistente._id.toString();
+            
+            // Continuar con la solicitud usando el nuevo ID
+            return await manejarSolicitudCursos(session.user.id, session.user.email, db);
           } else {
-            console.warn(`API: Ignorando ID de curso con formato desconocido:`, id);
-          }
-        } catch (error) {
-          console.error(`API: Error al procesar ID de curso (${id}):`, error);
-          // Continuar con el siguiente ID aunque este sea inválido
-        }
-      }
-      
-      // Si no hay IDs válidos, intentar buscar usando strings también
-      if (cursoIds.length === 0) {
-        console.log('API: No hay ObjectIds válidos, intentando otra estrategia');
-        
-        // Crear un array de strings para comparar
-        const cursoIdsString = usuario.cursosComprados
-          .filter(id => id) // Filtrar valores nulos o undefined
-          .map(id => typeof id === 'string' ? id : id.toString());
-        
-        if (cursoIdsString.length > 0) {
-          console.log('API: Buscando cursos con IDs (string):', cursoIdsString);
-          
-          // Buscar usando $or para comparar tanto ObjectId como strings
-          const cursosPorString = await db.collection('cursos')
-            .find({
-              $or: [
-                { _id: { $in: cursoIdsString.map(id => ObjectId.isValid(id) ? new ObjectId(id) : id) } },
-                { id: { $in: cursoIdsString } } // Por si acaso hay un campo "id" en lugar de "_id"
-              ]
-            })
-            .toArray();
-          
-          console.log('API: Se encontraron', cursosPorString.length, 'cursos por string de', cursoIdsString.length, 'IDs');
-          
-          if (cursosPorString.length > 0) {
-            return NextResponse.json({ cursos: cursosPorString });
+            // Si no existe, crearlo inmediatamente
+            console.log('API: Creando usuario durante solicitud de cursos para:', session.user.email);
+            const nuevoUsuario = {
+              email: session.user.email,
+              nombre: session.user.nombre || session.user.name?.split(' ')[0] || '',
+              apellido: session.user.apellido || session.user.name?.split(' ').slice(1).join(' ') || '',
+              telefono: session.user.telefono || '',
+              admin: process.env.ADMIN_EMAIL === session.user.email,
+              createdAt: new Date(),
+              lastLogin: new Date(),
+              image: session.user.image || '',
+              cursosComprados: []
+            };
+            
+            const resultado = await db.collection('usuarios').insertOne(nuevoUsuario);
+            if (resultado.acknowledged && resultado.insertedId) {
+              session.user.id = resultado.insertedId.toString();
+              console.log('API: Usuario creado con ID:', session.user.id);
+              
+              // Nuevo usuario creado, no tiene cursos
+              return NextResponse.json({ cursos: [] });
+            }
           }
         }
         
-        console.log('API: No hay IDs de cursos válidos para buscar');
-        return NextResponse.json({ cursos: [] });
+        // Si llegamos aquí, no pudimos sincronizar el usuario
+        console.log('API: No se pudo sincronizar el ID temporal');
+        return NextResponse.json(
+          { 
+            error: 'Tu sesión está siendo procesada', 
+            message: 'Por favor, espera unos segundos y vuelve a intentarlo.' 
+          },
+          { status: 202 } // Accepted - la solicitud se ha recibido pero aún no se ha actuado
+        );
+      } catch (syncError) {
+        console.error('API: Error al sincronizar usuario temporal:', syncError);
+        return NextResponse.json(
+          { 
+            error: 'Error al procesar tu cuenta', 
+            message: 'Por favor, cierra sesión y vuelve a iniciar sesión.' 
+          },
+          { status: 500 }
+        );
       }
-      
-      console.log('API: Buscando cursos con IDs (ObjectId):', cursoIds.map(id => id.toString()));
-      
-      // Obtener los detalles de los cursos comprados usando $or para mayor flexibilidad
-      const cursos = await db.collection('cursos')
-        .find({ 
-          $or: [
-            { _id: { $in: cursoIds } },
-            { _id: { $in: cursoIds.map(id => id.toString()) } } // Probar también con strings
-          ]
-        })
-        .toArray();
-      
-      console.log('API: Se encontraron', cursos.length, 'cursos de', cursoIds.length, 'IDs');
-      
-      // Mapear los IDs para debuggeo
-      console.log('IDs de cursos encontrados:', cursos.map(c => c._id.toString()));
-      
-      // Si no encontramos todos los cursos, loguear advertencia
-      if (cursos.length < cursoIds.length) {
-        console.warn('API: No se encontraron todos los cursos comprados. Faltan:', 
-          cursoIds.length - cursos.length);
-      }
-      
-      return NextResponse.json({ cursos });
-    } catch (error) {
-      console.error('API: Error al procesar los IDs de cursos:', error);
+    }
+    
+    // ID no temporal, conectar a la base de datos y procesar
+    try {
+      const { db } = await connectToDatabase();
+      return await manejarSolicitudCursos(userId, session.user.email, db);
+    } catch (dbError) {
+      console.error('API: Error al conectar a la base de datos:', dbError);
       return NextResponse.json(
         { 
-          error: 'Error al procesar los cursos', 
-          detalles: error.message 
+          error: 'Error de conexión a la base de datos', 
+          message: 'Por favor, inténtalo de nuevo más tarde.' 
         },
         { status: 500 }
       );
@@ -199,6 +121,138 @@ export async function GET(request: Request) {
       { 
         error: 'Error al obtener los cursos comprados',
         message: 'Por favor, inténtalo de nuevo más tarde.'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// Función para manejar la solicitud de cursos una vez que tenemos un ID válido
+async function manejarSolicitudCursos(userId: string, email: string | null | undefined, db: any) {
+  console.log('API: Procesando solicitud de cursos para usuario:', userId);
+  
+  // Buscar el usuario
+  let usuario;
+  let userQuery = {};
+  
+  try {
+    // Decidir cómo buscar al usuario (ID o email)
+    if (ObjectId.isValid(userId)) {
+      userQuery = { _id: new ObjectId(userId) };
+      console.log('API: Buscando usuario por ID:', userId);
+    } else if (email) {
+      userQuery = { email: email };
+      console.log('API: Buscando usuario por email:', email);
+    } else {
+      throw new Error('No se dispone de información suficiente para identificar al usuario');
+    }
+    
+    usuario = await db.collection('usuarios').findOne(userQuery);
+  } catch (error) {
+    console.error('API: Error al buscar usuario:', error);
+    return NextResponse.json(
+      { 
+        error: 'Error al identificar usuario', 
+        message: 'Por favor, cierra sesión y vuelve a iniciar.' 
+      },
+      { status: 400 }
+    );
+  }
+  
+  if (!usuario) {
+    console.log('API: Usuario no encontrado con la consulta:', JSON.stringify(userQuery));
+    return NextResponse.json(
+      { 
+        error: 'Usuario no encontrado', 
+        message: 'Por favor, cierra sesión y vuelve a iniciarla.' 
+      },
+      { status: 404 }
+    );
+  }
+  
+  // Si el usuario no tiene cursos comprados, devolver un array vacío
+  if (!usuario.cursosComprados || !Array.isArray(usuario.cursosComprados) || usuario.cursosComprados.length === 0) {
+    console.log('API: El usuario no tiene cursos comprados');
+    return NextResponse.json({ cursos: [] });
+  }
+  
+  console.log('API: Usuario tiene cursos comprados:', usuario.cursosComprados);
+  
+  try {
+    // Preparar una lista de IDs de cursos válidos
+    const cursoIds = [];
+    const cursosIdsString = new Set();
+    
+    for (const id of usuario.cursosComprados) {
+      if (!id) continue; // Ignorar valores nulos o undefined
+      
+      try {
+        // Guardar el ID como string para comparación
+        if (typeof id === 'string') {
+          cursosIdsString.add(id);
+          // Intentar convertir a ObjectId si es válido
+          if (ObjectId.isValid(id)) {
+            cursoIds.push(new ObjectId(id));
+          }
+        } else if (id instanceof ObjectId) {
+          cursoIds.push(id);
+          cursosIdsString.add(id.toString());
+        } else if (id && typeof id === 'object' && id._id) {
+          const idStr = id._id.toString();
+          cursosIdsString.add(idStr);
+          if (ObjectId.isValid(idStr)) {
+            cursoIds.push(new ObjectId(idStr));
+          }
+        }
+      } catch (error) {
+        console.error(`API: Error al procesar ID de curso (${id}):`, error);
+      }
+    }
+    
+    // Si no hay IDs válidos después de todo el procesamiento
+    if (cursoIds.length === 0 && cursosIdsString.size === 0) {
+      console.log('API: No se encontraron IDs válidos después del procesamiento');
+      return NextResponse.json({ cursos: [] });
+    }
+    
+    console.log(`API: Buscando cursos con ${cursoIds.length} ObjectIds y ${cursosIdsString.size} strings`);
+    
+    // Construir la consulta usando $or para mayor flexibilidad
+    const query: any = { $or: [] };
+    
+    // Añadir búsqueda por ObjectId si hay ObjectIds válidos
+    if (cursoIds.length > 0) {
+      query.$or.push({ _id: { $in: cursoIds } });
+    }
+    
+    // Añadir búsqueda por strings si hay strings
+    if (cursosIdsString.size > 0) {
+      const stringArray = Array.from(cursosIdsString);
+      // Buscar tanto en _id como en el campo id si existe
+      query.$or.push({ _id: { $in: stringArray } });
+      query.$or.push({ id: { $in: stringArray } });
+    }
+    
+    console.log('API: Consulta de cursos:', JSON.stringify(query));
+    
+    // Obtener los detalles de los cursos
+    const cursos = await db.collection('cursos').find(query).toArray();
+    
+    console.log('API: Se encontraron', cursos.length, 'cursos');
+    
+    // Si no encontramos todos los cursos, loguear advertencia
+    const totalIdsUnicos = new Set([...cursoIds.map(id => id.toString()), ...cursosIdsString]);
+    if (cursos.length < totalIdsUnicos.size) {
+      console.warn('API: No se encontraron todos los cursos. Encontrados:', cursos.length, 'de', totalIdsUnicos.size);
+    }
+    
+    return NextResponse.json({ cursos });
+  } catch (error) {
+    console.error('API: Error al procesar IDs de cursos:', error);
+    return NextResponse.json(
+      { 
+        error: 'Error al procesar los cursos', 
+        detalles: error.message 
       },
       { status: 500 }
     );
