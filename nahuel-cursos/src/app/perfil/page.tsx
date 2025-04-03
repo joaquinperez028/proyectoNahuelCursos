@@ -328,32 +328,37 @@ export default function Perfil() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {cursosComprados.map((curso) => (
-                  <Link key={curso._id} href={`/cursos/${curso._id}`}>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col">
-                      <div className="relative pb-[56.25%] bg-gray-100">
-                        {curso.videoPreview ? (
-                          <VideoPlayer 
-                            src={curso.videoPreview} 
-                            className="absolute inset-0" 
-                            autoPlay={false}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                            <span className="text-black font-medium">Vista previa no disponible</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4 flex-1 flex flex-col">
-                        <h3 className="font-bold text-black mb-2">{curso.titulo}</h3>
-                        <p className="text-black text-sm line-clamp-2 mb-auto">
-                          {curso.descripcion}
-                        </p>
-                        <div className="mt-4 pt-4 border-t border-gray-100">
-                          <span className="text-sm text-blue-600 font-medium">Ver curso</span>
+                  <div key={curso._id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
+                    <div className="relative pb-[56.25%] bg-gray-100">
+                      {curso.videoPreview ? (
+                        <VideoPlayer 
+                          src={curso.videoPreview} 
+                          className="absolute inset-0" 
+                          autoPlay={false}
+                          stopPropagation={true}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                          <span className="text-black font-medium">Vista previa no disponible</span>
                         </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-bold text-black mb-2">{curso.titulo}</h3>
+                      <p className="text-black text-sm line-clamp-2 mb-auto">
+                        {curso.descripcion}
+                      </p>
+                      <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                        <span className="text-sm text-blue-600 font-medium">Curso comprado</span>
+                        <Link 
+                          href={`/cursos/${curso._id}`}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center"
+                        >
+                          Ver curso
+                        </Link>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )}

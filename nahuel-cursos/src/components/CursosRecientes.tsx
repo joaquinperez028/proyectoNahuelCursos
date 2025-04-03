@@ -194,42 +194,50 @@ export default function CursosRecientes() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {cursos.map((curso) => (
-            <Link href={`/cursos/${curso._id}`} key={curso._id} className="block">
-              <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-                <div className="w-full h-48 bg-blue-100 relative">
-                  {curso.videoPreview ? (
-                    <VideoPlayer 
-                      src={curso.videoPreview} 
-                      className="absolute inset-0" 
-                      autoPlay={false}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-blue-100">
-                      <div className="text-center p-2">
-                        <FaVideo className="text-4xl text-blue-500 mx-auto mb-2" />
-                        <p className="text-sm text-blue-700">Vista previa no disponible</p>
-                      </div>
+            <div key={curso._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+              <div className="w-full h-48 bg-blue-100 relative">
+                {curso.videoPreview ? (
+                  <VideoPlayer 
+                    src={curso.videoPreview} 
+                    className="absolute inset-0" 
+                    autoPlay={false}
+                    stopPropagation={true}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-blue-100">
+                    <div className="text-center p-2">
+                      <FaVideo className="text-4xl text-blue-500 mx-auto mb-2" />
+                      <p className="text-sm text-blue-700">Vista previa no disponible</p>
                     </div>
-                  )}
-                </div>
-                <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-lg font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
-                  <p className="text-gray-600 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
-                  <div className="mt-auto">
-                    <div className="flex justify-between items-center">
-                      <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
-                      {curso.calificacionPromedio !== undefined && (
-                        <ValoracionEstrellas 
-                          calificacion={curso.calificacionPromedio} 
-                          totalValoraciones={curso.totalValoraciones} 
-                          tamano="sm" 
-                        />
-                      )}
-                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="p-6 flex-1 flex flex-col">
+                <h3 className="text-lg font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
+                <p className="text-gray-600 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
+                <div className="mt-auto">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
+                    {curso.calificacionPromedio !== undefined && (
+                      <ValoracionEstrellas 
+                        calificacion={curso.calificacionPromedio} 
+                        totalValoraciones={curso.totalValoraciones} 
+                        tamano="sm" 
+                      />
+                    )}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-100 text-right">
+                    <Link 
+                      href={`/cursos/${curso._id}`}
+                      className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Ver detalles
+                      <FaArrowRight className="ml-2" size={12} />
+                    </Link>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>

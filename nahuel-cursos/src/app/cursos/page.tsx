@@ -256,6 +256,7 @@ export default function Cursos() {
                       src={curso.videoPreview} 
                       className="absolute inset-0" 
                       autoPlay={false}
+                      stopPropagation={true}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

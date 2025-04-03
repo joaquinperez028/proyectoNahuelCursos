@@ -10,6 +10,7 @@ interface VideoPlayerProps {
   controls?: boolean;
   loop?: boolean;
   muted?: boolean;
+  stopPropagation?: boolean;
 }
 
 export default function VideoPlayer({
@@ -18,7 +19,8 @@ export default function VideoPlayer({
   autoPlay = false,
   controls = true,
   loop = false,
-  muted = false
+  muted = false,
+  stopPropagation = false
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -60,7 +62,13 @@ export default function VideoPlayer({
   };
 
   // Iniciar la reproducción cuando se hace clic en el overlay
-  const handlePlay = () => {
+  const handlePlay = (e: React.MouseEvent) => {
+    // Detener la propagación si se solicita
+    if (stopPropagation) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    
     setPlaying(true);
     
     if (isLocalVideo && videoRef.current) {
@@ -88,11 +96,19 @@ export default function VideoPlayer({
       iframeRef.current.src = playUrl;
     }
   };
+  
+  // Para interceptar clics en el iframe
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (stopPropagation) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
 
   // Para videos locales
   if (isLocalVideo) {
     return (
-      <div className={`relative w-full ${className}`}>
+      <div className={`relative w-full ${className}`} onClick={handleContainerClick}>
         <video
           ref={videoRef}
           className={`w-full rounded-lg`}
@@ -100,6 +116,7 @@ export default function VideoPlayer({
           controls={controls}
           loop={loop}
           muted={muted}
+          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
         >
           <source src={src} type="video/mp4" />
           Tu navegador no soporta la reproducción de videos.
@@ -124,7 +141,7 @@ export default function VideoPlayer({
   const urlSegura = prepararURLExterna(src);
   
   return (
-    <div className={`relative w-full pt-[56.25%] ${className}`}>
+    <div className={`relative w-full pt-[56.25%] ${className}`} onClick={handleContainerClick}>
       {src.startsWith('http') ? (
         <>
           <iframe
@@ -133,6 +150,7 @@ export default function VideoPlayer({
             src={urlSegura}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
           ></iframe>
           
           {!playing && !autoPlay && (
