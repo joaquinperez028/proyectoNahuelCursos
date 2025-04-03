@@ -1,0 +1,5 @@
+[33mcommit ae0e1355c37786e195af968f73d541ccd2350fe0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: joaquinperez028 <tortuwu028@gmail.com>
+Date:   Thu Apr 3 03:02:12 2025 -0300
+
+    Eliminar vercel.json para solucionar problemas de despliegue y añadir soporte para cursos
