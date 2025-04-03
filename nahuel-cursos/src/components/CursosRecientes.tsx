@@ -113,39 +113,64 @@ export default function CursosRecientes() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
   const [esReciente, setEsReciente] = useState(false);
   const haReintentado = useRef(false);
   const [generandoDatos, setGenerandoDatos] = useState(false);
+  const [intentosDeConexion, setIntentosDeConexion] = useState(0);
+  const intentosMaximos = 3;
   
   // Función para obtener los cursos con reintentos
   const obtenerCursosRecientes = async (esReintento = false) => {
     try {
       setLoading(true);
       setError('');
+      setErrorDetail('');
+      
+      console.log('Solicitando cursos recientes a la API...');
       const response = await axios.get('/api/cursos/recientes');
+      console.log('Respuesta recibida:', response.data);
+      
       setCursos(response.data.cursos);
       setEsReciente(response.data.esReciente);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al obtener cursos recientes:', err);
+      setIntentosDeConexion(prev => prev + 1);
+      
+      // Extraer el mensaje de error detallado si está disponible
+      let mensajeError = 'No se pudieron cargar los cursos recientes';
+      let detalleError = '';
+      
+      if (err.response?.data?.error) {
+        mensajeError = err.response.data.error;
+        detalleError = err.response.data.detalle || '';
+      } else if (err.message) {
+        detalleError = err.message;
+      }
+      
+      setError(mensajeError);
+      setErrorDetail(detalleError);
       
       // Si no hay cursos y es un reintento, podemos intentar sembrar datos de ejemplo
-      if (!haReintentado.current && esReintento) {
+      if (intentosDeConexion < intentosMaximos && !haReintentado.current && esReintento) {
         haReintentado.current = true;
         try {
           // Intentar sembrar datos
           setGenerandoDatos(true);
+          console.log('Intentando generar datos de ejemplo...');
           await axios.get('/api/seed-public');
+          console.log('Datos de ejemplo generados correctamente');
           // Esperar un momento y reintentar obtener cursos
           setTimeout(() => obtenerCursosRecientes(), 2000);
           return;
-        } catch (seedError) {
+        } catch (seedError: any) {
           console.error('Error al intentar sembrar datos:', seedError);
+          setError('No se pudieron generar datos de ejemplo');
+          setErrorDetail(seedError.message || 'Error al conectar con la base de datos');
         } finally {
           setGenerandoDatos(false);
         }
       }
-      
-      setError('No se pudieron cargar los cursos recientes');
     } finally {
       setLoading(false);
     }
@@ -174,9 +199,21 @@ export default function CursosRecientes() {
   if (error) {
     return (
       <div className="bg-red-50 text-red-800 p-6 rounded-lg">
-        <p className="mb-4">{error}</p>
+        <h3 className="text-lg font-semibold mb-2">Error de conexión</h3>
+        <p className="mb-2">{error}</p>
+        {errorDetail && (
+          <div className="bg-red-100 p-3 rounded mb-4 text-sm">
+            <p className="font-medium">Detalles técnicos:</p>
+            <p>{errorDetail}</p>
+          </div>
+        )}
+        <p className="mb-4">
+          {intentosDeConexion >= intentosMaximos 
+            ? 'Se han agotado los intentos de conexión. Por favor, verifica tu conexión a Internet y la disponibilidad de la base de datos.' 
+            : 'Estamos experimentando dificultades para conectar con la base de datos.'}
+        </p>
         {generandoDatos ? (
-          <div className="flex items-center">
+          <div className="flex items-center bg-blue-100 p-4 rounded">
             <FaSpinner className="animate-spin text-blue-600 mr-2" />
             <span>Generando datos de ejemplo...</span>
           </div>
@@ -184,6 +221,7 @@ export default function CursosRecientes() {
           <button 
             onClick={handleRetry}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
+            disabled={intentosDeConexion >= intentosMaximos}
           >
             <FaSyncAlt className="mr-2" /> Reintentar y generar datos
           </button>
@@ -195,12 +233,13 @@ export default function CursosRecientes() {
   if (cursos.length === 0) {
     return (
       <div className="bg-yellow-50 text-yellow-800 p-6 rounded-lg">
-        <p>No hay cursos disponibles actualmente.</p>
+        <h3 className="text-lg font-semibold mb-2">Sin contenido</h3>
+        <p className="mb-4">No hay cursos disponibles actualmente.</p>
         <button 
           onClick={handleRetry}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
         >
-          Generar cursos de ejemplo
+          <FaSyncAlt className="mr-2" /> Generar cursos de ejemplo
         </button>
       </div>
     );
