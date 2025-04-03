@@ -36,6 +36,20 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
   const [usuarioHaValorado, setUsuarioHaValorado] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   
+  // Añadir logs para depurar
+  useEffect(() => {
+    console.log('ValoracionesCurso montado con cursoId:', cursoId);
+    console.log('ValoracionesCurso tieneAcceso:', tieneAcceso);
+    console.log('ValoracionesCurso estado de sesión:', status);
+    if (session?.user) {
+      console.log('ValoracionesCurso usuario:', {
+        id: session.user.id,
+        email: session.user.email,
+        nombre: session.user.nombre || session.user.name
+      });
+    }
+  }, [cursoId, tieneAcceso, status, session])
+  
   // Cargar las valoraciones
   useEffect(() => {
     const obtenerValoraciones = async () => {
@@ -74,6 +88,11 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
     
     obtenerValoraciones();
   }, [cursoId, status, session]);
+  
+  // Verificar si podemos mostrar el formulario de valoración
+  const mostrarOpcionesValoracion = () => {
+    return status === 'authenticated' && tieneAcceso;
+  };
   
   // Enviar una valoración
   const handleSubmitValoracion = async (e: React.FormEvent) => {
@@ -202,7 +221,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
           </div>
         </div>
         
-        {tieneAcceso && status === 'authenticated' && (
+        {mostrarOpcionesValoracion() && (
           <div className="w-full sm:w-auto">
             {!mostrarFormulario && !usuarioHaValorado ? (
               <button
@@ -224,7 +243,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
       </div>
       
       {/* Formulario de valoración */}
-      {mostrarFormulario && tieneAcceso && status === 'authenticated' && (
+      {mostrarFormulario && mostrarOpcionesValoracion() && (
         <div className="bg-blue-50 p-6 rounded-lg mb-8">
           <h3 className="text-lg font-semibold mb-4 text-gray-900">
             {usuarioHaValorado ? 'Editar tu valoración' : 'Valorar este curso'}
@@ -321,7 +340,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
       ) : (
         <div className="text-center py-8 bg-gray-50 rounded-lg">
           <p className="text-gray-600">Este curso aún no tiene valoraciones</p>
-          {tieneAcceso && status === 'authenticated' && !mostrarFormulario && !usuarioHaValorado && (
+          {mostrarOpcionesValoracion() && !mostrarFormulario && !usuarioHaValorado && (
             <button
               onClick={() => setMostrarFormulario(true)}
               className="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium"
