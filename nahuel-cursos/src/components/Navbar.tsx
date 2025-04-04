@@ -121,7 +121,7 @@ export default function Navbar() {
                 </Link>
                 <Link 
                   href="/auth/registro" 
-                  className="px-4 py-2 bg-white text-blue-800 rounded-md hover:bg-blue-100 transition-colors font-medium"
+                  className="px-4 py-2 bg-white text-black rounded-md hover:bg-blue-100 transition-colors font-medium"
                 >
                   Registrarse
                 </Link>
