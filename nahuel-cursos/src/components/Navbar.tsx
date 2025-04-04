@@ -80,22 +80,22 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-blue-900 text-white shadow-lg">
+    <nav className="bg-blue-800 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <span className="font-bold text-xl">Nahuel Lozano</span>
+              <span className="font-bold text-xl text-white">Nahuel Lozano</span>
             </Link>
           </div>
           
           {/* Enlaces de navegación para pantallas medianas y grandes */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/cursos" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
+            <Link href="/cursos" className="px-3 py-2 rounded-md text-white hover:bg-blue-700 transition-colors font-medium">
               Cursos
             </Link>
             {session?.user?.role === 'admin' && (
-              <Link href="/admin" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
+              <Link href="/admin" className="px-3 py-2 rounded-md text-white hover:bg-blue-700 transition-colors font-medium">
                 Administración
               </Link>
             )}
@@ -103,25 +103,25 @@ export default function Navbar() {
             {session ? (
               <div className="relative ml-3 flex items-center space-x-3">
                 {isSyncNeeded && renderSyncIndicator()}
-                <Link href="/perfil" className="flex items-center text-sm px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
+                <Link href="/perfil" className="flex items-center text-sm px-3 py-2 rounded-md text-white hover:bg-blue-700 transition-colors font-medium">
                   <FaUser className="mr-1" /> 
                   {session.user?.name || 'Perfil'}
                 </Link>
                 <button 
                   onClick={() => signOut()} 
-                  className="flex items-center text-sm px-3 py-2 rounded-md hover:bg-blue-800 transition-colors"
+                  className="flex items-center text-sm px-3 py-2 rounded-md text-white hover:bg-blue-700 transition-colors font-medium"
                 >
                   <FaSignOutAlt className="mr-1" /> Salir
                 </button>
               </div>
             ) : (
               <div className="flex space-x-2">
-                <Link href="/auth/login" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
+                <Link href="/auth/login" className="px-4 py-2 rounded-md text-white hover:bg-blue-700 transition-colors font-medium border border-white">
                   Iniciar Sesión
                 </Link>
                 <Link 
                   href="/auth/registro" 
-                  className="px-3 py-2 bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-white text-blue-800 rounded-md hover:bg-blue-100 transition-colors font-medium"
                 >
                   Registrarse
                 </Link>
@@ -144,7 +144,24 @@ export default function Navbar() {
       {/* Indicador de sincronización para móviles */}
       {isSyncNeeded && session && (
         <div className="md:hidden px-4 py-2">
-          {renderSyncIndicator()}
+          <div className="bg-yellow-500 px-3 py-2 text-sm rounded flex items-center justify-between text-yellow-900 font-medium">
+            <div className="flex items-center">
+              <FaExclamationTriangle className="mr-2" />
+              <span className="mr-2">Sincronización necesaria</span>
+            </div>
+            <button 
+              onClick={handleRefreshSession}
+              disabled={isRefreshing}
+              className="bg-white text-yellow-800 px-3 py-1 rounded text-sm flex items-center hover:bg-yellow-100 transition-colors font-medium"
+            >
+              {isRefreshing ? 'Actualizando...' : (
+                <>
+                  <FaSync className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+                  Actualizar
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
       
