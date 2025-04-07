@@ -119,7 +119,7 @@ export default function Home() {
           </p>
           <Link 
             href="/cursos" 
-            className="bg-white text-blue-800 hover:bg-blue-100 py-3 px-8 rounded-lg text-lg font-medium transition-colors inline-block"
+            className="bg-white text-black hover:bg-blue-100 py-3 px-8 rounded-lg text-lg font-bold transition-colors inline-block"
           >
             Explorar cursos
           </Link>
