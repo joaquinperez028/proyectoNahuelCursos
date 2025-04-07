@@ -73,7 +73,7 @@ export default function Home() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
             {/* Característica 1 */}
-            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaGraduationCap className="text-green-600 text-2xl" />
               </div>
@@ -84,7 +84,7 @@ export default function Home() {
             </div>
             
             {/* Característica 2 */}
-            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaChartLine className="text-green-600 text-2xl" />
               </div>
@@ -95,7 +95,7 @@ export default function Home() {
             </div>
             
             {/* Característica 3 */}
-            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow">
+            <div className="bg-white rounded-xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaLock className="text-green-600 text-2xl" />
               </div>
