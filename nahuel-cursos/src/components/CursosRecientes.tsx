@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo, FaSyncAlt } from 'react-icons/fa';
+import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo, FaSyncAlt, FaLock, FaGraduationCap } from 'react-icons/fa';
 import ValoracionEstrellas from './ValoracionEstrellas';
 import VideoPlayer from './VideoPlayer';
 
@@ -27,6 +27,7 @@ export default function CursosRecientes() {
   const haReintentado = useRef(false);
   const [generandoDatos, setGenerandoDatos] = useState(false);
   const [intentosDeConexion, setIntentosDeConexion] = useState(0);
+  const [hoveredCurso, setHoveredCurso] = useState<string | null>(null);
   const intentosMaximos = 3;
   
   // Función para obtener los cursos con reintentos
@@ -194,7 +195,12 @@ export default function CursosRecientes() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {cursos.map((curso) => (
-            <div key={curso._id} className="bg-gray-100 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+            <div 
+              key={curso._id} 
+              className="bg-gray-100 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col relative"
+              onMouseEnter={() => setHoveredCurso(curso._id)}
+              onMouseLeave={() => setHoveredCurso(null)}
+            >
               <div className="w-full h-48 bg-gray-200 relative">
                 {curso.videoPreview ? (
                   <VideoPlayer 
@@ -237,6 +243,36 @@ export default function CursosRecientes() {
                   </div>
                 </div>
               </div>
+
+              {/* Modal que aparece al hacer hover */}
+              {hoveredCurso === curso._id && (
+                <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center p-6 transition-opacity duration-300">
+                  <div className="text-white">
+                    <h3 className="text-xl font-bold mb-4">Contenido Premium</h3>
+                    <p className="mb-4">Adquiere este curso para acceder al contenido completo</p>
+                    <div className="space-y-2 mb-6">
+                      <div className="flex items-center">
+                        <FaVideo className="text-green-500 mr-2" />
+                        <span>Video curso completo</span>
+                      </div>
+                      <div className="flex items-center">
+                        <FaLock className="text-green-500 mr-2" />
+                        <span>Acceso desde cualquier dispositivo</span>
+                      </div>
+                      <div className="flex items-center">
+                        <FaGraduationCap className="text-green-500 mr-2" />
+                        <span>Actualizaciones gratuitas</span>
+                      </div>
+                    </div>
+                    <Link 
+                      href={`/cursos/${curso._id}`}
+                      className="inline-block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors"
+                    >
+                      Ver más detalles
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
