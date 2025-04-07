@@ -180,7 +180,7 @@ export default function CursosRecientes() {
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-10">
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-green-800">
             {esReciente ? 'Últimos cursos añadidos' : 'Nuestro curso más reciente'}
           </h2>
           <Link 
@@ -207,14 +207,14 @@ export default function CursosRecientes() {
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
                     <div className="text-center p-2">
                       <FaVideo className="text-4xl text-green-500 mx-auto mb-2" />
-                      <p className="text-sm text-gray-700">Vista previa no disponible</p>
+                      <p className="text-sm text-green-700">Vista previa no disponible</p>
                     </div>
                   </div>
                 )}
               </div>
               <div className="p-6 flex flex-col flex-1">
-                <h3 className="text-lg font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
-                <p className="text-gray-600 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
+                <h3 className="text-lg font-semibold mb-2 text-green-800">{curso.titulo}</h3>
+                <p className="text-green-700 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
                 <div className="mt-auto">
                   <div className="flex justify-between items-center">
                     <span className="text-green-600 font-bold">${curso.precio.toFixed(2)}</span>

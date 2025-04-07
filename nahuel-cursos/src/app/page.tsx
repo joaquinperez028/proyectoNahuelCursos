@@ -63,10 +63,10 @@ export default function Home() {
       <section className="py-20 bg-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-green-800 mb-4">
               ¿Por qué elegir nuestros cursos?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-green-700 max-w-3xl mx-auto">
               Diseñados por expertos en inversiones, nuestros cursos te brindan las herramientas y conocimientos necesarios para navegar con confianza en el mundo de las criptomonedas.
             </p>
           </div>
@@ -77,8 +77,8 @@ export default function Home() {
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaGraduationCap className="text-green-600 text-2xl" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-gray-900">Contenido de calidad</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-3 text-green-800">Contenido de calidad</h3>
+              <p className="text-green-700">
                 Material actualizado y completo, desarrollado por profesionales con amplia experiencia en el mercado de criptomonedas.
               </p>
             </div>
@@ -88,8 +88,8 @@ export default function Home() {
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaChartLine className="text-green-600 text-2xl" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-gray-900">Estrategias efectivas</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-3 text-green-800">Estrategias efectivas</h3>
+              <p className="text-green-700">
                 Aprende técnicas de análisis y estrategias de inversión probadas para maximizar tus rendimientos y minimizar riesgos.
               </p>
             </div>
@@ -99,8 +99,8 @@ export default function Home() {
               <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
                 <FaLock className="text-green-600 text-2xl" />
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-gray-900">Acceso permanente</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-3 text-green-800">Acceso permanente</h3>
+              <p className="text-green-700">
                 Una vez comprado el curso, tendrás acceso de por vida al contenido, incluyendo todas las actualizaciones futuras.
               </p>
             </div>
