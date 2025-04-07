@@ -59,8 +59,8 @@ function LoginForm() {
   return (
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Inicia Sesión</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-3xl font-bold text-green-800">Inicia Sesión</h1>
+        <p className="mt-2 text-green-700">
           Accede a tu cuenta para ver y comprar cursos
         </p>
       </div>
@@ -93,45 +93,43 @@ function LoginForm() {
         </div>
         
         {/* Botón de Google */}
-        <div>
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full flex justify-center items-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-lg transition-colors font-medium shadow-sm"
-          >
-            {loading ? (
-              <>
-                <FaSpinner className="animate-spin mr-2" />
-                Conectando con Google...
-              </>
-            ) : (
-              <>
-                <FaGoogle className="text-red-500 mr-3" />
-                Iniciar sesión con Google
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full flex justify-center items-center bg-white hover:bg-gray-50 text-green-800 py-3 px-4 rounded-lg transition-colors font-medium shadow-sm border border-gray-300"
+        >
+          {loading ? (
+            <>
+              <FaSpinner className="animate-spin mr-2" />
+              <span className="text-green-700">Conectando con Google...</span>
+            </>
+          ) : (
+            <>
+              <FaGoogle className="text-red-500 mr-3" />
+              <span className="text-green-800">Iniciar sesión con Google</span>
+            </>
+          )}
+        </button>
         
         <div className="relative flex py-5 items-center">
           <div className="flex-grow border-t border-gray-200"></div>
-          <span className="flex-shrink mx-4 text-gray-400 text-sm">O</span>
+          <span className="flex-shrink mx-4 text-green-600 text-sm">O</span>
           <div className="flex-grow border-t border-gray-200"></div>
         </div>
         
         <div className="text-center">
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-green-700 mb-4">
             Al iniciar sesión, aceptas nuestros{' '}
-            <Link href="/terminos" className="text-blue-600 hover:text-blue-800">
+            <Link href="/terminos" className="text-green-600 hover:text-green-800">
               términos y condiciones
             </Link>
             {' '}y{' '}
-            <Link href="/privacidad" className="text-blue-600 hover:text-blue-800">
+            <Link href="/privacidad" className="text-green-600 hover:text-green-800">
               política de privacidad
             </Link>
           </p>
           
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-800 block mt-4">
+          <Link href="/" className="text-sm text-green-600 hover:text-green-800 block mt-4">
             Volver a la página principal
           </Link>
         </div>
