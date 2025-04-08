@@ -247,82 +247,102 @@ export default function CursosRecientes() {
 
         {/* Modal de detalles del curso */}
         {selectedCurso && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedCurso(null)}>
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="relative">
-                <button 
-                  onClick={() => setSelectedCurso(null)}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+            {/* Fondo con desenfoque */}
+            <div 
+              className="absolute inset-0 backdrop-blur-sm bg-black/30"
+              onClick={() => setSelectedCurso(null)}
+            ></div>
+            
+            {/* Contenido del modal */}
+            <div 
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden transform transition-all"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Botón de cerrar */}
+              <button 
+                onClick={() => setSelectedCurso(null)}
+                className="absolute top-4 right-4 text-white hover:text-gray-200 z-10 bg-black/30 rounded-full p-1 backdrop-blur-sm"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
 
-                <div className="w-full aspect-video bg-black relative">
-                  {selectedCurso.videoPreview ? (
-                    <VideoPlayer 
-                      src={selectedCurso.videoPreview} 
-                      className="absolute inset-0" 
-                      autoPlay={false}
-                      stopPropagation={true}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <FaLock className="text-5xl text-white mx-auto mb-2" />
-                        <h3 className="text-white text-xl font-bold">Contenido Premium</h3>
-                        <p className="text-white text-sm">Adquiere este curso para acceder al contenido completo</p>
-                      </div>
+              {/* Video o placeholder */}
+              <div className="w-full aspect-video bg-black relative">
+                {selectedCurso.videoPreview ? (
+                  <VideoPlayer 
+                    src={selectedCurso.videoPreview} 
+                    className="absolute inset-0" 
+                    autoPlay={false}
+                    stopPropagation={true}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+                    <div className="text-center px-6">
+                      <FaLock className="text-6xl text-green-500 mx-auto mb-4" />
+                      <h3 className="text-white text-2xl font-bold mb-2">Contenido Premium</h3>
+                      <p className="text-gray-300 text-sm">Adquiere este curso para acceder al contenido completo</p>
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Información del curso */}
+              <div className="p-8">
+                <h2 className="text-2xl font-bold text-green-800 mb-3">{selectedCurso.titulo}</h2>
+                <p className="text-green-700 mb-6">{selectedCurso.descripcion}</p>
+
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-3xl font-bold text-green-800">${selectedCurso.precio.toFixed(2)}</span>
+                  {selectedCurso.calificacionPromedio !== undefined && (
+                    <ValoracionEstrellas 
+                      calificacion={selectedCurso.calificacionPromedio} 
+                      totalValoraciones={selectedCurso.totalValoraciones} 
+                      tamano="lg" 
+                    />
                   )}
                 </div>
 
-                <div className="p-6">
-                  <h2 className="text-xl font-bold text-green-800 mb-2">{selectedCurso.titulo}</h2>
-                  <p className="text-green-700 text-sm mb-4">{selectedCurso.descripcion}</p>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-green-800">${selectedCurso.precio.toFixed(2)}</span>
-                    {selectedCurso.calificacionPromedio !== undefined && (
-                      <ValoracionEstrellas 
-                        calificacion={selectedCurso.calificacionPromedio} 
-                        totalValoraciones={selectedCurso.totalValoraciones} 
-                        tamano="sm" 
-                      />
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div className="bg-gray-50 rounded-xl p-6 mb-6">
+                  <h3 className="font-semibold text-gray-800 mb-4">Este curso incluye:</h3>
+                  <div className="space-y-4">
                     <div className="flex items-center">
-                      <FaVideo className="text-green-600 mr-2" />
-                      <span>Video curso completo</span>
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <FaVideo className="text-green-600 text-lg" />
+                      </div>
+                      <span className="text-gray-700">Video curso completo</span>
                     </div>
                     <div className="flex items-center">
-                      <FaLock className="text-green-600 mr-2" />
-                      <span>Acceso multiplataforma</span>
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <FaLock className="text-green-600 text-lg" />
+                      </div>
+                      <span className="text-gray-700">Acceso multiplataforma</span>
                     </div>
                     <div className="flex items-center">
-                      <FaGraduationCap className="text-green-600 mr-2" />
-                      <span>Actualizaciones gratis</span>
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <FaGraduationCap className="text-green-600 text-lg" />
+                      </div>
+                      <span className="text-gray-700">Actualizaciones gratuitas</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex space-x-3">
-                    <Link 
-                      href={`/cursos/${selectedCurso._id}`}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors font-medium text-sm flex items-center justify-center"
-                    >
-                      Ver curso completo
-                      <FaArrowRight className="ml-2" size={12} />
-                    </Link>
-                    <button
-                      onClick={() => setSelectedCurso(null)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
+                <div className="flex space-x-4">
+                  <Link 
+                    href={`/cursos/${selectedCurso._id}`}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-xl text-center transition-colors font-medium flex items-center justify-center"
+                  >
+                    Ver curso completo
+                    <FaArrowRight className="ml-2" />
+                  </Link>
+                  <button
+                    onClick={() => setSelectedCurso(null)}
+                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
             </div>
