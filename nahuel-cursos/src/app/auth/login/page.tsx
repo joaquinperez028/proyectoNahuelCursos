@@ -120,16 +120,16 @@ function LoginForm() {
         <div className="text-center">
           <p className="text-sm !text-white mb-4">
             Al iniciar sesión, aceptas nuestros{' '}
-            <Link href="/terminos" className="text-green-400 hover:text-white">
+            <Link href="/terminos" className="text-green-400 hover:text-blue">
               términos y condiciones
             </Link>
             {' '}y{' '}
-            <Link href="/privacidad" className="text-green-400 hover:text-white">
+            <Link href="/privacidad" className="text-green-400 hover:text-blue">
               política de privacidad
             </Link>
           </p>
           
-          <Link href="/" className="text-sm text-green-400 hover:text-white block mt-4">
+          <Link href="/" className="text-sm text-green-400 hover:text-blue block mt-4">
             Volver a la página principal
           </Link>
         </div>
