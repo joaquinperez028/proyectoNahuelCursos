@@ -303,11 +303,11 @@ export default function DetalleCurso({ params }: CursoProps) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="bg-blue-900 py-4 px-6 rounded-t-xl mb-6">
+      <div className="bg-black py-4 px-6 rounded-t-xl mb-6">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-0">{curso.titulo}</h1>
         <div className="flex flex-wrap gap-2 mt-2">
           {curso.categorias.map((categoria, index) => (
-            <span key={index} className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
+            <span key={index} className="bg-green-600 text-white text-xs px-3 py-1 rounded-full">
               {categoria}
             </span>
           ))}

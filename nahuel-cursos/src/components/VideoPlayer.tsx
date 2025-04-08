@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { FaPlayCircle } from 'react-icons/fa';
+import { FaPlayCircle, FaLock } from 'react-icons/fa';
 
 interface VideoPlayerProps {
   src: string;
@@ -127,7 +127,7 @@ export default function VideoPlayer({
             className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all"
             onClick={handlePlay}
           >
-            <div className="rounded-full bg-blue-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
+            <div className="rounded-full bg-green-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
               <FaPlayCircle className="text-white text-4xl" />
             </div>
           </div>
@@ -141,33 +141,22 @@ export default function VideoPlayer({
   const urlSegura = prepararURLExterna(src);
   
   return (
-    <div className={`relative w-full pt-[56.25%] ${className}`} onClick={handleContainerClick}>
-      {src.startsWith('http') ? (
-        <>
-          <iframe
-            ref={iframeRef}
-            className="absolute top-0 left-0 w-full h-full rounded-lg"
-            src={urlSegura}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-          ></iframe>
-          
-          {!playing && !autoPlay && (
-            <div 
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all"
-              onClick={handlePlay}
-            >
-              <div className="rounded-full bg-blue-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
-                <FaPlayCircle className="text-white text-4xl" />
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-200 rounded-lg">
-          <p className="text-gray-600">URL de video no válida</p>
+    <div className={`relative w-full ${className}`}>
+      {!urlSegura ? (
+        <div className="aspect-video bg-black flex items-center justify-center">
+          <div className="text-center p-8">
+            <FaLock className="text-6xl text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Contenido Premium</h2>
+            <p className="text-green-400">Adquiere este curso para acceder al contenido completo</p>
+          </div>
         </div>
+      ) : (
+        <iframe
+          src={urlSegura}
+          className="w-full aspect-video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        ></iframe>
       )}
     </div>
   );
