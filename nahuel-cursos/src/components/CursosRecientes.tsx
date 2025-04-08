@@ -24,10 +24,10 @@ export default function CursosRecientes() {
   const [error, setError] = useState('');
   const [errorDetail, setErrorDetail] = useState('');
   const [esReciente, setEsReciente] = useState(false);
+  const [selectedCurso, setSelectedCurso] = useState<Curso | null>(null);
   const haReintentado = useRef(false);
   const [generandoDatos, setGenerandoDatos] = useState(false);
   const [intentosDeConexion, setIntentosDeConexion] = useState(0);
-  const [hoveredCurso, setHoveredCurso] = useState<string | null>(null);
   const intentosMaximos = 3;
   
   // Función para obtener los cursos con reintentos
@@ -216,11 +216,7 @@ export default function CursosRecientes() {
                   </div>
                 )}
               </div>
-              <div 
-                className="p-6 flex flex-col flex-1 relative"
-                onMouseEnter={() => setHoveredCurso(curso._id)}
-                onMouseLeave={() => setHoveredCurso(null)}
-              >
+              <div className="p-6 flex flex-col flex-1">
                 <h3 className="text-lg font-semibold mb-2 text-green-800">{curso.titulo}</h3>
                 <p className="text-green-700 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
                 <div className="mt-auto">
@@ -235,49 +231,97 @@ export default function CursosRecientes() {
                     )}
                   </div>
                   <div className="mt-3 pt-3 border-t border-gray-200 text-right">
-                    <Link 
-                      href={`/cursos/${curso._id}`}
+                    <button 
+                      onClick={() => setSelectedCurso(curso)}
                       className="inline-flex items-center text-green-600 hover:text-green-800 font-medium"
                     >
                       Ver detalles
                       <FaArrowRight className="ml-2" size={12} />
-                    </Link>
+                    </button>
                   </div>
                 </div>
-
-                {/* Modal que aparece al hacer hover */}
-                {hoveredCurso === curso._id && (
-                  <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center p-6 transition-opacity duration-300">
-                    <div className="text-white">
-                      <h3 className="text-xl font-bold mb-4">Contenido Premium</h3>
-                      <p className="mb-4">Adquiere este curso para acceder al contenido completo</p>
-                      <div className="space-y-2 mb-6">
-                        <div className="flex items-center">
-                          <FaVideo className="text-green-500 mr-2" />
-                          <span>Video curso completo</span>
-                        </div>
-                        <div className="flex items-center">
-                          <FaLock className="text-green-500 mr-2" />
-                          <span>Acceso desde cualquier dispositivo</span>
-                        </div>
-                        <div className="flex items-center">
-                          <FaGraduationCap className="text-green-500 mr-2" />
-                          <span>Actualizaciones gratuitas</span>
-                        </div>
-                      </div>
-                      <Link 
-                        href={`/cursos/${curso._id}`}
-                        className="inline-block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors"
-                      >
-                        Ver más detalles
-                      </Link>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ))}
         </div>
+
+        {/* Modal de detalles del curso */}
+        {selectedCurso && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="relative">
+                <button 
+                  onClick={() => setSelectedCurso(null)}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+
+                <div className="w-full aspect-video bg-black relative">
+                  {selectedCurso.videoPreview ? (
+                    <VideoPlayer 
+                      src={selectedCurso.videoPreview} 
+                      className="absolute inset-0" 
+                      autoPlay={false}
+                      stopPropagation={true}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <FaLock className="text-5xl text-white mx-auto mb-2" />
+                        <h3 className="text-white text-xl font-bold">Contenido Premium</h3>
+                        <p className="text-white text-sm">Adquiere este curso para acceder al contenido completo</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold text-green-800 mb-4">{selectedCurso.titulo}</h2>
+                  <p className="text-green-700 mb-6">{selectedCurso.descripcion}</p>
+
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-2xl font-bold text-green-800">${selectedCurso.precio.toFixed(2)}</span>
+                      {selectedCurso.calificacionPromedio !== undefined && (
+                        <ValoracionEstrellas 
+                          calificacion={selectedCurso.calificacionPromedio} 
+                          totalValoraciones={selectedCurso.totalValoraciones} 
+                          tamano="lg" 
+                        />
+                      )}
+                    </div>
+
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center">
+                        <FaVideo className="text-green-600 mr-3" />
+                        <span>Video curso completo</span>
+                      </div>
+                      <div className="flex items-center">
+                        <FaLock className="text-green-600 mr-3" />
+                        <span>Acceso desde cualquier dispositivo</span>
+                      </div>
+                      <div className="flex items-center">
+                        <FaGraduationCap className="text-green-600 mr-3" />
+                        <span>Actualizaciones gratuitas</span>
+                      </div>
+                    </div>
+
+                    <Link 
+                      href={`/cursos/${selectedCurso._id}`}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg text-center transition-colors font-medium flex items-center justify-center"
+                    >
+                      Comprar curso
+                      <FaArrowRight className="ml-2" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
