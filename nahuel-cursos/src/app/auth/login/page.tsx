@@ -118,18 +118,18 @@ function LoginForm() {
         </div>
         
         <div className="text-center">
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-white mb-4">
             Al iniciar sesión, aceptas nuestros{' '}
-            <Link href="/terminos" className="text-blue-600 hover:text-blue-800">
+            <Link href="/terminos" className="text-white hover:text-green-400">
               términos y condiciones
             </Link>
             {' '}y{' '}
-            <Link href="/privacidad" className="text-blue-600 hover:text-blue-800">
+            <Link href="/privacidad" className="text-white hover:text-green-400">
               política de privacidad
             </Link>
           </p>
           
-          <Link href="/" className="text-sm text-blue-600 hover:text-blue-800 block mt-4">
+          <Link href="/" className="text-sm text-white hover:text-green-400 block mt-4">
             Volver a la página principal
           </Link>
         </div>
