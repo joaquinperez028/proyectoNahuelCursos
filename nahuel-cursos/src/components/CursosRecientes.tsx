@@ -86,7 +86,7 @@ export default function CursosRecientes() {
               // Reintentar obtener cursos
               obtenerCursosRecientes();
             } catch (error) {
-              console.error('Error en la verificación posterior:', error);
+              console.error('Error en la verificación posterior: ', error);
               obtenerCursosRecientes(); // Intentar de todos modos
             }
           }, 3000); // Aumentado a 3 segundos
