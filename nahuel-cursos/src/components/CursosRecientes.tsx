@@ -247,12 +247,12 @@ export default function CursosRecientes() {
 
         {/* Modal de detalles del curso */}
         {selectedCurso && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedCurso(null)}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="relative">
                 <button 
                   onClick={() => setSelectedCurso(null)}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -279,43 +279,49 @@ export default function CursosRecientes() {
                 </div>
 
                 <div className="p-6">
-                  <h2 className="text-2xl font-bold text-green-800 mb-4">{selectedCurso.titulo}</h2>
-                  <p className="text-green-700 mb-6">{selectedCurso.descripcion}</p>
+                  <h2 className="text-xl font-bold text-green-800 mb-2">{selectedCurso.titulo}</h2>
+                  <p className="text-green-700 text-sm mb-4">{selectedCurso.descripcion}</p>
 
-                  <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-2xl font-bold text-green-800">${selectedCurso.precio.toFixed(2)}</span>
-                      {selectedCurso.calificacionPromedio !== undefined && (
-                        <ValoracionEstrellas 
-                          calificacion={selectedCurso.calificacionPromedio} 
-                          totalValoraciones={selectedCurso.totalValoraciones} 
-                          tamano="lg" 
-                        />
-                      )}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-2xl font-bold text-green-800">${selectedCurso.precio.toFixed(2)}</span>
+                    {selectedCurso.calificacionPromedio !== undefined && (
+                      <ValoracionEstrellas 
+                        calificacion={selectedCurso.calificacionPromedio} 
+                        totalValoraciones={selectedCurso.totalValoraciones} 
+                        tamano="sm" 
+                      />
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                    <div className="flex items-center">
+                      <FaVideo className="text-green-600 mr-2" />
+                      <span>Video curso completo</span>
                     </div>
-
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center">
-                        <FaVideo className="text-green-600 mr-3" />
-                        <span>Video curso completo</span>
-                      </div>
-                      <div className="flex items-center">
-                        <FaLock className="text-green-600 mr-3" />
-                        <span>Acceso desde cualquier dispositivo</span>
-                      </div>
-                      <div className="flex items-center">
-                        <FaGraduationCap className="text-green-600 mr-3" />
-                        <span>Actualizaciones gratuitas</span>
-                      </div>
+                    <div className="flex items-center">
+                      <FaLock className="text-green-600 mr-2" />
+                      <span>Acceso multiplataforma</span>
                     </div>
+                    <div className="flex items-center">
+                      <FaGraduationCap className="text-green-600 mr-2" />
+                      <span>Actualizaciones gratis</span>
+                    </div>
+                  </div>
 
+                  <div className="flex space-x-3">
                     <Link 
                       href={`/cursos/${selectedCurso._id}`}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg text-center transition-colors font-medium flex items-center justify-center"
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors font-medium text-sm flex items-center justify-center"
                     >
-                      Comprar curso
-                      <FaArrowRight className="ml-2" />
+                      Ver curso completo
+                      <FaArrowRight className="ml-2" size={12} />
                     </Link>
+                    <button
+                      onClick={() => setSelectedCurso(null)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      Cerrar
+                    </button>
                   </div>
                 </div>
               </div>
