@@ -59,8 +59,8 @@ function LoginForm() {
   return (
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold !text-green-500">Inicia Sesión</h1>
-        <p className="mt-2 !text-green-400">
+        <h1 className="text-3xl font-bold !text-white">Inicia Sesión</h1>
+        <p className="mt-2 !text-white">
           Accede a tu cuenta para ver y comprar cursos
         </p>
       </div>
@@ -118,7 +118,7 @@ function LoginForm() {
         </div>
         
         <div className="text-center">
-          <p className="text-sm text-white mb-4">
+          <p className="text-sm !text-white mb-4">
             Al iniciar sesión, aceptas nuestros{' '}
             <Link href="/terminos" className="text-white hover:text-green-400">
               términos y condiciones
