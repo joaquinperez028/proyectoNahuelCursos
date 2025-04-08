@@ -152,13 +152,13 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
   // Renderizar estrellas para una calificación
   const renderEstrellas = (calificacion: number) => {
     return (
-      <div className="flex text-green-500">
+      <div className="flex">
         {[1, 2, 3, 4, 5].map((estrella) => (
-          <span key={estrella}>
+          <span key={estrella} className="mr-1">
             {estrella <= calificacion ? (
-              <FaStar className="mr-1" />
+              <FaStar className="text-green-500" />
             ) : (
-              <FaRegStar className="mr-1" />
+              <FaRegStar className="text-green-300" />
             )}
           </span>
         ))}
@@ -210,7 +210,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
         <div className="flex items-center gap-4">
           <div className="text-5xl font-bold text-white">{promedio.toFixed(1)}</div>
           <div>
-            <div className="flex text-green-500 text-xl mb-1">
+            <div className="text-xl mb-1">
               {renderEstrellas(promedio)}
             </div>
             <p className="text-green-400 mt-1">{totalValoraciones} valoraciones</p>
@@ -289,7 +289,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
                 <div>
                   <p className="font-medium text-white">{valoracion.usuario}</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex text-green-500 text-xl mb-1">
+                    <div className="text-lg">
                       {renderEstrellas(valoracion.calificacion)}
                     </div>
                     <span className="text-green-400 text-sm">
