@@ -27,14 +27,18 @@ export default function PrecioCurso({
 
   return (
     <div className="bg-green-900 text-white rounded-xl p-6 shadow-lg">
-      <div className="text-3xl font-bold mb-2">${precio.toFixed(2)}</div>
+      <div className="text-3xl font-bold text-white">${precio.toFixed(2)}</div>
       <p className="text-green-200 mb-6">Acceso de por vida al contenido del curso</p>
       
       <div className="flex items-center gap-2 mb-4">
-        <div className="flex text-green-400">
+        <div className="flex">
           {[1, 2, 3, 4, 5].map((estrella) => (
-            <span key={estrella}>
-              {estrella <= promedio ? <FaStar /> : <FaRegStar />}
+            <span key={estrella} className="mr-1">
+              {estrella <= promedio ? (
+                <FaStar className="text-green-500" />
+              ) : (
+                <FaRegStar className="text-green-300" />
+              )}
             </span>
           ))}
         </div>
