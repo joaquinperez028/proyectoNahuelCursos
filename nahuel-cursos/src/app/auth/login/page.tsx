@@ -59,8 +59,8 @@ function LoginForm() {
   return (
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-green-500">Inicia Sesión</h1>
-        <p className="mt-2 text-green-400">
+        <h1 className="text-3xl font-bold !text-green-500">Inicia Sesión</h1>
+        <p className="mt-2 !text-green-400">
           Accede a tu cuenta para ver y comprar cursos
         </p>
       </div>
