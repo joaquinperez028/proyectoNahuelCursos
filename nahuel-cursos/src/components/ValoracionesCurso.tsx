@@ -202,8 +202,19 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
   }
   
   return (
-    <div className="mt-10 border-t border-gray-200 pt-10">
-      <h2 className="text-2xl font-semibold mb-6 text-gray-900">Valoraciones y Comentarios</h2>
+    <div className="bg-black rounded-xl p-6">
+      <h2 className="text-2xl font-bold text-white mb-4">Valoraciones y Comentarios</h2>
+      
+      {/* Promedio y total de valoraciones */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="text-5xl font-bold text-white">{promedio.toFixed(1)}</div>
+        <div>
+          <div className="flex text-yellow-400 text-xl mb-1">
+            {renderEstrellas(promedio)}
+          </div>
+          <p className="text-green-400 mt-1">{totalValoraciones} valoraciones</p>
+        </div>
+      </div>
       
       {/* Resumen de valoraciones */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center mb-8">
@@ -244,96 +255,65 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
       
       {/* Formulario de valoración */}
       {mostrarFormulario && mostrarOpcionesValoracion() && (
-        <div className="bg-blue-50 p-6 rounded-lg mb-8">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900">
-            {usuarioHaValorado ? 'Editar tu valoración' : 'Valorar este curso'}
-          </h3>
-          
-          <form onSubmit={handleSubmitValoracion}>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2">Tu calificación</label>
-              {renderEstrellasSeleccionables()}
+        <div className="mb-8 p-4 bg-gray-900 rounded-lg">
+          <h3 className="text-xl font-semibold text-white mb-4">Deja tu valoración</h3>
+          <div className="mb-4">
+            <label className="block text-green-400 mb-2">Tu calificación</label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((estrella) => (
+                <button
+                  key={estrella}
+                  onClick={() => setCalificacion(estrella)}
+                  className={`text-2xl ${
+                    estrella <= calificacion ? 'text-yellow-400' : 'text-gray-500'
+                  }`}
+                >
+                  ★
+                </button>
+              ))}
             </div>
-            
-            <div className="mb-6">
-              <label htmlFor="comentario" className="block text-gray-700 mb-2">
-                Tu comentario (opcional)
-              </label>
-              <textarea
-                id="comentario"
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={4}
-                placeholder="Comparte tu experiencia con este curso..."
-              />
-            </div>
-            
-            {mensajeError && (
-              <div className="bg-red-50 text-red-800 p-3 rounded-md mb-4">
-                {mensajeError}
-              </div>
-            )}
-            
-            {mensajeExito && (
-              <div className="bg-green-50 text-green-800 p-3 rounded-md mb-4">
-                {mensajeExito}
-              </div>
-            )}
-            
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={enviando}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg transition-colors text-sm font-medium"
-              >
-                {enviando ? (
-                  <span className="flex items-center">
-                    <FaSpinner className="animate-spin mr-2" /> Enviando...
-                  </span>
-                ) : (
-                  usuarioHaValorado ? 'Actualizar valoración' : 'Enviar valoración'
-                )}
-              </button>
-              
-              <button
-                type="button"
-                onClick={() => setMostrarFormulario(false)}
-                className="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+          </div>
+          <div className="mb-4">
+            <label className="block text-green-400 mb-2">Tu comentario</label>
+            <textarea
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+              className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700 focus:border-green-500 focus:ring-1 focus:ring-green-500"
+              rows={4}
+            ></textarea>
+          </div>
+          <button
+            onClick={handleSubmitValoracion}
+            disabled={enviando || calificacion === 0}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {enviando ? 'Enviando...' : 'Enviar valoración'}
+          </button>
         </div>
       )}
       
       {/* Lista de valoraciones */}
       {valoraciones.length > 0 ? (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {valoraciones.map((valoracion) => (
-            <div key={valoracion._id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
-              <div className="flex items-start">
-                <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center mr-4">
-                  <FaUser className="text-blue-600" />
+            <div key={valoracion._id} className="border-t border-gray-800 pt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white">
+                  {valoracion.usuario.charAt(0)}
                 </div>
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center">
-                      <h4 className="font-semibold text-gray-900 mr-2">{valoracion.usuario}</h4>
-                      <div className="flex text-yellow-400 mt-1 sm:mt-0">
-                        {renderEstrellas(valoracion.calificacion)}
-                      </div>
+                <div>
+                  <p className="font-medium text-white">{valoracion.usuario}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex text-yellow-400 text-xl mb-1">
+                      {renderEstrellas(valoracion.calificacion)}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1 sm:mt-0">
+                    <span className="text-green-400 text-sm">
                       {formatearFecha(valoracion.fecha)}
-                    </div>
+                    </span>
                   </div>
-                  {valoracion.comentario && (
-                    <p className="text-gray-700 mt-2 whitespace-pre-line">{valoracion.comentario}</p>
-                  )}
                 </div>
               </div>
+              <p className="text-gray-300">{valoracion.comentario}</p>
             </div>
           ))}
         </div>
