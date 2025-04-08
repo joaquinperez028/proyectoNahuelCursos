@@ -152,7 +152,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
   // Renderizar estrellas para una calificación
   const renderEstrellas = (calificacion: number) => {
     return (
-      <div className="flex text-yellow-400">
+      <div className="flex text-green-500">
         {[1, 2, 3, 4, 5].map((estrella) => (
           <span key={estrella}>
             {estrella <= calificacion ? (
@@ -169,7 +169,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
   // Renderizar estrellas seleccionables para el formulario
   const renderEstrellasSeleccionables = () => {
     return (
-      <div className="flex text-yellow-400 text-2xl mb-4">
+      <div className="flex text-green-500 text-2xl mb-4">
         {[1, 2, 3, 4, 5].map((estrella) => (
           <button
             key={estrella}
@@ -206,45 +206,30 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
       <h2 className="text-2xl font-bold text-white mb-4">Valoraciones y Comentarios</h2>
       
       {/* Promedio y total de valoraciones */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="text-5xl font-bold text-white">{promedio.toFixed(1)}</div>
-        <div>
-          <div className="flex text-yellow-400 text-xl mb-1">
-            {renderEstrellas(promedio)}
-          </div>
-          <p className="text-green-400 mt-1">{totalValoraciones} valoraciones</p>
-        </div>
-      </div>
-      
-      {/* Resumen de valoraciones */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center mb-8">
-        <div className="flex items-center mb-4 sm:mb-0 sm:mr-8">
-          <div className="text-4xl font-bold text-gray-900 mr-4">
-            {promedio.toFixed(1)}
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <div className="text-5xl font-bold text-white">{promedio.toFixed(1)}</div>
           <div>
-            <div className="flex text-yellow-400 text-xl mb-1">
+            <div className="flex text-green-500 text-xl mb-1">
               {renderEstrellas(promedio)}
             </div>
-            <div className="text-gray-600 text-sm">
-              {totalValoraciones} {totalValoraciones === 1 ? 'valoración' : 'valoraciones'}
-            </div>
+            <p className="text-green-400 mt-1">{totalValoraciones} valoraciones</p>
           </div>
         </div>
         
         {mostrarOpcionesValoracion() && (
-          <div className="w-full sm:w-auto">
+          <div>
             {!mostrarFormulario && !usuarioHaValorado ? (
               <button
                 onClick={() => setMostrarFormulario(true)}
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium"
+                className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium"
               >
                 Valorar este curso
               </button>
             ) : usuarioHaValorado && !mostrarFormulario ? (
               <button
                 onClick={() => setMostrarFormulario(true)}
-                className="w-full sm:w-auto bg-blue-100 hover:bg-blue-200 text-blue-800 py-2 px-4 rounded-lg transition-colors text-sm font-medium"
+                className="bg-gray-800 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors text-sm font-medium"
               >
                 Editar mi valoración
               </button>
@@ -265,7 +250,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
                   key={estrella}
                   onClick={() => setCalificacion(estrella)}
                   className={`text-2xl ${
-                    estrella <= calificacion ? 'text-yellow-400' : 'text-gray-500'
+                    estrella <= calificacion ? 'text-green-500' : 'text-gray-500'
                   }`}
                 >
                   ★
@@ -304,7 +289,7 @@ export default function ValoracionesCurso({ cursoId, tieneAcceso }: Valoraciones
                 <div>
                   <p className="font-medium text-white">{valoracion.usuario}</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex text-yellow-400 text-xl mb-1">
+                    <div className="flex text-green-500 text-xl mb-1">
                       {renderEstrellas(valoracion.calificacion)}
                     </div>
                     <span className="text-green-400 text-sm">
