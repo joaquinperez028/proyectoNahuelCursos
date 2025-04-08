@@ -198,8 +198,6 @@ export default function CursosRecientes() {
             <div 
               key={curso._id} 
               className="bg-gray-100 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col relative"
-              onMouseEnter={() => setHoveredCurso(curso._id)}
-              onMouseLeave={() => setHoveredCurso(null)}
             >
               <div className="w-full h-48 bg-gray-200 relative">
                 {curso.videoPreview ? (
@@ -218,7 +216,11 @@ export default function CursosRecientes() {
                   </div>
                 )}
               </div>
-              <div className="p-6 flex flex-col flex-1">
+              <div 
+                className="p-6 flex flex-col flex-1 relative"
+                onMouseEnter={() => setHoveredCurso(curso._id)}
+                onMouseLeave={() => setHoveredCurso(null)}
+              >
                 <h3 className="text-lg font-semibold mb-2 text-green-800">{curso.titulo}</h3>
                 <p className="text-green-700 mb-4 line-clamp-2 flex-1">{curso.descripcion}</p>
                 <div className="mt-auto">
@@ -242,37 +244,37 @@ export default function CursosRecientes() {
                     </Link>
                   </div>
                 </div>
-              </div>
 
-              {/* Modal que aparece al hacer hover */}
-              {hoveredCurso === curso._id && (
-                <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center p-6 transition-opacity duration-300">
-                  <div className="text-white">
-                    <h3 className="text-xl font-bold mb-4">Contenido Premium</h3>
-                    <p className="mb-4">Adquiere este curso para acceder al contenido completo</p>
-                    <div className="space-y-2 mb-6">
-                      <div className="flex items-center">
-                        <FaVideo className="text-green-500 mr-2" />
-                        <span>Video curso completo</span>
+                {/* Modal que aparece al hacer hover */}
+                {hoveredCurso === curso._id && (
+                  <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center p-6 transition-opacity duration-300">
+                    <div className="text-white">
+                      <h3 className="text-xl font-bold mb-4">Contenido Premium</h3>
+                      <p className="mb-4">Adquiere este curso para acceder al contenido completo</p>
+                      <div className="space-y-2 mb-6">
+                        <div className="flex items-center">
+                          <FaVideo className="text-green-500 mr-2" />
+                          <span>Video curso completo</span>
+                        </div>
+                        <div className="flex items-center">
+                          <FaLock className="text-green-500 mr-2" />
+                          <span>Acceso desde cualquier dispositivo</span>
+                        </div>
+                        <div className="flex items-center">
+                          <FaGraduationCap className="text-green-500 mr-2" />
+                          <span>Actualizaciones gratuitas</span>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <FaLock className="text-green-500 mr-2" />
-                        <span>Acceso desde cualquier dispositivo</span>
-                      </div>
-                      <div className="flex items-center">
-                        <FaGraduationCap className="text-green-500 mr-2" />
-                        <span>Actualizaciones gratuitas</span>
-                      </div>
+                      <Link 
+                        href={`/cursos/${curso._id}`}
+                        className="inline-block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors"
+                      >
+                        Ver más detalles
+                      </Link>
                     </div>
-                    <Link 
-                      href={`/cursos/${curso._id}`}
-                      className="inline-block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center transition-colors"
-                    >
-                      Ver más detalles
-                    </Link>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>
