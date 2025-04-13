@@ -32,16 +32,38 @@ const chunksTracker = new Map<string, ChunkMetadata>();
 // Función para limpiar entradas antiguas del tracker (llamada periódicamente)
 const cleanupTracker = () => {
   const oneHourAgo = new Date(Date.now() - 3600000); // 1 hora
+  console.log(`Ejecutando limpieza de rastreador de fragmentos. Entradas actuales: ${chunksTracker.size}`);
+  
   for (const [fileId, metadata] of chunksTracker.entries()) {
+    // No eliminar archivos que aún están en progreso y tienen actividad reciente
     if (metadata.uploadDate < oneHourAgo) {
-      console.log(`Limpiando rastreo obsoleto para fileId: ${fileId}`);
+      // Verificar si realmente podemos eliminar esta entrada
+      const completePercentage = (metadata.receivedChunks.length / metadata.totalChunks) * 100;
+      
+      // Si ya recibimos más del 90% de los fragmentos, esperamos un poco más
+      if (completePercentage > 90) {
+        console.log(`Conservando rastreo para fileId: ${fileId} (${completePercentage.toFixed(1)}% completo, espera extendida)`);
+        continue;
+      }
+      
+      // Si el archivo está casi completo pero tiene más de 2 horas, eliminarlo
+      if (metadata.uploadDate < new Date(Date.now() - 7200000) && completePercentage > 50) {
+        console.log(`Limpiando rastreo obsoleto para fileId: ${fileId} (${completePercentage.toFixed(1)}% completo pero inactivo por >2 horas)`);
+        chunksTracker.delete(fileId);
+        continue;
+      }
+      
+      // Para archivos con poco progreso, limpiar después de 1 hora
+      console.log(`Limpiando rastreo obsoleto para fileId: ${fileId} (${completePercentage.toFixed(1)}% completo, inactivo por >1 hora)`);
       chunksTracker.delete(fileId);
     }
   }
+  
+  console.log(`Limpieza completada. Entradas restantes: ${chunksTracker.size}`);
 };
 
-// Programar limpieza cada hora
-setInterval(cleanupTracker, 3600000);
+// Programar limpieza cada 30 minutos
+setInterval(cleanupTracker, 1800000);
 
 export async function POST(req: NextRequest) {
   try {
@@ -239,88 +261,200 @@ export async function POST(req: NextRequest) {
       // Para fragmentos subsiguientes, obtener el archivo existente y actualizarlo
       const metadata = chunksTracker.get(fileId);
       if (!metadata) {
-        console.error(`Error: No se encontró metadata para fileId: ${fileId}`);
-        return NextResponse.json(
-          { error: 'No se encontró el archivo para actualizar. Inicie la carga nuevamente.' },
-          { status: 404 }
-        );
-      }
-      
-      // Buscar el archivo por fileId en los metadatos
-      const existingFiles = await db.collection('fs.files')
-        .find({ 'metadata.fileId': fileId })
-        .toArray();
-      
-      if (existingFiles.length === 0) {
-        console.error(`Error: No se encontró archivo en GridFS para fileId: ${fileId}`);
-        return NextResponse.json(
-          { error: 'No se encontró el archivo para actualizar en el sistema. Inicie la carga nuevamente.' },
-          { status: 404 }
-        );
-      }
-      
-      const existingFile = existingFiles[0];
-      const fsFileId = existingFile._id;
-      
-      // Guardar el fragmento como un nuevo chunk asociado al mismo archivo
-      try {
-        await db.collection('fs.chunks').insertOne({
-          files_id: new ObjectId(fsFileId),
-          n: chunkIndexNum,
-          data: buffer
-        });
+        // Si no encontramos en el tracker, intentemos recuperarla directamente de la base de datos
+        console.log(`No se encontró metadata en el rastreador para fileId: ${fileId}. Intentando recuperar de la base de datos...`);
         
-        console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
+        // Intentar encontrar el archivo existente
+        const existingFiles = await db.collection('fs.files')
+          .find({ 'metadata.fileId': fileId })
+          .toArray();
         
-        // Verificar si todos los fragmentos han sido recibidos
-        if (metadata.receivedChunks.length === totalChunksNum) {
-          console.log(`Todos los fragmentos recibidos para ${fileName}. Completando proceso...`);
-          
-          // Marcar el archivo como completado
-          await db.collection('fs.files').updateOne(
-            { _id: new ObjectId(fsFileId) },
-            { $set: { 'metadata.isProcessing': false, 'metadata.isComplete': true } }
+        if (existingFiles.length === 0) {
+          console.error(`Error: No se encontró archivo en GridFS para fileId: ${fileId}`);
+          return NextResponse.json(
+            { error: 'No se encontró el archivo para actualizar. Inicie la carga nuevamente.' },
+            { status: 404 }
           );
+        }
+        
+        // Reconstruir metadata desde el archivo existente
+        const existingFile = existingFiles[0];
+        const reconstructedMetadata: ChunkMetadata = {
+          fileName: existingFile.filename || fileName,
+          contentType: existingFile.metadata?.contentType || contentType,
+          totalChunks: existingFile.metadata?.totalChunks || totalChunksNum,
+          receivedChunks: [], // Esto lo reconstruiremos a continuación
+          uploadDate: new Date()
+        };
+        
+        // Buscar fragmentos ya recibidos
+        const existingChunks = await db.collection('fs.chunks')
+          .find({ files_id: existingFile._id })
+          .toArray();
+        
+        reconstructedMetadata.receivedChunks = existingChunks.map(chunk => chunk.n);
+        console.log(`Se reconstruyó la metadata para fileId: ${fileId}. Fragmentos ya recibidos: ${reconstructedMetadata.receivedChunks.length}`);
+        
+        // Actualizar el rastreador
+        chunksTracker.set(fileId, reconstructedMetadata);
+        
+        // Continuar con la metadata reconstruida
+        if (!reconstructedMetadata.receivedChunks.includes(chunkIndexNum)) {
+          reconstructedMetadata.receivedChunks.push(chunkIndexNum);
+        }
+        
+        // Buscar el archivo existente (ya lo tenemos)
+        const fsFileId = existingFile._id;
+        
+        // Guardar el fragmento como un nuevo chunk
+        try {
+          await db.collection('fs.chunks').insertOne({
+            files_id: new ObjectId(fsFileId),
+            n: chunkIndexNum,
+            data: buffer
+          });
           
-          // Limpiar el tracker
-          chunksTracker.delete(fileId);
+          console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
+          
+          // Verificar si todos los fragmentos han sido recibidos
+          if (reconstructedMetadata.receivedChunks.length === totalChunksNum) {
+            console.log(`Todos los fragmentos recibidos para ${fileName}. Completando proceso...`);
+            
+            // Marcar el archivo como completado
+            await db.collection('fs.files').updateOne(
+              { _id: new ObjectId(fsFileId) },
+              { $set: { 'metadata.isProcessing': false, 'metadata.isComplete': true } }
+            );
+            
+            // Limpiar el tracker
+            chunksTracker.delete(fileId);
+            
+            return NextResponse.json({
+              message: `Carga completa de ${fileName}`,
+              fsFileId: fsFileId.toString(),
+              isComplete: true,
+              success: true
+            });
+          }
           
           return NextResponse.json({
-            message: `Carga completa de ${fileName}`,
-            fsFileId: fsFileId.toString(),
-            isComplete: true,
+            message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
+            fragmentosRecibidos: reconstructedMetadata.receivedChunks.length,
             success: true
           });
+        } catch (error: any) {
+          console.error(`Error al guardar fragmento ${chunkIndexNum + 1}: ${error.message}`);
+          
+          // Comprobar si el error está relacionado con una limitación de tamaño
+          if (error.message && (
+            error.message.includes('entity too large') || 
+            error.message.includes('exceeds limit') ||
+            error.message.includes('size limit')
+          )) {
+            return NextResponse.json(
+              { 
+                error: 'El fragmento es demasiado grande para ser procesado', 
+                code: '413',
+                message: 'Request Entity Too Large'
+              },
+              { status: 413 }
+            );
+          }
+          
+          return NextResponse.json(
+            { error: `Error al guardar el fragmento: ${error.message}` },
+            { status: 500 }
+          );
+        }
+      } else {
+        // Si encontramos metadata en el rastreador, proceder normalmente
+        console.log(`Usando metadata del rastreador para fileId: ${fileId}`);
+        
+        // Añadir este fragmento a la lista de fragmentos recibidos si no está ya
+        if (!metadata.receivedChunks.includes(chunkIndexNum)) {
+          metadata.receivedChunks.push(chunkIndexNum);
+          // Actualizar la fecha de carga
+          metadata.uploadDate = new Date();
         }
         
-        return NextResponse.json({
-          message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
-          fragmentosRecibidos: metadata.receivedChunks.length,
-          success: true
-        });
-      } catch (error: any) {
-        console.error(`Error al guardar fragmento ${chunkIndexNum + 1}: ${error.message}`);
+        // Buscar el archivo por fileId en los metadatos
+        const existingFiles = await db.collection('fs.files')
+          .find({ 'metadata.fileId': fileId })
+          .toArray();
         
-        // Comprobar si el error está relacionado con una limitación de tamaño
-        if (error.message && (
-          error.message.includes('entity too large') || 
-          error.message.includes('exceeds limit') ||
-          error.message.includes('size limit')
-        )) {
+        if (existingFiles.length === 0) {
+          console.error(`Error: No se encontró archivo en GridFS para fileId: ${fileId}`);
+          // Limpiar el rastreador ya que el archivo parece no existir
+          chunksTracker.delete(fileId);
           return NextResponse.json(
-            { 
-              error: 'El fragmento es demasiado grande para ser procesado', 
-              code: '413',
-              message: 'Request Entity Too Large'
-            },
-            { status: 413 }
+            { error: 'No se encontró el archivo para actualizar en el sistema. Inicie la carga nuevamente.' },
+            { status: 404 }
           );
         }
         
-        return NextResponse.json(
-          { error: `Error al guardar el fragmento: ${error.message}` },
-          { status: 500 }
-        );
+        const existingFile = existingFiles[0];
+        const fsFileId = existingFile._id;
+        
+        // Guardar el fragmento como un nuevo chunk asociado al mismo archivo
+        try {
+          await db.collection('fs.chunks').insertOne({
+            files_id: new ObjectId(fsFileId),
+            n: chunkIndexNum,
+            data: buffer
+          });
+          
+          console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
+          
+          // Verificar si todos los fragmentos han sido recibidos
+          if (metadata.receivedChunks.length === totalChunksNum) {
+            console.log(`Todos los fragmentos recibidos para ${fileName}. Completando proceso...`);
+            
+            // Marcar el archivo como completado
+            await db.collection('fs.files').updateOne(
+              { _id: new ObjectId(fsFileId) },
+              { $set: { 'metadata.isProcessing': false, 'metadata.isComplete': true } }
+            );
+            
+            // Limpiar el tracker
+            chunksTracker.delete(fileId);
+            
+            return NextResponse.json({
+              message: `Carga completa de ${fileName}`,
+              fsFileId: fsFileId.toString(),
+              isComplete: true,
+              success: true
+            });
+          }
+          
+          return NextResponse.json({
+            message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
+            fragmentosRecibidos: metadata.receivedChunks.length,
+            success: true
+          });
+        } catch (error: any) {
+          console.error(`Error al guardar fragmento ${chunkIndexNum + 1}: ${error.message}`);
+          
+          // Comprobar si el error está relacionado con una limitación de tamaño
+          if (error.message && (
+            error.message.includes('entity too large') || 
+            error.message.includes('exceeds limit') ||
+            error.message.includes('size limit')
+          )) {
+            return NextResponse.json(
+              { 
+                error: 'El fragmento es demasiado grande para ser procesado', 
+                code: '413',
+                message: 'Request Entity Too Large'
+              },
+              { status: 413 }
+            );
+          }
+          
+          return NextResponse.json(
+            { error: `Error al guardar el fragmento: ${error.message}` },
+            { status: 500 }
+          );
+        }
       }
     } catch (error: any) {
       console.error('Error en el procesamiento de fragmentos:', error);

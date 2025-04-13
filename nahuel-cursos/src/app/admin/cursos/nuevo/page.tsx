@@ -189,8 +189,9 @@ export default function NuevoCurso() {
         
         let retryCount = 0;
         const maxRetries = 3;
+        let fragmentUploaded = false;
         
-        while (retryCount <= maxRetries) {
+        while (retryCount <= maxRetries && !fragmentUploaded) {
           try {
             console.log(`Enviando fragmento ${chunkIndex + 1}/${totalChunks}${retryCount > 0 ? ` (intento ${retryCount}/${maxRetries})` : ''}...`);
             
@@ -231,6 +232,7 @@ export default function NuevoCurso() {
             }
             
             uploadedChunks++;
+            fragmentUploaded = true;
             console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
             
             // En el último fragmento, finalizar el archivo
@@ -280,9 +282,6 @@ export default function NuevoCurso() {
                 throw new Error(errorMessage);
               }
             }
-            
-            // Si llegamos aquí, la subida fue exitosa, salimos del bucle de reintentos
-            break;
           } catch (chunkError: any) {
             // Capturar específicamente el error 413 (Entidad demasiado grande)
             if (chunkError.response?.status === 413) {
@@ -343,16 +342,30 @@ export default function NuevoCurso() {
               setErrorDetails(`Error no serializable para fragmento ${chunkIndex + 1}/${totalChunks}`);
             }
             
+            // Si aún hay reintentos disponibles, continuar
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`Reintentando envío de fragmento (intento ${retryCount}/${maxRetries})...`);
+              // Añadir pequeño retraso antes de reintentar
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+            
             throw new Error(errorMessage);
           }
         }
         
-        // Si todos los fragmentos se subieron pero no se finalizó explícitamente
-        if (uploadedChunks === totalChunks && fileId) {
-          return `/api/videos/${fileId}`;
+        // Si después de todos los reintentos no se pudo subir el fragmento, salir
+        if (!fragmentUploaded) {
+          throw new Error(`No se pudo subir el fragmento ${chunkIndex + 1} después de ${maxRetries} intentos`);
         }
-        
-        throw new Error('No se pudo completar la subida de todos los fragmentos');
+      }
+      
+      // Si llegamos aquí, todos los fragmentos se han subido
+      if (fileId) {
+        return `/api/videos/${fileId}`;
+      } else {
+        throw new Error('Subida completada pero no se obtuvo un ID de archivo válido');
       }
     } catch (error: any) {
       console.error('Error en la subida fragmentada:', error);
@@ -532,18 +545,51 @@ export default function NuevoCurso() {
           setUploadingVideo(true);
           setUploadProgress(prev => ({ ...prev, main: 0 }));
           console.log('Subiendo video principal a MongoDB GridFS...');
+          
+          // Agregar más información de registro para diagnóstico
+          console.log(`Detalles del archivo de video principal:`, {
+            nombre: videoFile.name,
+            tamaño: `${(videoFile.size / (1024 * 1024)).toFixed(2)}MB`,
+            tipo: videoFile.type,
+            fragmentación: videoFile.size > 20 * 1024 * 1024 ? 'Sí (subida fragmentada)' : 'No (subida normal)'
+          });
+          
           try {
             videoPath = await uploadVideoFile(videoFile);
             console.log('Video principal subido correctamente a MongoDB GridFS:', videoPath);
-          } catch (videoUploadError) {
+          } catch (videoUploadError: any) {
+            // Mejorar el manejo de errores con más detalles
+            console.error('Error detallado al subir video principal:', videoUploadError);
+            let errorInfo = {};
+            
+            try {
+              errorInfo = {
+                message: videoUploadError.message || 'Error desconocido',
+                stack: videoUploadError.stack,
+                name: videoUploadError.name,
+                fileName: videoFile.name,
+                fileSize: videoFile.size,
+                fileType: videoFile.type
+              };
+              
+              if (videoUploadError.response) {
+                errorInfo['responseStatus'] = videoUploadError.response.status;
+                errorInfo['responseData'] = videoUploadError.response.data;
+              }
+            } catch (e) {
+              console.error('Error al extraer información del error:', e);
+            }
+            
             // Capturar específicamente errores de [object Object]
             if (videoUploadError.toString() === '[object Object]') {
               console.error('Error [object Object] detectado durante la subida del video principal');
               setError('Error durante la subida del video principal. Por favor, inténtalo de nuevo o contacta con soporte técnico.');
-              setErrorDetails(JSON.stringify(videoUploadError, Object.getOwnPropertyNames(videoUploadError), 2));
+              setErrorDetails(JSON.stringify(errorInfo, null, 2));
             } else {
-              throw videoUploadError; // Re-lanzar para que lo capture el bloque catch externo
+              setError(`Error al subir video principal: ${videoUploadError.message || 'Error desconocido'}`);
+              setErrorDetails(JSON.stringify(errorInfo, null, 2));
             }
+            
             setLoading(false);
             setUploadingVideo(false);
             setUploadingPreview(false);
@@ -556,18 +602,51 @@ export default function NuevoCurso() {
           setUploadingPreview(true);
           setUploadProgress(prev => ({ ...prev, preview: 0 }));
           console.log('Subiendo video de vista previa a MongoDB GridFS...');
+          
+          // Agregar más información de registro para diagnóstico
+          console.log(`Detalles del archivo de vista previa:`, {
+            nombre: videoPreviewFile.name,
+            tamaño: `${(videoPreviewFile.size / (1024 * 1024)).toFixed(2)}MB`,
+            tipo: videoPreviewFile.type,
+            fragmentación: videoPreviewFile.size > 20 * 1024 * 1024 ? 'Sí (subida fragmentada)' : 'No (subida normal)'
+          });
+          
           try {
             videoPreviewPath = await uploadVideoFile(videoPreviewFile);
             console.log('Video de vista previa subido correctamente a MongoDB GridFS:', videoPreviewPath);
-          } catch (previewUploadError) {
+          } catch (previewUploadError: any) {
+            // Mejorar el manejo de errores con más detalles
+            console.error('Error detallado al subir video de vista previa:', previewUploadError);
+            let errorInfo = {};
+            
+            try {
+              errorInfo = {
+                message: previewUploadError.message || 'Error desconocido',
+                stack: previewUploadError.stack,
+                name: previewUploadError.name,
+                fileName: videoPreviewFile.name,
+                fileSize: videoPreviewFile.size,
+                fileType: videoPreviewFile.type
+              };
+              
+              if (previewUploadError.response) {
+                errorInfo['responseStatus'] = previewUploadError.response.status;
+                errorInfo['responseData'] = previewUploadError.response.data;
+              }
+            } catch (e) {
+              console.error('Error al extraer información del error:', e);
+            }
+            
             // Capturar específicamente errores de [object Object]
             if (previewUploadError.toString() === '[object Object]') {
               console.error('Error [object Object] detectado durante la subida del video de vista previa');
               setError('Error durante la subida del video de vista previa. Por favor, inténtalo de nuevo o contacta con soporte técnico.');
-              setErrorDetails(JSON.stringify(previewUploadError, Object.getOwnPropertyNames(previewUploadError), 2));
+              setErrorDetails(JSON.stringify(errorInfo, null, 2));
             } else {
-              throw previewUploadError; // Re-lanzar para que lo capture el bloque catch externo
+              setError(`Error al subir video de vista previa: ${previewUploadError.message || 'Error desconocido'}`);
+              setErrorDetails(JSON.stringify(errorInfo, null, 2));
             }
+            
             setLoading(false);
             setUploadingVideo(false);
             setUploadingPreview(false);
