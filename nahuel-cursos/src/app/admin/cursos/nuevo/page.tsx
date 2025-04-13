@@ -971,6 +971,10 @@ export default function NuevoCurso() {
               <strong>Nota:</strong> El sistema ahora soporta subida de archivos grandes (hasta 100MB) usando 
               un proceso de fragmentación que divide los archivos en partes más pequeñas.
             </p>
+            <p className="text-blue-700 text-sm mt-1">
+              <strong>Novedad:</strong> La reproducción de videos ha sido mejorada para soportar streaming 
+              eficiente y reproducción de archivos grandes subidos por fragmentos.
+            </p>
             <div className="mt-2 flex items-center">
               <input
                 type="checkbox"

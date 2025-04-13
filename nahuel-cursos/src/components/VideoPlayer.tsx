@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { FaPlayCircle, FaLock } from 'react-icons/fa';
+import { FaPlayCircle, FaLock, FaSpinner } from 'react-icons/fa';
 
 interface VideoPlayerProps {
   src: string;
@@ -25,12 +25,37 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLocalVideo, setIsLocalVideo] = useState(false);
+  const [isGridFSVideo, setIsGridFSVideo] = useState(false);
   const [playing, setPlaying] = useState(autoPlay);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Determina si es un video local o una URL externa (YouTube, Vimeo, etc.)
+    // Determina si es un video local (uploads) o un video de GridFS (/api/videos/...)
+    // o una URL externa (YouTube, Vimeo, etc.)
     const isLocalPath = src.startsWith('/uploads/') || src.startsWith('./uploads/');
+    const isGridFSPath = src && (src.startsWith('/api/videos/') || src.includes('fileId='));
+    
     setIsLocalVideo(isLocalPath);
+    setIsGridFSVideo(isGridFSPath);
+    
+    // Si es un video GridFS, verificar que sea accesible
+    if (isGridFSPath) {
+      setLoading(true);
+      fetch(src, { method: 'HEAD' })
+        .then(response => {
+          if (!response.ok) {
+            console.error('Error al verificar el video GridFS:', response.status);
+            setError(`Error al cargar el video (${response.status})`);
+          }
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error al verificar el video GridFS:', err);
+          setError('Error al cargar el video');
+          setLoading(false);
+        });
+    }
   }, [src]);
 
   // Función para preparar URL con parámetros que eviten autoplay a menos que sea explícitamente solicitado
@@ -71,8 +96,11 @@ export default function VideoPlayer({
     
     setPlaying(true);
     
-    if (isLocalVideo && videoRef.current) {
-      videoRef.current.play();
+    if ((isLocalVideo || isGridFSVideo) && videoRef.current) {
+      videoRef.current.play().catch(err => {
+        console.error('Error al reproducir el video:', err);
+        setError('Error al reproducir el video');
+      });
     } else if (iframeRef.current) {
       // Modificar URL para activar autoplay
       let playUrl = src;
@@ -105,32 +133,58 @@ export default function VideoPlayer({
     }
   };
 
-  // Para videos locales
-  if (isLocalVideo) {
+  // Para videos locales o GridFS
+  if (isLocalVideo || isGridFSVideo) {
     return (
       <div className={`relative w-full ${className}`} onClick={handleContainerClick}>
-        <video
-          ref={videoRef}
-          className={`w-full rounded-lg`}
-          autoPlay={autoPlay}
-          controls={controls}
-          loop={loop}
-          muted={muted}
-          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-        >
-          <source src={src} type="video/mp4" />
-          Tu navegador no soporta la reproducción de videos.
-        </video>
-        
-        {!playing && !autoPlay && (
-          <div 
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all"
-            onClick={handlePlay}
-          >
-            <div className="rounded-full bg-green-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
-              <FaPlayCircle className="text-white text-4xl" />
+        {loading ? (
+          <div className="aspect-video bg-gray-800 flex items-center justify-center">
+            <FaSpinner className="animate-spin text-4xl text-blue-500" />
+            <span className="ml-2 text-white">Cargando video...</span>
+          </div>
+        ) : error ? (
+          <div className="aspect-video bg-gray-800 flex items-center justify-center text-center p-4">
+            <div>
+              <div className="text-red-500 text-xl mb-2">Error al cargar el video</div>
+              <div className="text-white text-sm">{error}</div>
+              <button 
+                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                onClick={() => window.location.reload()}
+              >
+                Reintentar
+              </button>
             </div>
           </div>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              className={`w-full rounded-lg`}
+              autoPlay={autoPlay}
+              controls={controls}
+              loop={loop}
+              muted={muted}
+              onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
+              onError={(e) => {
+                console.error('Error en la reproducción del video:', e);
+                setError('Error en la reproducción del video. Intente nuevamente.');
+              }}
+            >
+              <source src={src} type="video/mp4" />
+              Tu navegador no soporta la reproducción de videos.
+            </video>
+            
+            {!playing && !autoPlay && (
+              <div 
+                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all"
+                onClick={handlePlay}
+              >
+                <div className="rounded-full bg-green-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
+                  <FaPlayCircle className="text-white text-4xl" />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     );
@@ -152,6 +206,7 @@ export default function VideoPlayer({
         </div>
       ) : (
         <iframe
+          ref={iframeRef}
           src={urlSegura}
           className="w-full aspect-video"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
