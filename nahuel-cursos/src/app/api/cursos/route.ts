@@ -3,6 +3,8 @@ import { connectToDatabase } from '@/lib/db/connection';
 import { getServerSession } from 'next-auth';
 import { authOptions, isAdmin } from '@/lib/auth/auth';
 import { ObjectId } from 'mongodb';
+import CursoModel from '@/models/curso';  // Importar el modelo Mongoose de curso
+import { connectMongoose } from '@/lib/db/mongoose';  // Importar la conexión de Mongoose
 
 const CURSOS_POR_PAGINA = 10;
 
@@ -115,8 +117,9 @@ export async function POST(request: Request) {
     }
     
     try {
-      const { db } = await connectToDatabase();
-      console.log('Conexión a base de datos exitosa');
+      // Establecer conexión con Mongoose
+      await connectMongoose();
+      console.log('Conexión a Mongoose exitosa');
       
       // Normalizar y validar datos
       const cursoParaGuardar = {
@@ -131,26 +134,24 @@ export async function POST(request: Request) {
           : []
       };
       
-      console.log('Insertando curso en la base de datos');
+      console.log('Creando curso con el modelo Mongoose');
       
-      // Crear el nuevo curso
-      const resultado = await db.collection('cursos').insertOne(cursoParaGuardar);
+      // Crear el nuevo curso usando el modelo Mongoose
+      const nuevoCurso = new CursoModel(cursoParaGuardar);
+      const cursoGuardado = await nuevoCurso.save();
       
-      if (!resultado.acknowledged) {
-        console.error('Error al insertar en la base de datos: operación no reconocida');
+      if (!cursoGuardado || !cursoGuardado._id) {
+        console.error('Error al guardar el curso con Mongoose');
         throw new Error('Error al crear el curso en la base de datos');
       }
       
-      console.log('Curso creado exitosamente, ID:', resultado.insertedId);
+      console.log('Curso creado exitosamente con Mongoose, ID:', cursoGuardado._id);
       
       return NextResponse.json(
         { 
           mensaje: 'Curso creado exitosamente', 
-          id: resultado.insertedId,
-          curso: {
-            _id: resultado.insertedId,
-            ...cursoParaGuardar
-          }
+          id: cursoGuardado._id,
+          curso: cursoGuardado
         },
         { status: 201 }
       );
