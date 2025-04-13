@@ -180,7 +180,7 @@ export default function NuevoCurso() {
         chunkFormData.append('fileName', file.name);
         chunkFormData.append('contentType', file.type || 'application/octet-stream');
         chunkFormData.append('totalChunks', totalChunks.toString());
-        chunkFormData.append('currentChunk', chunkIndex.toString());
+        chunkFormData.append('chunkIndex', chunkIndex.toString());
         
         // Si ya tenemos un fileId (no es el primer fragmento), lo incluimos
         if (fileId) {
@@ -219,16 +219,67 @@ export default function NuevoCurso() {
             
             console.log(`Respuesta del servidor para fragmento ${chunkIndex + 1}:`, response.data);
             
-            // Guardar el fileId devuelto por el servidor
+            // Guardar el fileId devuelto por el servidor (para el primer fragmento o si cambia)
             if (response.data.fileId) {
               fileId = response.data.fileId;
               console.log(`FileId obtenido/actualizado: ${fileId}`);
-            } else {
-              console.warn(`Advertencia: No se recibió fileId para el fragmento ${chunkIndex + 1}`);
+            }
+            // También verificar si el servidor devolvió un fsFileId
+            else if (response.data.fsFileId && chunkIndex === 0) {
+              fileId = response.data.fsFileId;
+              console.log(`FsFileId obtenido del primer fragmento: ${fileId}`);
             }
             
             uploadedChunks++;
             console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
+            
+            // En el último fragmento, finalizar el archivo
+            if (chunkIndex === totalChunks - 1 && fileId) {
+              console.log('Todos los fragmentos subidos. Verificando estado de finalización...');
+              
+              // Verificar si ya fue marcado como completo en el último fragmento
+              if (response.data.isComplete) {
+                console.log('El servidor ya marcó el archivo como completo:', response.data);
+                // Usar el fsFileId devuelto o cualquier ruta de archivo proporcionada
+                if (response.data.fsFileId) {
+                  return `/api/videos/${response.data.fsFileId}`;
+                } else if (response.data.filePath) {
+                  return response.data.filePath;
+                } else {
+                  return `/api/videos/${fileId}`;
+                }
+              }
+              
+              // Si no se marcó como completo, intentar finalizarlo manualmente
+              try {
+                console.log('Solicitando finalización manual...');
+                const finalizeResponse = await axios.post('/api/upload/chunks/finalize', {
+                  fileId: fileId,
+                  fileName: file.name,
+                  contentType: file.type || 'application/octet-stream',
+                  totalChunks: totalChunks
+                }, {
+                  timeout: 180000 // 3 minutos para finalizar
+                });
+                
+                console.log('Archivo completado exitosamente:', finalizeResponse.data);
+                return finalizeResponse.data.filePath || `/api/videos/${fileId}`;
+              } catch (finalizeError: any) {
+                console.error('Error al finalizar la subida fragmentada:', finalizeError);
+                
+                let errorMessage = 'Error al finalizar la combinación de fragmentos: ';
+                
+                if (finalizeError.response?.data?.error) {
+                  errorMessage += finalizeError.response.data.error;
+                } else if (finalizeError.message) {
+                  errorMessage += finalizeError.message;
+                } else {
+                  errorMessage += 'Error desconocido durante la finalización';
+                }
+                
+                throw new Error(errorMessage);
+              }
+            }
             
             // Si llegamos aquí, la subida fue exitosa, salimos del bucle de reintentos
             break;
@@ -296,40 +347,13 @@ export default function NuevoCurso() {
           }
         }
         
-        // En el último fragmento, finalizar el archivo
-        if (chunkIndex === totalChunks - 1 && fileId) {
-          console.log('Todos los fragmentos subidos. Solicitando finalización...');
-          try {
-            const finalizeResponse = await axios.post('/api/upload/chunks/finalize', {
-              fileId: fileId,
-              fileName: file.name,
-              contentType: file.type || 'application/octet-stream',
-              totalChunks: totalChunks
-            }, {
-              timeout: 180000 // 3 minutos para finalizar
-            });
-            
-            console.log('Archivo completado exitosamente:', finalizeResponse.data);
-            return finalizeResponse.data.filePath;
-          } catch (finalizeError: any) {
-            console.error('Error al finalizar la subida fragmentada:', finalizeError);
-            
-            let errorMessage = 'Error al finalizar la combinación de fragmentos: ';
-            
-            if (finalizeError.response?.data?.error) {
-              errorMessage += finalizeError.response.data.error;
-            } else if (finalizeError.message) {
-              errorMessage += finalizeError.message;
-            } else {
-              errorMessage += 'Error desconocido durante la finalización';
-            }
-            
-            throw new Error(errorMessage);
-          }
+        // Si todos los fragmentos se subieron pero no se finalizó explícitamente
+        if (uploadedChunks === totalChunks && fileId) {
+          return `/api/videos/${fileId}`;
         }
+        
+        throw new Error('No se pudo completar la subida de todos los fragmentos');
       }
-      
-      throw new Error('No se pudo completar la subida de todos los fragmentos');
     } catch (error: any) {
       console.error('Error en la subida fragmentada:', error);
       

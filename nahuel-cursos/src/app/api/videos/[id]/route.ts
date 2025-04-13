@@ -38,12 +38,59 @@ export async function GET(
     const files = await db.collection('videos.files').findOne({ _id: fileId });
     
     if (!files) {
-      return NextResponse.json(
-        { error: 'Video no encontrado' },
-        { status: 404 }
-      );
+      // Intentar encontrar en el bucket por defecto (fs.files)
+      const fsFiles = await db.collection('fs.files').findOne({ _id: fileId });
+      
+      if (!fsFiles) {
+        return NextResponse.json(
+          { error: 'Video no encontrado' },
+          { status: 404 }
+        );
+      }
+      
+      // Encontrado en el bucket por defecto, usar ese en lugar del bucket 'videos'
+      const contentType = fsFiles.metadata?.contentType || 'video/mp4';
+      
+      // Establecer cabeceras para Etag y almacenamiento en caché
+      const headers = new Headers();
+      headers.set('Content-Type', contentType);
+      headers.set('Accept-Ranges', 'bytes');
+      headers.set('Cache-Control', 'public, max-age=86400'); // Cache por 24 horas
+      
+      // Crear un GridFS bucket por defecto
+      const defaultBucket = new GridFSBucket(db);
+      
+      // Crear un stream para leer el archivo
+      const downloadStream = defaultBucket.openDownloadStream(fileId);
+      
+      // Convertir el stream de Node.js a un ReadableStream web
+      const readableStream = new ReadableStream({
+        start(controller) {
+          downloadStream.on('data', (chunk) => {
+            controller.enqueue(chunk);
+          });
+          
+          downloadStream.on('error', (error) => {
+            console.error('Error al leer el archivo:', error);
+            controller.error(error);
+          });
+          
+          downloadStream.on('end', () => {
+            controller.close();
+          });
+        },
+        cancel() {
+          downloadStream.destroy();
+        }
+      });
+      
+      // Devolver la respuesta con el stream
+      return new Response(readableStream, {
+        headers,
+      });
     }
     
+    // Continuar con el código existente para el bucket 'videos'
     // Obtener el tipo de contenido del archivo
     const contentType = files.metadata?.contentType || 'video/mp4';
     

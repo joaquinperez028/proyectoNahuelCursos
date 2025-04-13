@@ -124,20 +124,29 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      const fileId = formData.get('fileId');
-      if (!fileId || typeof fileId !== 'string') {
-        console.error('Error: ID de archivo inválido', fileId);
-        return NextResponse.json(
-          { error: 'ID de archivo inválido o no proporcionado' },
-          { status: 400 }
-        );
-      }
+      // Para el primer fragmento, permitir fileId nulo y generar uno nuevo
+      let fileId = formData.get('fileId') as string | null;
       
       const chunkIndex = formData.get('chunkIndex');
       if (!chunkIndex || typeof chunkIndex !== 'string') {
         console.error('Error: Índice de fragmento inválido', chunkIndex);
         return NextResponse.json(
           { error: 'Índice de fragmento inválido o no proporcionado' },
+          { status: 400 }
+        );
+      }
+      
+      const chunkIndexNum = parseInt(chunkIndex, 10);
+      
+      // Si es el primer fragmento y no hay ID, generamos uno nuevo
+      if (chunkIndexNum === 0 && !fileId) {
+        fileId = new ObjectId().toString();
+        console.log(`Generando nuevo fileId para primer fragmento: ${fileId}`);
+      } else if (!fileId) {
+        // Para fragmentos subsiguientes, sí requerimos un fileId
+        console.error('Error: ID de archivo inválido o nulo para fragmento no inicial', fileId);
+        return NextResponse.json(
+          { error: 'ID de archivo inválido o no proporcionado para fragmento no inicial' },
           { status: 400 }
         );
       }
@@ -161,7 +170,6 @@ export async function POST(req: NextRequest) {
       }
       
       // Convertir tipos
-      const chunkIndexNum = parseInt(chunkIndex, 10);
       const totalChunksNum = parseInt(totalChunks, 10);
       
       // Actualizar el rastreador de fragmentos
