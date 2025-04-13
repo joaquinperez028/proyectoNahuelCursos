@@ -27,6 +27,7 @@ export default function NuevoCurso() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingPreview, setUploadingPreview] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ main: 0, preview: 0 });
 
@@ -61,6 +62,91 @@ export default function NuevoCurso() {
     }
   };
 
+  // Función auxiliar para formatear errores
+  const formatError = (error: any): string => {
+    if (!error) return 'Error desconocido';
+    
+    // Si ya es un string, devolverlo directamente
+    if (typeof error === 'string') return error;
+    
+    // Definir un replacer personalizado para JSON.stringify que acceda a propiedades no enumerables
+    const customReplacer = (key: string, value: any) => {
+      // Para propiedades circulares o funciones
+      if (typeof value === 'function') {
+        return '[Función]';
+      }
+      if (value === window || value === document) {
+        return '[Objeto del DOM]';
+      }
+      return value;
+    };
+    
+    // Caso especial para [object Object]
+    if (error.toString() === '[object Object]') {
+      try {
+        // Intentar extraer información útil
+        const details = [];
+        
+        if (error.message) details.push(`Mensaje: ${error.message}`);
+        if (error.name) details.push(`Tipo: ${error.name}`);
+        if (error.code) details.push(`Código: ${error.code}`);
+        if (error.status) details.push(`Estado: ${error.status}`);
+        if (error.response?.status) details.push(`Estado HTTP: ${error.response.status}`);
+        if (error.response?.statusText) details.push(`Texto HTTP: ${error.response.statusText}`);
+        if (error.response?.data) {
+          const dataStr = typeof error.response.data === 'string' 
+            ? error.response.data 
+            : JSON.stringify(error.response.data, customReplacer);
+          details.push(`Datos: ${dataStr}`);
+        }
+        
+        // Si encontramos detalles útiles, usarlos
+        if (details.length > 0) {
+          return details.join('\n');
+        }
+        
+        // Si no, intentar serializar todo el objeto con un enfoque más agresivo
+        try {
+          // Intentar usar Object.getOwnPropertyNames para obtener todas las propiedades
+          const allProps = Object.getOwnPropertyNames(error);
+          const safeProps = {};
+          
+          // Extraer valores de forma segura
+          for (const prop of allProps) {
+            try {
+              if (typeof error[prop] !== 'function' && 
+                  typeof error[prop] !== 'undefined' &&
+                  error[prop] !== null) {
+                safeProps[prop] = error[prop];
+              }
+            } catch (e) {
+              safeProps[prop] = "[No accesible]";
+            }
+          }
+          
+          // Almacenar detalles para mostrar luego
+          setErrorDetails(JSON.stringify(safeProps, customReplacer, 2));
+          
+          // Construir un mensaje más amigable para el usuario
+          return "Se produjo un error durante la carga del video. Hemos guardado detalles técnicos que puedes ver expandiendo abajo.";
+        } catch (e) {
+          console.error("Error al intentar serializar el objeto de error:", e);
+          return JSON.stringify(error, customReplacer);
+        }
+      } catch (e) {
+        // Si falla la serialización
+        setErrorDetails("El error no pudo ser serializado para mostrar detalles. Revisar la consola para más información.");
+        return "Error no serializable - Por favor intenta de nuevo o contacta con soporte técnico.";
+      }
+    }
+    
+    // Casos normales
+    if (error.message) return error.message;
+    if (error.toString) return error.toString();
+    
+    return 'Error desconocido';
+  };
+
   const uploadVideoFile = async (file: File): Promise<string> => {
     try {
       console.log('Iniciando subida del archivo a MongoDB GridFS:', file.name);
@@ -93,30 +179,51 @@ export default function NuevoCurso() {
       return response.data.filePath;
     } catch (error: any) {
       console.error('Error en subida de archivo a MongoDB GridFS:', error);
-      console.error('Detalles adicionales del error:', {
-        isAxiosError: error.isAxiosError,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        headers: error.response?.headers,
-        config: error.config
-      });
       
-      let errorMsg = 'Error desconocido en la subida del archivo';
+      // Depuración detallada del error
+      console.error('Tipo de error:', typeof error);
+      console.error('Error es instancia de Error:', error instanceof Error);
+      console.error('JSON.stringify del error:');
+      try {
+        console.error(JSON.stringify(error, null, 2));
+      } catch (e) {
+        console.error('Error no serializable con JSON.stringify');
+      }
       
-      if (error.response?.data?.error) {
-        errorMsg = error.response.data.error;
-      } else if (error.message) {
-        errorMsg = error.message;
-      } else if (typeof error === 'object') {
-        // Intenta convertir el objeto de error a una cadena legible
+      console.error('Propiedades del error:');
+      for (const prop in error) {
         try {
-          errorMsg = JSON.stringify(error);
+          console.error(`${prop}:`, error[prop]);
         } catch (e) {
-          errorMsg = 'Error no serializable';
+          console.error(`Error al acceder a la propiedad ${prop}`);
         }
       }
       
+      console.error('Detalles adicionales del error:', {
+        isAxiosError: error.isAxiosError,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      
+      // Usar la función de formateo de errores
+      let errorMsg = formatError(error.response?.data || error);
+      
+      // Si hay datos más detallados en la respuesta
+      if (error.response?.data?.error) {
+        errorMsg = formatError(error.response.data.error);
+      }
+      
       setError(`Error al subir video: ${errorMsg}`);
+      
+      // Almacenar detalles adicionales si es necesario
+      if (error.toString() === '[object Object]') {
+        try {
+          setErrorDetails(JSON.stringify(error, null, 2));
+        } catch (e) {
+          setErrorDetails("Error no serializable - Ver consola para más detalles");
+        }
+      }
+      
       throw new Error(errorMsg);
     }
   };
@@ -178,8 +285,23 @@ export default function NuevoCurso() {
           setUploadingVideo(true);
           setUploadProgress(prev => ({ ...prev, main: 0 }));
           console.log('Subiendo video principal a MongoDB GridFS...');
-          videoPath = await uploadVideoFile(videoFile);
-          console.log('Video principal subido correctamente a MongoDB GridFS:', videoPath);
+          try {
+            videoPath = await uploadVideoFile(videoFile);
+            console.log('Video principal subido correctamente a MongoDB GridFS:', videoPath);
+          } catch (videoUploadError) {
+            // Capturar específicamente errores de [object Object]
+            if (videoUploadError.toString() === '[object Object]') {
+              console.error('Error [object Object] detectado durante la subida del video principal');
+              setError('Error durante la subida del video principal. Por favor, inténtalo de nuevo o contacta con soporte técnico.');
+              setErrorDetails(JSON.stringify(videoUploadError, Object.getOwnPropertyNames(videoUploadError), 2));
+            } else {
+              throw videoUploadError; // Re-lanzar para que lo capture el bloque catch externo
+            }
+            setLoading(false);
+            setUploadingVideo(false);
+            setUploadingPreview(false);
+            return;
+          }
           setUploadingVideo(false);
         }
         
@@ -187,8 +309,23 @@ export default function NuevoCurso() {
           setUploadingPreview(true);
           setUploadProgress(prev => ({ ...prev, preview: 0 }));
           console.log('Subiendo video de vista previa a MongoDB GridFS...');
-          videoPreviewPath = await uploadVideoFile(videoPreviewFile);
-          console.log('Video de vista previa subido correctamente a MongoDB GridFS:', videoPreviewPath);
+          try {
+            videoPreviewPath = await uploadVideoFile(videoPreviewFile);
+            console.log('Video de vista previa subido correctamente a MongoDB GridFS:', videoPreviewPath);
+          } catch (previewUploadError) {
+            // Capturar específicamente errores de [object Object]
+            if (previewUploadError.toString() === '[object Object]') {
+              console.error('Error [object Object] detectado durante la subida del video de vista previa');
+              setError('Error durante la subida del video de vista previa. Por favor, inténtalo de nuevo o contacta con soporte técnico.');
+              setErrorDetails(JSON.stringify(previewUploadError, Object.getOwnPropertyNames(previewUploadError), 2));
+            } else {
+              throw previewUploadError; // Re-lanzar para que lo capture el bloque catch externo
+            }
+            setLoading(false);
+            setUploadingVideo(false);
+            setUploadingPreview(false);
+            return;
+          }
           setUploadingPreview(false);
         }
       } catch (uploadError: any) {
@@ -307,9 +444,22 @@ export default function NuevoCurso() {
             <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-lg mb-6">
               <h3 className="text-lg font-bold mb-2">Error</h3>
               <p className="text-sm whitespace-pre-wrap overflow-auto max-h-32">{error}</p>
+              
+              {errorDetails && (
+                <div className="mt-3 border-t border-red-200 pt-3">
+                  <details>
+                    <summary className="text-sm font-medium cursor-pointer">Ver detalles técnicos</summary>
+                    <pre className="mt-2 text-xs bg-red-100 p-3 rounded overflow-auto max-h-64">{errorDetails}</pre>
+                  </details>
+                </div>
+              )}
+              
               <div className="mt-3 flex justify-end">
                 <button 
-                  onClick={() => setError('')} 
+                  onClick={() => {
+                    setError('');
+                    setErrorDetails(null);
+                  }} 
                   className="text-xs bg-red-100 hover:bg-red-200 text-red-800 py-1 px-3 rounded-md transition"
                 >
                   Cerrar
