@@ -8,13 +8,9 @@ import { GridFSBucket, ObjectId } from 'mongodb';
 export const config = {
   api: {
     bodyParser: false,
-    // Aumentar el límite de tamaño para respuestas y solicitudes
     responseLimit: '50mb',
-    // Esto no afecta directamente al bodyParser de Next.js, pero documentamos la limitación
-    // El límite real está controlado por el servidor subyacente (generalmente 4MB por defecto)
   },
-  // Añadir un tiempo de espera más largo para permitir subidas grandes
-  maxDuration: 60, // 60 segundos para la función completa
+  maxDuration: 60,
 };
 
 // Estructura temporal para almacenar información sobre archivos en proceso de carga
@@ -124,14 +120,15 @@ export async function POST(req: NextRequest) {
       // Verificar el tamaño del fragmento y rechazar si es demasiado grande
       // El límite es de aproximadamente 4MB (un poco menos para dejar margen)
       const MAX_CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
-      if ((chunk as Blob).size > MAX_CHUNK_SIZE) {
-        console.error(`Error: El fragmento excede el tamaño máximo permitido. Tamaño: ${(chunk as Blob).size} bytes, Máximo: ${MAX_CHUNK_SIZE} bytes`);
+      const chunkSize = (chunk as Blob).size;
+      
+      if (chunkSize > MAX_CHUNK_SIZE) {
+        console.error(`Error: El fragmento excede el tamaño máximo permitido. Tamaño: ${chunkSize} bytes, Máximo: ${MAX_CHUNK_SIZE} bytes`);
         return NextResponse.json(
           { 
-            error: `El fragmento excede el tamaño máximo permitido (${Math.round(MAX_CHUNK_SIZE/1024/1024)}MB)`,
+            error: `El fragmento es demasiado grande (${(chunkSize / 1024 / 1024).toFixed(2)}MB). El tamaño máximo permitido es ${MAX_CHUNK_SIZE / 1024 / 1024}MB por fragmento`,
             code: '413',
-            message: 'Request Entity Too Large',
-            chunkSize: (chunk as Blob).size
+            message: 'Request Entity Too Large'
           },
           { status: 413 }
         );
@@ -360,11 +357,28 @@ export async function POST(req: NextRequest) {
         
         // Guardar el fragmento como un nuevo chunk
         try {
-          await db.collection('fs.chunks').insertOne({
+          // Comprobar primero si el fragmento ya existe para este archivo
+          const existingChunk = await db.collection('fs.chunks').findOne({
             files_id: new ObjectId(fsFileId),
-            n: chunkIndexNum,
-            data: buffer
+            n: chunkIndexNum
           });
+          
+          if (existingChunk) {
+            console.log(`El fragmento ${chunkIndexNum + 1} ya existe para este archivo. Actualizando en lugar de insertar.`);
+            
+            // Actualizar el fragmento existente en lugar de insertar uno nuevo
+            await db.collection('fs.chunks').updateOne(
+              { files_id: new ObjectId(fsFileId), n: chunkIndexNum },
+              { $set: { data: buffer } }
+            );
+          } else {
+            // Insertar un nuevo fragmento si no existe
+            await db.collection('fs.chunks').insertOne({
+              files_id: new ObjectId(fsFileId),
+              n: chunkIndexNum,
+              data: buffer
+            });
+          }
           
           console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
           
@@ -401,13 +415,16 @@ export async function POST(req: NextRequest) {
           if (error.message && (
             error.message.includes('entity too large') || 
             error.message.includes('exceeds limit') ||
-            error.message.includes('size limit')
+            error.message.includes('size limit') ||
+            error.message.includes('request entity too large') ||
+            error.message.includes('413')
           )) {
             return NextResponse.json(
               { 
-                error: 'El fragmento es demasiado grande para ser procesado', 
+                error: `El fragmento es demasiado grande para ser procesado (límite: ${MAX_CHUNK_SIZE / 1024 / 1024}MB)`, 
                 code: '413',
-                message: 'Request Entity Too Large'
+                message: 'Request Entity Too Large',
+                detail: 'Intenta dividir el archivo en fragmentos más pequeños'
               },
               { status: 413 }
             );
@@ -449,11 +466,28 @@ export async function POST(req: NextRequest) {
         
         // Guardar el fragmento como un nuevo chunk asociado al mismo archivo
         try {
-          await db.collection('fs.chunks').insertOne({
+          // Comprobar primero si el fragmento ya existe para este archivo
+          const existingChunk = await db.collection('fs.chunks').findOne({
             files_id: new ObjectId(fsFileId),
-            n: chunkIndexNum,
-            data: buffer
+            n: chunkIndexNum
           });
+          
+          if (existingChunk) {
+            console.log(`El fragmento ${chunkIndexNum + 1} ya existe para este archivo. Actualizando en lugar de insertar.`);
+            
+            // Actualizar el fragmento existente en lugar de insertar uno nuevo
+            await db.collection('fs.chunks').updateOne(
+              { files_id: new ObjectId(fsFileId), n: chunkIndexNum },
+              { $set: { data: buffer } }
+            );
+          } else {
+            // Insertar un nuevo fragmento si no existe
+            await db.collection('fs.chunks').insertOne({
+              files_id: new ObjectId(fsFileId),
+              n: chunkIndexNum,
+              data: buffer
+            });
+          }
           
           console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
           
@@ -490,13 +524,16 @@ export async function POST(req: NextRequest) {
           if (error.message && (
             error.message.includes('entity too large') || 
             error.message.includes('exceeds limit') ||
-            error.message.includes('size limit')
+            error.message.includes('size limit') ||
+            error.message.includes('request entity too large') ||
+            error.message.includes('413')
           )) {
             return NextResponse.json(
               { 
-                error: 'El fragmento es demasiado grande para ser procesado', 
+                error: `El fragmento es demasiado grande para ser procesado (límite: ${MAX_CHUNK_SIZE / 1024 / 1024}MB)`, 
                 code: '413',
-                message: 'Request Entity Too Large'
+                message: 'Request Entity Too Large',
+                detail: 'Intenta dividir el archivo en fragmentos más pequeños'
               },
               { status: 413 }
             );
@@ -510,6 +547,26 @@ export async function POST(req: NextRequest) {
       }
     } catch (error: any) {
       console.error('Error en el procesamiento de fragmentos:', error);
+      
+      // Verificar si el error está relacionado con el tamaño de la solicitud
+      if (error.message && (
+        error.message.includes('entity too large') || 
+        error.message.includes('exceeds limit') ||
+        error.message.includes('size limit') ||
+        error.message.includes('request entity too large') ||
+        error.message.includes('413')
+      )) {
+        return NextResponse.json(
+          { 
+            error: 'La solicitud excede el límite de tamaño permitido', 
+            code: '413',
+            message: 'Request Entity Too Large',
+            detail: 'Verifica el tamaño del fragmento enviado y asegúrate de que cumple con los límites del servidor'
+          },
+          { status: 413 }
+        );
+      }
+      
       return NextResponse.json(
         { error: `Error en la carga de fragmentos: ${error.message}` },
         { status: 500 }
@@ -517,6 +574,26 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: any) {
     console.error('Error crítico en el procesamiento de la solicitud:', error);
+    
+    // Verificar si el error crítico está relacionado con el tamaño de la solicitud
+    if (error.message && (
+      error.message.includes('entity too large') || 
+      error.message.includes('exceeds limit') ||
+      error.message.includes('size limit') ||
+      error.message.includes('request entity too large') ||
+      error.message.includes('413')
+    )) {
+      return NextResponse.json(
+        { 
+          error: 'La solicitud excede el límite de tamaño máximo del servidor', 
+          code: '413',
+          message: 'Request Entity Too Large',
+          detail: 'Este error ocurrió en el nivel más alto del procesamiento. Intenta reducir el tamaño del fragmento enviado'
+        },
+        { status: 413 }
+      );
+    }
+    
     return NextResponse.json(
       { error: `Error interno del servidor: ${error.message}` },
       { status: 500 }

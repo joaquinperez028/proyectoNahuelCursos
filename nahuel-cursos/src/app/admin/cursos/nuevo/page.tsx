@@ -219,6 +219,31 @@ export default function NuevoCurso() {
       console.log(`Reanudando carga previa para ${file.name} con fileId=${fileId}`);
       setError(`Reanudando carga previa para ${file.name}. Si continúa encontrando errores, puede intentar recargar la página para iniciar una nueva carga.`);
       setTimeout(() => setError(''), 5000); // Limpiar el mensaje después de 5 segundos
+      
+      // Obtener información sobre fragmentos ya subidos antes de continuar
+      try {
+        const chunkInfoResponse = await axios.get(`/api/upload/chunks/info?fileId=${fileId}`);
+        const alreadyUploadedChunks = chunkInfoResponse.data.uploadedChunks || [];
+        
+        console.log(`Información de carga recuperada. Fragmentos ya subidos: ${alreadyUploadedChunks.length}/${totalChunks}`);
+        
+        // Actualizar progreso inicial basado en los fragmentos ya subidos
+        if (alreadyUploadedChunks.length > 0) {
+          const initialProgress = Math.round((alreadyUploadedChunks.length / totalChunks) * 100);
+          
+          if (file === videoFile) {
+            setUploadProgress(prev => ({ ...prev, main: initialProgress }));
+          } else {
+            setUploadProgress(prev => ({ ...prev, preview: initialProgress }));
+          }
+          
+          // Ya mostrar fragmentos subidos
+          uploadedChunks = alreadyUploadedChunks.length;
+        }
+      } catch (error) {
+        console.warn('No se pudo obtener información sobre fragmentos ya subidos:', error);
+        // Seguir con la carga normal incluso si falla esta verificación
+      }
     } else {
       console.log(`Iniciando nueva carga para ${file.name}`);
     }
@@ -227,6 +252,9 @@ export default function NuevoCurso() {
     console.log(`Tipo de archivo: ${file.type}, Tamaño: ${file.size} bytes`);
     
     try {
+      // Crear un array para realizar un seguimiento de los fragmentos subidos con éxito
+      const successfulChunks = new Set<number>();
+      
       // Subir cada fragmento secuencialmente
       for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
         const start = chunkIndex * CHUNK_SIZE;
@@ -271,7 +299,8 @@ export default function NuevoCurso() {
               onUploadProgress: (progressEvent) => {
                 // Calcular el progreso total teniendo en cuenta todos los fragmentos
                 const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
-                const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+                const successfulCount = successfulChunks.size;
+                const overallProgress = ((successfulCount + chunkProgress) / totalChunks) * 100;
                 const percentCompleted = Math.round(overallProgress);
                 
                 console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
@@ -323,6 +352,7 @@ export default function NuevoCurso() {
             }
             
             uploadedChunks++;
+            successfulChunks.add(chunkIndex);
             fragmentUploaded = true;
             console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
             
@@ -374,6 +404,19 @@ export default function NuevoCurso() {
               }
             }
           } catch (chunkError: any) {
+            // Capturar específicamente el error de clave duplicada
+            if (chunkError.response?.data?.error && 
+                (chunkError.response.data.error.includes('duplicate key error') || 
+                 chunkError.response.data.error.includes('E11000'))) {
+              console.log(`Detectado error de clave duplicada para fragmento ${chunkIndex + 1}. Fragmento probablemente ya subido.`);
+              
+              // Marcamos este fragmento como completado y continuamos con el siguiente
+              successfulChunks.add(chunkIndex);
+              fragmentUploaded = true;
+              uploadedChunks++;
+              continue;
+            }
+            
             // Capturar específicamente el error 413 (Entidad demasiado grande)
             if (chunkError.response?.status === 413) {
               console.error(`Error 413: Fragmento ${chunkIndex + 1} demasiado grande.`);
