@@ -30,6 +30,7 @@ export default function NuevoCurso() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ main: 0, preview: 0 });
+  const [useChunkedUpload, setUseChunkedUpload] = useState(true);
 
   // Verificar si el usuario es administrador
   if (status === 'authenticated' && session?.user?.role !== 'admin') {
@@ -147,9 +148,116 @@ export default function NuevoCurso() {
     return 'Error desconocido';
   };
 
+  // Función para subir archivos grandes en fragmentos
+  const uploadLargeVideoInChunks = async (file: File): Promise<string> => {
+    // Tamaño de cada fragmento (5MB)
+    const CHUNK_SIZE = 5 * 1024 * 1024;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let uploadedChunks = 0;
+    let fileId: string | null = null;
+    
+    console.log(`Iniciando subida fragmentada para ${file.name}. Total de fragmentos: ${totalChunks}`);
+    
+    try {
+      // Subir cada fragmento secuencialmente
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(file.size, start + CHUNK_SIZE);
+        const chunk = file.slice(start, end);
+        
+        console.log(`Subiendo fragmento ${chunkIndex + 1}/${totalChunks} (${start}-${end} de ${file.size} bytes)`);
+        
+        // Crear FormData para este fragmento
+        const chunkFormData = new FormData();
+        chunkFormData.append('chunk', chunk);
+        chunkFormData.append('fileName', file.name);
+        chunkFormData.append('contentType', file.type);
+        chunkFormData.append('totalChunks', totalChunks.toString());
+        chunkFormData.append('currentChunk', chunkIndex.toString());
+        
+        // Si ya tenemos un fileId (no es el primer fragmento), lo incluimos
+        if (fileId) {
+          chunkFormData.append('fileId', fileId);
+        }
+        
+        // Enviar el fragmento al servidor
+        const response = await axios.post('/api/upload/chunks', chunkFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            // Calcular el progreso total teniendo en cuenta todos los fragmentos
+            const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
+            const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+            const percentCompleted = Math.round(overallProgress);
+            
+            console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
+            
+            // Actualizar el progreso global
+            if (file === videoFile) {
+              setUploadProgress(prev => ({ ...prev, main: percentCompleted }));
+            } else {
+              setUploadProgress(prev => ({ ...prev, preview: percentCompleted }));
+            }
+          }
+        });
+        
+        // Guardar el fileId devuelto por el servidor
+        if (response.data.fileId) {
+          fileId = response.data.fileId;
+        }
+        
+        uploadedChunks++;
+        console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
+        
+        // En el último fragmento, el servidor completará el archivo
+        if (chunkIndex === totalChunks - 1) {
+          console.log('Todos los fragmentos subidos. Solicitando finalización...');
+          const finalizeResponse = await axios.post('/api/upload/chunks/finalize', {
+            fileId: fileId,
+            fileName: file.name,
+            contentType: file.type,
+            totalChunks: totalChunks
+          });
+          
+          console.log('Archivo completado exitosamente:', finalizeResponse.data);
+          return finalizeResponse.data.filePath;
+        }
+      }
+      
+      throw new Error('No se pudo completar la subida de todos los fragmentos');
+    } catch (error: any) {
+      console.error('Error en la subida fragmentada:', error);
+      // Si es un error específico de algún fragmento
+      if (error.response?.data?.error) {
+        throw new Error(`Error en fragmento ${uploadedChunks + 1}/${totalChunks}: ${error.response.data.error}`);
+      }
+      // Cualquier otro error
+      throw error;
+    }
+  };
+
   const uploadVideoFile = async (file: File): Promise<string> => {
     try {
       console.log('Iniciando subida del archivo a MongoDB GridFS:', file.name);
+      
+      // Usar subida fragmentada para archivos grandes
+      if (useChunkedUpload && file.size > 20 * 1024 * 1024) {
+        console.log('Archivo grande detectado. Usando subida fragmentada...');
+        return await uploadLargeVideoInChunks(file);
+      }
+      
+      // Para archivos pequeños, usar el método normal
+      console.log('Usando subida normal para archivo pequeño');
+      
+      // Verificar tamaño antes de intentar subir
+      if (file.size > 25 * 1024 * 1024) {
+        console.warn('Archivo grande detectado:', file.size, 'bytes. Puede exceder límites del servidor.');
+        setError('El archivo es demasiado grande para una subida directa. Usando subida fragmentada...');
+        return await uploadLargeVideoInChunks(file);
+      }
+      
+      // Crear instancia de FormData
       const formData = new FormData();
       formData.append('video', file);
       
@@ -161,7 +269,9 @@ export default function NuevoCurso() {
           'Content-Type': 'multipart/form-data',
         },
         // Añadir timeout y seguimiento de progreso
-        timeout: 300000, // 5 minutos para archivos grandes
+        timeout: 600000, // 10 minutos para archivos grandes
+        maxContentLength: Infinity, // Sin límite de contenido en Axios
+        maxBodyLength: Infinity, // Sin límite de cuerpo en Axios
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || file.size));
           console.log(`Progreso de subida: ${percentCompleted}%`);
@@ -179,6 +289,13 @@ export default function NuevoCurso() {
       return response.data.filePath;
     } catch (error: any) {
       console.error('Error en subida de archivo a MongoDB GridFS:', error);
+      
+      // Detección específica del error 413 (Entidad demasiado grande)
+      if (error.response && error.response.status === 413) {
+        const errorMsg = 'El archivo es demasiado grande para ser subido. El límite del servidor es 25MB aproximadamente. Por favor, comprime el video o usa una URL externa.';
+        setError(`Error al subir video: ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
       
       // Depuración detallada del error
       console.error('Tipo de error:', typeof error);
@@ -475,9 +592,21 @@ export default function NuevoCurso() {
               No se utilizarán servicios externos de almacenamiento.
             </p>
             <p className="text-blue-700 text-sm">
-              <strong>Nota:</strong> El tamaño máximo de cada archivo es de 100MB. Para archivos más grandes, 
-              considera comprimir el video o proporcionar una URL externa.
+              <strong>Nota:</strong> El sistema ahora soporta subida de archivos grandes (hasta 100MB) usando 
+              un proceso de fragmentación que divide los archivos en partes más pequeñas.
             </p>
+            <div className="mt-2 flex items-center">
+              <input
+                type="checkbox"
+                id="useChunkedUpload"
+                checked={useChunkedUpload}
+                onChange={(e) => setUseChunkedUpload(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded"
+              />
+              <label htmlFor="useChunkedUpload" className="ml-2 block text-sm text-blue-700">
+                Habilitar subida fragmentada para archivos grandes (recomendado)
+              </label>
+            </div>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -557,20 +686,23 @@ export default function NuevoCurso() {
                           {videoFile ? videoFile.name : 'Seleccionar archivo de video completo para subir a MongoDB'}
                         </span>
                         
-                        {videoFile && !uploadingVideo && (
-                          <span className="text-xs text-gray-500 mt-1">
-                            {(videoFile.size / (1024 * 1024)).toFixed(2)} MB
-                          </span>
+                        {videoFile && uploadingVideo && (
+                          <div className="mt-2">
+                            <ProgressBar progress={uploadProgress.main} />
+                            {uploadProgress.main === 100 && (
+                              <p className="text-xs text-green-600 mt-1 text-center">
+                                Procesando fragmentos... Por favor, espere.
+                              </p>
+                            )}
+                            {videoFile.size > 20 * 1024 * 1024 && useChunkedUpload && (
+                              <p className="text-xs text-blue-600 mt-1 text-center">
+                                Usando subida fragmentada para este archivo grande
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
-                    
-                    {/* Barra de progreso */}
-                    {uploadingVideo && (
-                      <div className="mt-2">
-                        <ProgressBar progress={uploadProgress.main} />
-                      </div>
-                    )}
                   </div>
                 </div>
                 
@@ -622,20 +754,23 @@ export default function NuevoCurso() {
                           {videoPreviewFile ? videoPreviewFile.name : 'Seleccionar archivo de vista previa para subir a MongoDB'}
                         </span>
                         
-                        {videoPreviewFile && !uploadingPreview && (
-                          <span className="text-xs text-gray-500 mt-1">
-                            {(videoPreviewFile.size / (1024 * 1024)).toFixed(2)} MB
-                          </span>
+                        {videoPreviewFile && uploadingPreview && (
+                          <div className="mt-2">
+                            <ProgressBar progress={uploadProgress.preview} />
+                            {uploadProgress.preview === 100 && (
+                              <p className="text-xs text-green-600 mt-1 text-center">
+                                Procesando fragmentos... Por favor, espere.
+                              </p>
+                            )}
+                            {videoPreviewFile.size > 20 * 1024 * 1024 && useChunkedUpload && (
+                              <p className="text-xs text-blue-600 mt-1 text-center">
+                                Usando subida fragmentada para este archivo grande
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
-                    
-                    {/* Barra de progreso */}
-                    {uploadingPreview && (
-                      <div className="mt-2">
-                        <ProgressBar progress={uploadProgress.preview} />
-                      </div>
-                    )}
                   </div>
                 </div>
                 
