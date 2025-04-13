@@ -206,10 +206,14 @@ export default function NuevoCurso() {
 
   // Función para subir archivos grandes en fragmentos
   const uploadLargeVideoInChunks = async (file: File): Promise<string> => {
-    // Tamaño de cada fragmento (reducido a 2MB para evitar errores 413)
-    const CHUNK_SIZE = 2 * 1024 * 1024;
+    // Tamaño de cada fragmento - reducido a 2MB por defecto, pero a 1MB para vistas previas
+    const isPreviewFile = file === videoPreviewFile;
+    const CHUNK_SIZE = isPreviewFile ? 1 * 1024 * 1024 : 2 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     let uploadedChunks = 0;
+    
+    console.log(`Configurando subida fragmentada para ${isPreviewFile ? 'vista previa' : 'video principal'}`);
+    console.log(`Usando tamaño de fragmento: ${CHUNK_SIZE / (1024 * 1024)}MB, Total fragmentos: ${totalChunks}`);
     
     // Intentar recuperar un fileId previo para esta carga
     let fileId: string | null = getExistingFileId(file.name);
@@ -518,8 +522,14 @@ export default function NuevoCurso() {
     try {
       console.log('Iniciando subida del archivo a MongoDB GridFS:', file.name);
       
-      // Usar subida fragmentada para archivos grandes
-      if (useChunkedUpload && file.size > 20 * 1024 * 1024) {
+      // Verificar si es un archivo de vista previa
+      const isPreviewFile = file === videoPreviewFile;
+      console.log(`Este archivo ${isPreviewFile ? 'ES' : 'NO es'} un video de vista previa`);
+      
+      // Determinar si necesitamos usar carga fragmentada
+      // Forzar el uso de carga fragmentada para CUALQUIER archivo de vista previa que supere 20MB
+      // o para archivos grandes cuando useChunkedUpload está habilitado
+      if ((isPreviewFile && file.size > 20 * 1024 * 1024) || (useChunkedUpload && file.size > 20 * 1024 * 1024)) {
         console.log('Archivo grande detectado. Usando subida fragmentada...');
         return await uploadLargeVideoInChunks(file);
       }
@@ -527,8 +537,8 @@ export default function NuevoCurso() {
       // Para archivos pequeños, usar el método normal
       console.log('Usando subida normal para archivo pequeño');
       
-      // Verificar tamaño antes de intentar subir
-      if (file.size > 25 * 1024 * 1024) {
+      // Verificar tamaño antes de intentar subir - usar límite de 20MB para ser conservadores con vistas previas
+      if (file.size > 20 * 1024 * 1024) {
         console.warn('Archivo grande detectado:', file.size, 'bytes. Puede exceder límites del servidor.');
         setError('El archivo es demasiado grande para una subida directa. Usando subida fragmentada...');
         return await uploadLargeVideoInChunks(file);
@@ -569,9 +579,18 @@ export default function NuevoCurso() {
       
       // Detección específica del error 413 (Entidad demasiado grande)
       if (error.response && error.response.status === 413) {
-        const errorMsg = 'El archivo es demasiado grande para ser subido. El límite del servidor es 25MB aproximadamente. Por favor, comprime el video o usa una URL externa.';
-        setError(`Error al subir video: ${errorMsg}`);
-        throw new Error(errorMsg);
+        console.log('Error 413 detectado. Intentando subida en fragmentos...');
+        const errorMsg = 'El archivo es demasiado grande para ser subido directamente. Cambiando a método fragmentado...';
+        setError(errorMsg);
+        
+        // Intentar con método fragmentado automáticamente
+        try {
+          console.log('Redirigiendo a subida fragmentada...');
+          return await uploadLargeVideoInChunks(file);
+        } catch (chunkError: any) {
+          console.error('Error también en subida fragmentada:', chunkError);
+          throw new Error(`Error al subir archivo con método fragmentado: ${chunkError.message || 'Error desconocido'}`);
+        }
       }
       
       // Depuración detallada del error
@@ -1058,6 +1077,11 @@ export default function NuevoCurso() {
                         <span className="text-sm text-gray-700 text-center">
                           {videoFile ? videoFile.name : 'Seleccionar archivo de video completo para subir a MongoDB'}
                         </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {videoFile ? 
+                            `Tamaño: ${(videoFile.size / (1024 * 1024)).toFixed(2)}MB - ${videoFile.size > 20 * 1024 * 1024 ? 'Se usará carga fragmentada automáticamente' : 'Carga directa'}` 
+                            : 'Los archivos mayores a 20MB se subirán automáticamente en fragmentos'}
+                        </p>
                         
                         {videoFile && uploadingVideo && (
                           <div className="mt-2">
@@ -1126,6 +1150,11 @@ export default function NuevoCurso() {
                         <span className="text-sm text-gray-700 text-center">
                           {videoPreviewFile ? videoPreviewFile.name : 'Seleccionar archivo de vista previa para subir a MongoDB'}
                         </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {videoPreviewFile ? 
+                            `Tamaño: ${(videoPreviewFile.size / (1024 * 1024)).toFixed(2)}MB - ${videoPreviewFile.size > 20 * 1024 * 1024 ? 'Se usará carga fragmentada automáticamente' : 'Carga directa'}` 
+                            : 'Los archivos mayores a 20MB se subirán automáticamente en fragmentos'}
+                        </p>
                         
                         {videoPreviewFile && uploadingPreview && (
                           <div className="mt-2">
