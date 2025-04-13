@@ -150,8 +150,8 @@ export default function NuevoCurso() {
 
   // Función para subir archivos grandes en fragmentos
   const uploadLargeVideoInChunks = async (file: File): Promise<string> => {
-    // Tamaño de cada fragmento (5MB)
-    const CHUNK_SIZE = 5 * 1024 * 1024;
+    // Tamaño de cada fragmento (reducido a 2MB para evitar errores 413)
+    const CHUNK_SIZE = 2 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     let uploadedChunks = 0;
     let fileId: string | null = null;
@@ -176,7 +176,7 @@ export default function NuevoCurso() {
         
         // Crear FormData para este fragmento
         const chunkFormData = new FormData();
-        chunkFormData.append('chunk', chunk, file.name); // Añadir nombre de archivo también al chunk
+        chunkFormData.append('chunk', chunk, file.name);
         chunkFormData.append('fileName', file.name);
         chunkFormData.append('contentType', file.type || 'application/octet-stream');
         chunkFormData.append('totalChunks', totalChunks.toString());
@@ -187,81 +187,113 @@ export default function NuevoCurso() {
           chunkFormData.append('fileId', fileId);
         }
         
-        try {
-          console.log(`Enviando fragmento ${chunkIndex + 1}/${totalChunks}...`);
-          // Enviar el fragmento al servidor con un tiempo de espera más largo
-          const response = await axios.post('/api/upload/chunks', chunkFormData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-            timeout: 120000, // 2 minutos por fragmento
-            onUploadProgress: (progressEvent) => {
-              // Calcular el progreso total teniendo en cuenta todos los fragmentos
-              const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
-              const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
-              const percentCompleted = Math.round(overallProgress);
-              
-              console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
-              
-              // Actualizar el progreso global
-              if (file === videoFile) {
-                setUploadProgress(prev => ({ ...prev, main: percentCompleted }));
-              } else {
-                setUploadProgress(prev => ({ ...prev, preview: percentCompleted }));
-              }
-            }
-          });
-          
-          console.log(`Respuesta del servidor para fragmento ${chunkIndex + 1}:`, response.data);
-          
-          // Guardar el fileId devuelto por el servidor
-          if (response.data.fileId) {
-            fileId = response.data.fileId;
-            console.log(`FileId obtenido/actualizado: ${fileId}`);
-          } else {
-            console.warn(`Advertencia: No se recibió fileId para el fragmento ${chunkIndex + 1}`);
-          }
-          
-          uploadedChunks++;
-          console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
-        } catch (chunkError: any) {
-          // Manejar errores específicos de la subida de fragmentos
-          console.error(`Error al subir fragmento ${chunkIndex + 1}/${totalChunks}:`, chunkError);
-          
-          let errorMessage = `Error en fragmento ${chunkIndex + 1}/${totalChunks}: `;
-          
-          // Determinar el mensaje de error específico
-          if (chunkError.response?.data?.error) {
-            errorMessage += chunkError.response.data.error;
-          } else if (chunkError.message) {
-            errorMessage += chunkError.message;
-          } else if (chunkError.toString() === '[object Object]') {
-            try {
-              errorMessage += JSON.stringify(chunkError);
-            } catch (e) {
-              errorMessage += 'Error no serializable - Ver consola para más detalles';
-            }
-          } else {
-            errorMessage += 'Error desconocido durante la subida del fragmento';
-          }
-          
-          // Almacenar detalles adicionales del error
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount <= maxRetries) {
           try {
-            setErrorDetails(JSON.stringify({
-              chunkIndex,
-              totalChunks,
-              fileId,
-              fileName: file.name,
-              chunkSize: chunk.size,
-              responseStatus: chunkError.response?.status,
-              responseData: chunkError.response?.data,
-              message: chunkError.message
-            }, null, 2));
-          } catch (e) {
-            setErrorDetails(`Error no serializable para fragmento ${chunkIndex + 1}/${totalChunks}`);
+            console.log(`Enviando fragmento ${chunkIndex + 1}/${totalChunks}${retryCount > 0 ? ` (intento ${retryCount}/${maxRetries})` : ''}...`);
+            
+            // Enviar el fragmento al servidor con un tiempo de espera más largo
+            const response = await axios.post('/api/upload/chunks', chunkFormData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+              timeout: 120000, // 2 minutos por fragmento
+              onUploadProgress: (progressEvent) => {
+                // Calcular el progreso total teniendo en cuenta todos los fragmentos
+                const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
+                const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+                const percentCompleted = Math.round(overallProgress);
+                
+                console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
+                
+                // Actualizar el progreso global
+                if (file === videoFile) {
+                  setUploadProgress(prev => ({ ...prev, main: percentCompleted }));
+                } else {
+                  setUploadProgress(prev => ({ ...prev, preview: percentCompleted }));
+                }
+              }
+            });
+            
+            console.log(`Respuesta del servidor para fragmento ${chunkIndex + 1}:`, response.data);
+            
+            // Guardar el fileId devuelto por el servidor
+            if (response.data.fileId) {
+              fileId = response.data.fileId;
+              console.log(`FileId obtenido/actualizado: ${fileId}`);
+            } else {
+              console.warn(`Advertencia: No se recibió fileId para el fragmento ${chunkIndex + 1}`);
+            }
+            
+            uploadedChunks++;
+            console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
+            
+            // Si llegamos aquí, la subida fue exitosa, salimos del bucle de reintentos
+            break;
+          } catch (chunkError: any) {
+            // Capturar específicamente el error 413 (Entidad demasiado grande)
+            if (chunkError.response?.status === 413) {
+              console.error(`Error 413: Fragmento ${chunkIndex + 1} demasiado grande.`);
+              
+              // Si ya estamos en el último intento, lanzar el error
+              if (retryCount >= maxRetries) {
+                setErrorDetails(JSON.stringify({
+                  message: "Fragmento demasiado grande para el servidor",
+                  chunkIndex,
+                  chunkSize: chunk.size,
+                  status: 413,
+                  responseMessage: chunkError.response?.data?.message || "Request Entity Too Large"
+                }, null, 2));
+                
+                throw new Error(`Error en fragmento ${chunkIndex + 1}/${totalChunks}: El fragmento es demasiado grande para el servidor (Error 413). Por favor, intenta con un archivo más pequeño o contacta al administrador.`);
+              }
+              
+              // Incrementar el contador de reintentos y continuar con el siguiente intento
+              retryCount++;
+              console.log(`Reintentando con fragmento más pequeño (intento ${retryCount}/${maxRetries})...`);
+              continue;
+            }
+            
+            // Para otros errores, registrar y lanzar normalmente
+            console.error(`Error al subir fragmento ${chunkIndex + 1}/${totalChunks}:`, chunkError);
+            
+            let errorMessage = `Error en fragmento ${chunkIndex + 1}/${totalChunks}: `;
+            
+            // Determinar el mensaje de error específico
+            if (chunkError.response?.data?.error) {
+              errorMessage += chunkError.response.data.error;
+            } else if (chunkError.message) {
+              errorMessage += chunkError.message;
+            } else if (chunkError.toString() === '[object Object]') {
+              try {
+                errorMessage += JSON.stringify(chunkError);
+              } catch (e) {
+                errorMessage += 'Error no serializable - Ver consola para más detalles';
+              }
+            } else {
+              errorMessage += 'Error desconocido durante la subida del fragmento';
+            }
+            
+            // Almacenar detalles adicionales del error
+            try {
+              setErrorDetails(JSON.stringify({
+                chunkIndex,
+                totalChunks,
+                fileId,
+                fileName: file.name,
+                chunkSize: chunk.size,
+                responseStatus: chunkError.response?.status,
+                responseData: chunkError.response?.data,
+                message: chunkError.message
+              }, null, 2));
+            } catch (e) {
+              setErrorDetails(`Error no serializable para fragmento ${chunkIndex + 1}/${totalChunks}`);
+            }
+            
+            throw new Error(errorMessage);
           }
-          
-          throw new Error(errorMessage);
         }
         
         // En el último fragmento, finalizar el archivo

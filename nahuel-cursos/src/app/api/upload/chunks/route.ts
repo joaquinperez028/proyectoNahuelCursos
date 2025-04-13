@@ -4,12 +4,17 @@ import { authOptions, isAdmin } from '@/lib/auth/auth';
 import clientPromise from '@/lib/db/mongodb';
 import { GridFSBucket, ObjectId } from 'mongodb';
 
-// Configuración para manejar tamaños pequeños (cada fragmento será pequeño)
+// Configuración para manejar archivos más grandes
 export const config = {
   api: {
     bodyParser: false,
-    responseLimit: '10mb',
+    // Aumentar el límite de tamaño para respuestas y solicitudes
+    responseLimit: '50mb',
+    // Esto no afecta directamente al bodyParser de Next.js, pero documentamos la limitación
+    // El límite real está controlado por el servidor subyacente (generalmente 4MB por defecto)
   },
+  // Añadir un tiempo de espera más largo para permitir subidas grandes
+  maxDuration: 60, // 60 segundos para la función completa
 };
 
 // Estructura temporal para almacenar información sobre archivos en proceso de carga
@@ -52,10 +57,38 @@ export async function POST(req: NextRequest) {
     
     console.log('Procesando fragmento de archivo...');
     
-    // Obtener formData
-    const formData = await req.formData();
-    
     try {
+      // Obtener formData con manejo de errores mejorado
+      let formData;
+      try {
+        formData = await req.formData();
+      } catch (formDataError: any) {
+        console.error('Error al procesar formData:', formDataError);
+        
+        // Verificar si el error está relacionado con el tamaño del cuerpo de la solicitud
+        const errorMessage = formDataError.message || '';
+        if (
+          errorMessage.includes('entity too large') || 
+          errorMessage.includes('exceeds limit') ||
+          errorMessage.includes('body size limit')
+        ) {
+          console.error('Error 413: Solicitud demasiado grande');
+          return NextResponse.json(
+            { 
+              error: 'El fragmento excede el tamaño máximo permitido por el servidor', 
+              code: '413',
+              message: 'Request Entity Too Large' 
+            },
+            { status: 413 }
+          );
+        }
+        
+        return NextResponse.json(
+          { error: `Error al procesar los datos del formulario: ${errorMessage}` },
+          { status: 400 }
+        );
+      }
+      
       // Extraer y validar datos con un mejor manejo de errores
       const chunk = formData.get('chunk');
       if (!chunk || !(chunk instanceof Blob)) {
@@ -66,11 +99,54 @@ export async function POST(req: NextRequest) {
         );
       }
       
+      // Verificar el tamaño del fragmento y rechazar si es demasiado grande
+      // El límite es de aproximadamente 4MB (un poco menos para dejar margen)
+      const MAX_CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
+      if ((chunk as Blob).size > MAX_CHUNK_SIZE) {
+        console.error(`Error: El fragmento excede el tamaño máximo permitido. Tamaño: ${(chunk as Blob).size} bytes, Máximo: ${MAX_CHUNK_SIZE} bytes`);
+        return NextResponse.json(
+          { 
+            error: `El fragmento excede el tamaño máximo permitido (${Math.round(MAX_CHUNK_SIZE/1024/1024)}MB)`,
+            code: '413',
+            message: 'Request Entity Too Large',
+            chunkSize: (chunk as Blob).size
+          },
+          { status: 413 }
+        );
+      }
+      
       const fileName = formData.get('fileName');
       if (!fileName || typeof fileName !== 'string') {
         console.error('Error: Nombre de archivo inválido', fileName);
         return NextResponse.json(
           { error: 'Nombre de archivo inválido o no proporcionado' },
+          { status: 400 }
+        );
+      }
+      
+      const fileId = formData.get('fileId');
+      if (!fileId || typeof fileId !== 'string') {
+        console.error('Error: ID de archivo inválido', fileId);
+        return NextResponse.json(
+          { error: 'ID de archivo inválido o no proporcionado' },
+          { status: 400 }
+        );
+      }
+      
+      const chunkIndex = formData.get('chunkIndex');
+      if (!chunkIndex || typeof chunkIndex !== 'string') {
+        console.error('Error: Índice de fragmento inválido', chunkIndex);
+        return NextResponse.json(
+          { error: 'Índice de fragmento inválido o no proporcionado' },
+          { status: 400 }
+        );
+      }
+      
+      const totalChunks = formData.get('totalChunks');
+      if (!totalChunks || typeof totalChunks !== 'string') {
+        console.error('Error: Total de fragmentos inválido', totalChunks);
+        return NextResponse.json(
+          { error: 'Total de fragmentos inválido o no proporcionado' },
           { status: 400 }
         );
       }
@@ -84,236 +160,171 @@ export async function POST(req: NextRequest) {
         );
       }
       
-      const totalChunksStr = formData.get('totalChunks');
-      if (!totalChunksStr || typeof totalChunksStr !== 'string') {
-        console.error('Error: Total de fragmentos inválido', totalChunksStr);
-        return NextResponse.json(
-          { error: 'Total de fragmentos inválido o no proporcionado' },
-          { status: 400 }
-        );
-      }
-      const totalChunks = parseInt(totalChunksStr);
-      if (isNaN(totalChunks) || totalChunks <= 0) {
-        console.error('Error: Total de fragmentos no es un número válido', totalChunks);
-        return NextResponse.json(
-          { error: 'Total de fragmentos debe ser un número positivo' },
-          { status: 400 }
-        );
+      // Convertir tipos
+      const chunkIndexNum = parseInt(chunkIndex, 10);
+      const totalChunksNum = parseInt(totalChunks, 10);
+      
+      // Actualizar el rastreador de fragmentos
+      if (!chunksTracker.has(fileId)) {
+        chunksTracker.set(fileId, {
+          fileName,
+          contentType,
+          totalChunks: totalChunksNum,
+          receivedChunks: [chunkIndexNum],
+          uploadDate: new Date()
+        });
+      } else {
+        const metadata = chunksTracker.get(fileId)!;
+        if (!metadata.receivedChunks.includes(chunkIndexNum)) {
+          metadata.receivedChunks.push(chunkIndexNum);
+        }
       }
       
-      const currentChunkStr = formData.get('currentChunk');
-      if (!currentChunkStr || typeof currentChunkStr !== 'string') {
-        console.error('Error: Índice de fragmento actual inválido', currentChunkStr);
-        return NextResponse.json(
-          { error: 'Índice de fragmento actual inválido o no proporcionado' },
-          { status: 400 }
-        );
-      }
-      const currentChunk = parseInt(currentChunkStr);
-      if (isNaN(currentChunk) || currentChunk < 0 || currentChunk >= totalChunks) {
-        console.error('Error: Índice de fragmento fuera de rango', currentChunk, totalChunks);
-        return NextResponse.json(
-          { error: `Índice de fragmento debe estar entre 0 y ${totalChunks - 1}` },
-          { status: 400 }
-        );
-      }
-      
-      let fileId = formData.get('fileId') as string | null;
-      
-      console.log(`Fragmento validado: ${currentChunk + 1}/${totalChunks} para ${fileName}`);
-      console.log(`Tamaño del fragmento: ${(chunk as Blob).size} bytes, tipo: ${(chunk as Blob).type || contentType}`);
+      // Convertir chunk a ArrayBuffer para almacenamiento
+      const buffer = Buffer.from(await (chunk as Blob).arrayBuffer());
       
       // Conectar a MongoDB
       const client = await clientPromise;
       const db = client.db();
+      const bucket = new GridFSBucket(db);
       
-      // Crear o recuperar un bucket para los fragmentos
-      const bucket = new GridFSBucket(db, {
-        bucketName: 'chunks'
-      });
+      console.log(`Procesando fragmento ${chunkIndexNum + 1} de ${totalChunksNum} para ${fileName}`);
       
-      // Si es el primer fragmento y no hay fileId, creamos uno nuevo
-      if (currentChunk === 0 && !fileId) {
-        fileId = new ObjectId().toString();
-        console.log(`Iniciando nueva subida fragmentada con ID: ${fileId}`);
-        
-        // Iniciar el seguimiento
-        chunksTracker.set(fileId, {
-          fileName,
-          contentType,
-          totalChunks,
-          receivedChunks: [],
-          uploadDate: new Date()
+      // Lógica para el primer fragmento (crea el archivo)
+      if (chunkIndexNum === 0) {
+        console.log(`Iniciando carga para ${fileName}, fileId: ${fileId}`);
+        const uploadStream = bucket.openUploadStream(fileName, {
+          metadata: {
+            contentType,
+            totalChunks: totalChunksNum,
+            fileId,
+            isProcessing: true, // Indicador de que aún se está subiendo
+          },
         });
-      } else if (!fileId) {
+        
+        // Convertir el ObjectId a string para usar como referencia
+        const fsFileId = uploadStream.id.toString();
+        
+        // Escribir el primer fragmento
+        uploadStream.write(buffer);
+        uploadStream.end();
+        
+        // Esperar a que termine la carga
+        await new Promise<void>((resolve, reject) => {
+          uploadStream.on('finish', () => {
+            console.log(`Primer fragmento para ${fileName} guardado con fsFileId: ${fsFileId}`);
+            resolve();
+          });
+          uploadStream.on('error', (error) => {
+            console.error(`Error al guardar el primer fragmento: ${error.message}`);
+            reject(error);
+          });
+        });
+        
+        return NextResponse.json({
+          message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
+          fsFileId,
+          success: true
+        });
+      }
+      
+      // Para fragmentos subsiguientes, obtener el archivo existente y actualizarlo
+      const metadata = chunksTracker.get(fileId);
+      if (!metadata) {
+        console.error(`Error: No se encontró metadata para fileId: ${fileId}`);
         return NextResponse.json(
-          { error: 'Se requiere fileId para fragmentos que no son el primero' },
-          { status: 400 }
+          { error: 'No se encontró el archivo para actualizar. Inicie la carga nuevamente.' },
+          { status: 404 }
         );
       }
       
-      // Verificar que tengamos registro de este archivo
-      if (!chunksTracker.has(fileId)) {
-        console.log(`No se encontró registro para fileId: ${fileId}`);
-        
-        // Intentar recuperar información de la base de datos
-        try {
-          const chunksCollection = db.collection('chunks.files');
-          const existingChunks = await chunksCollection.find({
-            'metadata.parentFileId': fileId
-          }).toArray();
-          
-          if (existingChunks.length > 0) {
-            // Reconstruir el registro
-            const sampleChunk = existingChunks[0];
-            chunksTracker.set(fileId, {
-              fileName: sampleChunk.metadata.originalFilename,
-              contentType: sampleChunk.metadata.contentType,
-              totalChunks: totalChunks,
-              receivedChunks: existingChunks.map(chunk => parseInt(chunk.metadata.chunkIndex)),
-              uploadDate: new Date()
-            });
-            console.log(`Reconstruido registro para fileId: ${fileId}`);
-          } else {
-            return NextResponse.json(
-              { error: 'No se encontró información para el fileId proporcionado' },
-              { status: 404 }
-            );
-          }
-        } catch (dbError) {
-          console.error('Error al recuperar información de fragmentos:', dbError);
-          return NextResponse.json(
-            { error: 'Error al recuperar información de fragmentos previos' },
-            { status: 500 }
-          );
-        }
+      // Buscar el archivo por fileId en los metadatos
+      const existingFiles = await db.collection('fs.files')
+        .find({ 'metadata.fileId': fileId })
+        .toArray();
+      
+      if (existingFiles.length === 0) {
+        console.error(`Error: No se encontró archivo en GridFS para fileId: ${fileId}`);
+        return NextResponse.json(
+          { error: 'No se encontró el archivo para actualizar en el sistema. Inicie la carga nuevamente.' },
+          { status: 404 }
+        );
       }
       
-      // Generar nombre único para este fragmento
-      const chunkFilename = `${fileId}_${currentChunk}.chunk`;
+      const existingFile = existingFiles[0];
+      const fsFileId = existingFile._id;
       
-      // Convertir el fragmento a buffer
-      console.log(`Convirtiendo fragmento ${currentChunk + 1} a buffer...`);
+      // Guardar el fragmento como un nuevo chunk asociado al mismo archivo
       try {
-        const arrayBuffer = await (chunk as Blob).arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        console.log(`Fragmento ${currentChunk + 1} convertido a buffer. Tamaño: ${buffer.length} bytes`);
+        await db.collection('fs.chunks').insertOne({
+          files_id: new ObjectId(fsFileId),
+          n: chunkIndexNum,
+          data: buffer
+        });
         
-        if (buffer.length === 0) {
-          console.error(`Error: El buffer para el fragmento ${currentChunk + 1} está vacío`);
+        console.log(`Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} guardado para ${fileName}`);
+        
+        // Verificar si todos los fragmentos han sido recibidos
+        if (metadata.receivedChunks.length === totalChunksNum) {
+          console.log(`Todos los fragmentos recibidos para ${fileName}. Completando proceso...`);
+          
+          // Marcar el archivo como completado
+          await db.collection('fs.files').updateOne(
+            { _id: new ObjectId(fsFileId) },
+            { $set: { 'metadata.isProcessing': false, 'metadata.isComplete': true } }
+          );
+          
+          // Limpiar el tracker
+          chunksTracker.delete(fileId);
+          
+          return NextResponse.json({
+            message: `Carga completa de ${fileName}`,
+            fsFileId: fsFileId.toString(),
+            isComplete: true,
+            success: true
+          });
+        }
+        
+        return NextResponse.json({
+          message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
+          fragmentosRecibidos: metadata.receivedChunks.length,
+          success: true
+        });
+      } catch (error: any) {
+        console.error(`Error al guardar fragmento ${chunkIndexNum + 1}: ${error.message}`);
+        
+        // Comprobar si el error está relacionado con una limitación de tamaño
+        if (error.message && (
+          error.message.includes('entity too large') || 
+          error.message.includes('exceeds limit') ||
+          error.message.includes('size limit')
+        )) {
           return NextResponse.json(
-            { error: `Fragmento ${currentChunk + 1} está vacío` },
-            { status: 400 }
+            { 
+              error: 'El fragmento es demasiado grande para ser procesado', 
+              code: '413',
+              message: 'Request Entity Too Large'
+            },
+            { status: 413 }
           );
         }
         
-        // Subir el fragmento a GridFS
-        const chunkId = new ObjectId();
-        console.log(`Creando stream para subir fragmento ${currentChunk + 1} con ID: ${chunkId.toString()}`);
-        
-        const uploadStream = bucket.openUploadStreamWithId(chunkId, chunkFilename, {
-          metadata: {
-            parentFileId: fileId,
-            originalFilename: fileName,
-            contentType: contentType,
-            chunkIndex: currentChunk,
-            totalChunks: totalChunks,
-            uploadedBy: session.user.email,
-            uploadedAt: new Date(),
-            size: buffer.length
-          }
-        });
-        
-        // Promesa para manejar la subida del fragmento
-        await new Promise<void>((resolve, reject) => {
-          uploadStream.on('error', (error) => {
-            console.error(`Error en el stream al subir fragmento ${currentChunk + 1}:`, error);
-            
-            // Intentar obtener más detalles del error
-            let errorDetail = 'Error desconocido';
-            if (error.message) {
-              errorDetail = error.message;
-            } else if ((error as any).code) {
-              errorDetail = `Código de error: ${(error as any).code}`;
-            } else {
-              try {
-                errorDetail = JSON.stringify(error);
-              } catch (e) {
-                errorDetail = 'Error no serializable';
-              }
-            }
-            
-            reject(new Error(`Error en el stream: ${errorDetail}`));
-          });
-          
-          uploadStream.on('finish', () => {
-            console.log(`Fragmento ${currentChunk + 1}/${totalChunks} guardado correctamente en GridFS`);
-            resolve();
-          });
-          
-          // Escribir el buffer en el stream con mejor manejo de errores
-          try {
-            uploadStream.write(buffer, (writeError) => {
-              if (writeError) {
-                console.error(`Error al escribir fragmento ${currentChunk + 1} en el stream:`, writeError);
-                reject(new Error(`Error al escribir en el stream: ${writeError.message || 'Error desconocido'}`));
-                return;
-              }
-              
-              console.log(`Fragmento ${currentChunk + 1} escrito en el stream. Finalizando...`);
-              try {
-                uploadStream.end((endError) => {
-                  if (endError) {
-                    console.error(`Error al finalizar el stream para fragmento ${currentChunk + 1}:`, endError);
-                    reject(new Error(`Error al finalizar el stream: ${endError.message || 'Error desconocido'}`));
-                    return;
-                  }
-                });
-              } catch (endError) {
-                console.error(`Excepción al finalizar el stream para fragmento ${currentChunk + 1}:`, endError);
-                reject(new Error(`Excepción al finalizar el stream: ${(endError as Error).message || 'Error desconocido'}`));
-              }
-            });
-          } catch (writeError) {
-            console.error(`Excepción al escribir fragmento ${currentChunk + 1} en el stream:`, writeError);
-            reject(new Error(`Excepción al escribir en el stream: ${(writeError as Error).message || 'Error desconocido'}`));
-          }
-        });
-        
-        // Actualizar el registro de fragmentos
-        const metadata = chunksTracker.get(fileId)!;
-        metadata.receivedChunks.push(currentChunk);
-        metadata.uploadDate = new Date(); // Actualizar fecha
-        chunksTracker.set(fileId, metadata);
-        
-        console.log(`Fragmento ${currentChunk + 1}/${totalChunks} procesado. Total recibidos: ${metadata.receivedChunks.length}/${totalChunks}`);
-        
-        // Devolver información sobre el fragmento procesado
-        return NextResponse.json({
-          success: true,
-          fileId: fileId,
-          processedChunk: currentChunk,
-          totalProcessed: metadata.receivedChunks.length,
-          remaining: totalChunks - metadata.receivedChunks.length
-        });
-      } catch (bufferError) {
-        console.error(`Error al procesar el buffer para fragmento ${currentChunk + 1}:`, bufferError);
         return NextResponse.json(
-          { error: `Error al procesar el buffer: ${(bufferError as Error).message || 'Error desconocido'}` },
+          { error: `Error al guardar el fragmento: ${error.message}` },
           { status: 500 }
         );
       }
     } catch (error: any) {
-      console.error('Error general en procesamiento de fragmento:', error);
+      console.error('Error en el procesamiento de fragmentos:', error);
       return NextResponse.json(
-        { error: error.message || 'Error en el procesamiento del fragmento' },
+        { error: `Error en la carga de fragmentos: ${error.message}` },
         { status: 500 }
       );
     }
   } catch (error: any) {
-    console.error('Error general en procesamiento de fragmento:', error);
+    console.error('Error crítico en el procesamiento de la solicitud:', error);
     return NextResponse.json(
-      { error: error.message || 'Error en el procesamiento del fragmento' },
+      { error: `Error interno del servidor: ${error.message}` },
       { status: 500 }
     );
   }
