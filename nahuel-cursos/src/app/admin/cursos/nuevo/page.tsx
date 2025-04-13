@@ -157,6 +157,7 @@ export default function NuevoCurso() {
     let fileId: string | null = null;
     
     console.log(`Iniciando subida fragmentada para ${file.name}. Total de fragmentos: ${totalChunks}`);
+    console.log(`Tipo de archivo: ${file.type}, Tamaño: ${file.size} bytes`);
     
     try {
       // Subir cada fragmento secuencialmente
@@ -165,13 +166,19 @@ export default function NuevoCurso() {
         const end = Math.min(file.size, start + CHUNK_SIZE);
         const chunk = file.slice(start, end);
         
-        console.log(`Subiendo fragmento ${chunkIndex + 1}/${totalChunks} (${start}-${end} de ${file.size} bytes)`);
+        console.log(`Preparando fragmento ${chunkIndex + 1}/${totalChunks} (${start}-${end} de ${file.size} bytes)`);
+        console.log(`Tamaño del fragmento: ${chunk.size} bytes, tipo: ${chunk.type || file.type}`);
+        
+        // Verificar que el fragmento tenga contenido
+        if (chunk.size === 0) {
+          throw new Error(`El fragmento ${chunkIndex + 1} está vacío`);
+        }
         
         // Crear FormData para este fragmento
         const chunkFormData = new FormData();
-        chunkFormData.append('chunk', chunk);
+        chunkFormData.append('chunk', chunk, file.name); // Añadir nombre de archivo también al chunk
         chunkFormData.append('fileName', file.name);
-        chunkFormData.append('contentType', file.type);
+        chunkFormData.append('contentType', file.type || 'application/octet-stream');
         chunkFormData.append('totalChunks', totalChunks.toString());
         chunkFormData.append('currentChunk', chunkIndex.toString());
         
@@ -180,60 +187,127 @@ export default function NuevoCurso() {
           chunkFormData.append('fileId', fileId);
         }
         
-        // Enviar el fragmento al servidor
-        const response = await axios.post('/api/upload/chunks', chunkFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            // Calcular el progreso total teniendo en cuenta todos los fragmentos
-            const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
-            const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
-            const percentCompleted = Math.round(overallProgress);
-            
-            console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
-            
-            // Actualizar el progreso global
-            if (file === videoFile) {
-              setUploadProgress(prev => ({ ...prev, main: percentCompleted }));
-            } else {
-              setUploadProgress(prev => ({ ...prev, preview: percentCompleted }));
+        try {
+          console.log(`Enviando fragmento ${chunkIndex + 1}/${totalChunks}...`);
+          // Enviar el fragmento al servidor con un tiempo de espera más largo
+          const response = await axios.post('/api/upload/chunks', chunkFormData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            timeout: 120000, // 2 minutos por fragmento
+            onUploadProgress: (progressEvent) => {
+              // Calcular el progreso total teniendo en cuenta todos los fragmentos
+              const chunkProgress = progressEvent.loaded / (progressEvent.total || chunk.size);
+              const overallProgress = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+              const percentCompleted = Math.round(overallProgress);
+              
+              console.log(`Progreso de fragmento ${chunkIndex + 1}: ${Math.round(chunkProgress * 100)}%, Total: ${percentCompleted}%`);
+              
+              // Actualizar el progreso global
+              if (file === videoFile) {
+                setUploadProgress(prev => ({ ...prev, main: percentCompleted }));
+              } else {
+                setUploadProgress(prev => ({ ...prev, preview: percentCompleted }));
+              }
             }
-          }
-        });
-        
-        // Guardar el fileId devuelto por el servidor
-        if (response.data.fileId) {
-          fileId = response.data.fileId;
-        }
-        
-        uploadedChunks++;
-        console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
-        
-        // En el último fragmento, el servidor completará el archivo
-        if (chunkIndex === totalChunks - 1) {
-          console.log('Todos los fragmentos subidos. Solicitando finalización...');
-          const finalizeResponse = await axios.post('/api/upload/chunks/finalize', {
-            fileId: fileId,
-            fileName: file.name,
-            contentType: file.type,
-            totalChunks: totalChunks
           });
           
-          console.log('Archivo completado exitosamente:', finalizeResponse.data);
-          return finalizeResponse.data.filePath;
+          console.log(`Respuesta del servidor para fragmento ${chunkIndex + 1}:`, response.data);
+          
+          // Guardar el fileId devuelto por el servidor
+          if (response.data.fileId) {
+            fileId = response.data.fileId;
+            console.log(`FileId obtenido/actualizado: ${fileId}`);
+          } else {
+            console.warn(`Advertencia: No se recibió fileId para el fragmento ${chunkIndex + 1}`);
+          }
+          
+          uploadedChunks++;
+          console.log(`Fragmento ${chunkIndex + 1}/${totalChunks} subido correctamente. FileId: ${fileId}`);
+        } catch (chunkError: any) {
+          // Manejar errores específicos de la subida de fragmentos
+          console.error(`Error al subir fragmento ${chunkIndex + 1}/${totalChunks}:`, chunkError);
+          
+          let errorMessage = `Error en fragmento ${chunkIndex + 1}/${totalChunks}: `;
+          
+          // Determinar el mensaje de error específico
+          if (chunkError.response?.data?.error) {
+            errorMessage += chunkError.response.data.error;
+          } else if (chunkError.message) {
+            errorMessage += chunkError.message;
+          } else if (chunkError.toString() === '[object Object]') {
+            try {
+              errorMessage += JSON.stringify(chunkError);
+            } catch (e) {
+              errorMessage += 'Error no serializable - Ver consola para más detalles';
+            }
+          } else {
+            errorMessage += 'Error desconocido durante la subida del fragmento';
+          }
+          
+          // Almacenar detalles adicionales del error
+          try {
+            setErrorDetails(JSON.stringify({
+              chunkIndex,
+              totalChunks,
+              fileId,
+              fileName: file.name,
+              chunkSize: chunk.size,
+              responseStatus: chunkError.response?.status,
+              responseData: chunkError.response?.data,
+              message: chunkError.message
+            }, null, 2));
+          } catch (e) {
+            setErrorDetails(`Error no serializable para fragmento ${chunkIndex + 1}/${totalChunks}`);
+          }
+          
+          throw new Error(errorMessage);
+        }
+        
+        // En el último fragmento, finalizar el archivo
+        if (chunkIndex === totalChunks - 1 && fileId) {
+          console.log('Todos los fragmentos subidos. Solicitando finalización...');
+          try {
+            const finalizeResponse = await axios.post('/api/upload/chunks/finalize', {
+              fileId: fileId,
+              fileName: file.name,
+              contentType: file.type || 'application/octet-stream',
+              totalChunks: totalChunks
+            }, {
+              timeout: 180000 // 3 minutos para finalizar
+            });
+            
+            console.log('Archivo completado exitosamente:', finalizeResponse.data);
+            return finalizeResponse.data.filePath;
+          } catch (finalizeError: any) {
+            console.error('Error al finalizar la subida fragmentada:', finalizeError);
+            
+            let errorMessage = 'Error al finalizar la combinación de fragmentos: ';
+            
+            if (finalizeError.response?.data?.error) {
+              errorMessage += finalizeError.response.data.error;
+            } else if (finalizeError.message) {
+              errorMessage += finalizeError.message;
+            } else {
+              errorMessage += 'Error desconocido durante la finalización';
+            }
+            
+            throw new Error(errorMessage);
+          }
         }
       }
       
       throw new Error('No se pudo completar la subida de todos los fragmentos');
     } catch (error: any) {
       console.error('Error en la subida fragmentada:', error);
-      // Si es un error específico de algún fragmento
-      if (error.response?.data?.error) {
-        throw new Error(`Error en fragmento ${uploadedChunks + 1}/${totalChunks}: ${error.response.data.error}`);
-      }
-      // Cualquier otro error
-      throw error;
+      
+      // Componer un mensaje de error más detallado
+      let errorMessage = error.message || 'Error desconocido durante la subida fragmentada';
+      
+      // Añadir información contextual
+      errorMessage += ` (Fragmentos subidos: ${uploadedChunks}/${totalChunks})`;
+      
+      throw new Error(errorMessage);
     }
   };
 

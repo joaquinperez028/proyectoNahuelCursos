@@ -92,41 +92,91 @@ export async function POST(req: NextRequest) {
     // Función para procesar los fragmentos secuencialmente
     const processChunks = async () => {
       try {
+        console.log(`Iniciando procesamiento secuencial de ${sortedChunkIds.length} fragmentos`);
+        
+        // Crear un array para almacenar todos los buffers
+        const allBuffers: Buffer[] = [];
+        
+        // Primero, descargar todos los fragmentos individualmente
         for (let i = 0; i < sortedChunkIds.length; i++) {
           const chunkId = sortedChunkIds[i];
-          console.log(`Procesando fragmento ${i + 1}/${sortedChunkIds.length}`);
+          console.log(`Descargando fragmento ${i + 1}/${sortedChunkIds.length} (ID: ${chunkId.toString()})`);
           
-          // Descargar el fragmento
-          const downloadStream = chunksBucket.openDownloadStream(chunkId);
+          // Crear un buffer para almacenar este fragmento
+          const bufferChunks: Buffer[] = [];
           
-          // Esperar a que se complete la descarga y escritura
+          // Descargar el fragmento y almacenarlo en memoria
           await new Promise<void>((resolve, reject) => {
+            const downloadStream = chunksBucket.openDownloadStream(chunkId);
+            
             downloadStream.on('error', (error) => {
               console.error(`Error al descargar fragmento ${i + 1}:`, error);
-              reject(error);
+              reject(new Error(`Error al descargar fragmento ${i + 1}: ${error.message || 'Error desconocido'}`));
+            });
+            
+            downloadStream.on('data', (chunk) => {
+              bufferChunks.push(chunk);
             });
             
             downloadStream.on('end', () => {
-              console.log(`Fragmento ${i + 1} añadido al archivo final`);
+              console.log(`Fragmento ${i + 1} descargado correctamente. Tamaño: ${bufferChunks.reduce((total, buf) => total + buf.length, 0)} bytes`);
               resolve();
             });
-            
-            // Conectar el stream de descarga al stream de subida
-            downloadStream.pipe(uploadStream, { end: i === sortedChunkIds.length - 1 });
           });
+          
+          // Combinar los fragmentos buffer en uno solo para este fragmento
+          if (bufferChunks.length > 0) {
+            const completeChunkBuffer = Buffer.concat(bufferChunks);
+            console.log(`Fragmento ${i + 1} concatenado. Tamaño: ${completeChunkBuffer.length} bytes`);
+            allBuffers.push(completeChunkBuffer);
+          } else {
+            console.warn(`Fragmento ${i + 1} no tiene contenido`);
+          }
         }
         
-        // Esperar a que se complete la subida del archivo combinado
-        return new Promise<void>((resolve, reject) => {
+        // Ahora combinar todos los buffers en un solo archivo
+        if (allBuffers.length === 0) {
+          throw new Error('No se pudieron obtener datos de ningún fragmento');
+        }
+        
+        console.log(`Combinando ${allBuffers.length} buffers en un solo archivo...`);
+        const finalBuffer = Buffer.concat(allBuffers);
+        console.log(`Buffer final creado. Tamaño total: ${finalBuffer.length} bytes`);
+        
+        // Subir el buffer combinado como un solo archivo
+        await new Promise<void>((resolve, reject) => {
           uploadStream.on('error', (error) => {
-            console.error('Error al finalizar la combinación de fragmentos:', error);
-            reject(error);
+            console.error('Error al subir el archivo combinado:', error);
+            reject(new Error(`Error al subir el archivo final: ${error.message || 'Error desconocido'}`));
           });
           
           uploadStream.on('finish', () => {
-            console.log('Archivo combinado correctamente');
+            console.log('Archivo combinado y subido correctamente');
             resolve();
           });
+          
+          // Escribir el buffer completo al stream
+          try {
+            console.log('Escribiendo buffer combinado al stream...');
+            uploadStream.write(finalBuffer, (writeError) => {
+              if (writeError) {
+                console.error('Error al escribir buffer combinado:', writeError);
+                reject(new Error(`Error al escribir el archivo final: ${writeError.message || 'Error desconocido'}`));
+                return;
+              }
+              
+              console.log('Buffer escrito correctamente. Finalizando stream...');
+              uploadStream.end((endError) => {
+                if (endError) {
+                  console.error('Error al finalizar el stream:', endError);
+                  reject(new Error(`Error al finalizar el stream: ${endError.message || 'Error desconocido'}`));
+                }
+              });
+            });
+          } catch (streamError: any) {
+            console.error('Error en operación de stream:', streamError);
+            reject(new Error(`Error en el stream: ${streamError.message || 'Error desconocido'}`));
+          }
         });
         
       } catch (error) {
