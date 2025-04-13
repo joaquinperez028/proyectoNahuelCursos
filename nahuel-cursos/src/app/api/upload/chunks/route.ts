@@ -228,7 +228,9 @@ export async function POST(req: NextRequest) {
             contentType,
             totalChunks: totalChunksNum,
             fileId,
-            isProcessing: true, // Indicador de que aún se está subiendo
+            isProcessing: true,
+            uploadedBy: session.user.email,
+            uploadDate: new Date()
           },
         });
         
@@ -251,9 +253,20 @@ export async function POST(req: NextRequest) {
           });
         });
         
+        // Actualizar explícitamente el metadato para asegurar que fileId está configurado correctamente
+        await db.collection('fs.files').updateOne(
+          { _id: new ObjectId(fsFileId) },
+          { $set: { 'metadata.fileId': fileId } }
+        );
+
+        // Verificar que se guardó correctamente
+        const savedFile = await db.collection('fs.files').findOne({ _id: new ObjectId(fsFileId) });
+        console.log(`Archivo creado con metadata:`, JSON.stringify(savedFile?.metadata || {}, null, 2));
+        
         return NextResponse.json({
           message: `Fragmento ${chunkIndexNum + 1} de ${totalChunksNum} recibido`,
           fsFileId,
+          fileId,
           success: true
         });
       }
@@ -264,15 +277,54 @@ export async function POST(req: NextRequest) {
         // Si no encontramos en el tracker, intentemos recuperarla directamente de la base de datos
         console.log(`No se encontró metadata en el rastreador para fileId: ${fileId}. Intentando recuperar de la base de datos...`);
         
-        // Intentar encontrar el archivo existente
-        const existingFiles = await db.collection('fs.files')
+        // Intentar encontrar el archivo existente con varias opciones de búsqueda
+        let existingFiles = await db.collection('fs.files')
           .find({ 'metadata.fileId': fileId })
           .toArray();
+        
+        // Si no encontramos por metadata.fileId, intentamos buscar por _id si parece ser un ObjectId válido
+        if (existingFiles.length === 0 && ObjectId.isValid(fileId)) {
+          console.log(`No se encontró archivo por metadata.fileId, intentando buscar por _id: ${fileId}`);
+          try {
+            const fileById = await db.collection('fs.files')
+              .find({ _id: new ObjectId(fileId) })
+              .toArray();
+            
+            if (fileById.length > 0) {
+              existingFiles = fileById;
+              console.log(`Archivo encontrado por _id: ${fileId}`);
+            }
+          } catch (err) {
+            console.error(`Error al buscar por _id: ${err.message}`);
+          }
+        }
+        
+        // Registrar todos los archivos en proceso para diagnóstico
+        const allProcessingFiles = await db.collection('fs.files')
+          .find({ 'metadata.isProcessing': true })
+          .toArray();
+        
+        console.log(`Archivos en proceso encontrados: ${allProcessingFiles.length}`);
+        
+        if (allProcessingFiles.length > 0) {
+          console.log(`IDs de archivos en proceso:`, allProcessingFiles.map(f => ({
+            id: f._id.toString(),
+            fileId: f.metadata?.fileId,
+            fileName: f.filename
+          })));
+        }
         
         if (existingFiles.length === 0) {
           console.error(`Error: No se encontró archivo en GridFS para fileId: ${fileId}`);
           return NextResponse.json(
-            { error: 'No se encontró el archivo para actualizar. Inicie la carga nuevamente.' },
+            { 
+              error: 'No se encontró el archivo para actualizar. Inicie la carga nuevamente.',
+              debug: {
+                fileIdProvided: fileId,
+                processingFilesCount: allProcessingFiles.length,
+                processingFiles: allProcessingFiles.map(f => f._id.toString())
+              }
+            },
             { status: 404 }
           );
         }

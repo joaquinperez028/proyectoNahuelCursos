@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -31,6 +31,62 @@ export default function NuevoCurso() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ main: 0, preview: 0 });
   const [useChunkedUpload, setUseChunkedUpload] = useState(true);
+  const [uploadSession, setUploadSession] = useState<{[key: string]: string}>({});
+
+  // Función para guardar el estado de la sesión de carga
+  const saveUploadSession = (fileName: string, fileId: string) => {
+    const session = { ...uploadSession, [fileName]: fileId };
+    setUploadSession(session);
+    
+    // También guardarlo en localStorage para persistencia
+    try {
+      localStorage.setItem('uploadSession', JSON.stringify(session));
+      console.log(`Sesión de carga guardada para ${fileName} con fileId=${fileId}`);
+    } catch (e) {
+      console.error('Error al guardar sesión de carga en localStorage:', e);
+    }
+  };
+  
+  // Función para recuperar el fileId de una sesión previa
+  const getExistingFileId = (fileName: string): string | null => {
+    const sessionFileId = uploadSession[fileName];
+    
+    if (sessionFileId) {
+      console.log(`Recuperando sesión de carga existente para ${fileName}: fileId=${sessionFileId}`);
+      return sessionFileId;
+    }
+    
+    // Intentar recuperar de localStorage si no está en el estado
+    try {
+      const savedSession = localStorage.getItem('uploadSession');
+      if (savedSession) {
+        const parsed = JSON.parse(savedSession);
+        if (parsed[fileName]) {
+          // Actualizar el estado con todas las sesiones guardadas
+          setUploadSession(parsed);
+          console.log(`Sesión recuperada de localStorage para ${fileName}: fileId=${parsed[fileName]}`);
+          return parsed[fileName];
+        }
+      }
+    } catch (e) {
+      console.error('Error al recuperar sesión de carga de localStorage:', e);
+    }
+    
+    return null;
+  };
+
+  // Cargar sesiones de carga previas desde localStorage al inicio
+  useEffect(() => {
+    try {
+      const savedSession = localStorage.getItem('uploadSession');
+      if (savedSession) {
+        setUploadSession(JSON.parse(savedSession));
+        console.log('Sesiones de carga recuperadas de localStorage:', savedSession);
+      }
+    } catch (e) {
+      console.error('Error al cargar sesiones de carga previas:', e);
+    }
+  }, []);
 
   // Verificar si el usuario es administrador
   if (status === 'authenticated' && session?.user?.role !== 'admin') {
@@ -154,7 +210,18 @@ export default function NuevoCurso() {
     const CHUNK_SIZE = 2 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     let uploadedChunks = 0;
-    let fileId: string | null = null;
+    
+    // Intentar recuperar un fileId previo para esta carga
+    let fileId: string | null = getExistingFileId(file.name);
+    
+    // Si tenemos un fileId previo, mostrar mensaje de recuperación
+    if (fileId) {
+      console.log(`Reanudando carga previa para ${file.name} con fileId=${fileId}`);
+      setError(`Reanudando carga previa para ${file.name}. Si continúa encontrando errores, puede intentar recargar la página para iniciar una nueva carga.`);
+      setTimeout(() => setError(''), 5000); // Limpiar el mensaje después de 5 segundos
+    } else {
+      console.log(`Iniciando nueva carga para ${file.name}`);
+    }
     
     console.log(`Iniciando subida fragmentada para ${file.name}. Total de fragmentos: ${totalChunks}`);
     console.log(`Tipo de archivo: ${file.type}, Tamaño: ${file.size} bytes`);
@@ -182,7 +249,7 @@ export default function NuevoCurso() {
         chunkFormData.append('totalChunks', totalChunks.toString());
         chunkFormData.append('chunkIndex', chunkIndex.toString());
         
-        // Si ya tenemos un fileId (no es el primer fragmento), lo incluimos
+        // Si ya tenemos un fileId (no es el primer fragmento o estamos reanudando), lo incluimos
         if (fileId) {
           chunkFormData.append('fileId', fileId);
         }
@@ -221,14 +288,38 @@ export default function NuevoCurso() {
             console.log(`Respuesta del servidor para fragmento ${chunkIndex + 1}:`, response.data);
             
             // Guardar el fileId devuelto por el servidor (para el primer fragmento o si cambia)
+            let fileIdUpdated = false;
+            
+            // Priorizar el fileId explícito
             if (response.data.fileId) {
               fileId = response.data.fileId;
-              console.log(`FileId obtenido/actualizado: ${fileId}`);
+              console.log(`FileId explícito obtenido/actualizado: ${fileId}`);
+              fileIdUpdated = true;
             }
-            // También verificar si el servidor devolvió un fsFileId
+            // Si no hay fileId explícito pero hay fsFileId, usar ese (solo para el primer fragmento)
             else if (response.data.fsFileId && chunkIndex === 0) {
               fileId = response.data.fsFileId;
               console.log(`FsFileId obtenido del primer fragmento: ${fileId}`);
+              fileIdUpdated = true;
+            }
+            
+            // Verificar que tenemos un fileId válido
+            if (!fileId) {
+              console.error('Error: No se recibió un fileId válido del servidor');
+              throw new Error('No se recibió un fileId válido del servidor. No se puede continuar con la carga.');
+            }
+            
+            // Guardar la sesión de carga para recuperación futura si el ID fue actualizado
+            if (fileIdUpdated) {
+              saveUploadSession(file.name, fileId);
+              
+              // Logging para diagnóstico
+              console.log(`FileId actualizado para próximos fragmentos: ${fileId}`);
+              
+              // Solo para el primer fragmento, registrar qué ID usaremos para los siguientes
+              if (chunkIndex === 0) {
+                console.log(`IMPORTANTE: Se usará fileId=${fileId} para todos los fragmentos subsiguientes`);
+              }
             }
             
             uploadedChunks++;
@@ -744,6 +835,20 @@ export default function NuevoCurso() {
     </div>
   );
 
+  // Función para limpiar sesiones de carga
+  const clearUploadSessions = () => {
+    try {
+      localStorage.removeItem('uploadSession');
+      setUploadSession({});
+      console.log('Sesiones de carga eliminadas');
+      setError('Sesiones de carga eliminadas correctamente. Puede iniciar nuevas cargas.');
+      setTimeout(() => setError(''), 3000);
+    } catch (e) {
+      console.error('Error al eliminar sesiones de carga:', e);
+      setError('Error al eliminar las sesiones de carga');
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div className="flex justify-center items-center py-20">
@@ -816,6 +921,22 @@ export default function NuevoCurso() {
                 Habilitar subida fragmentada para archivos grandes (recomendado)
               </label>
             </div>
+            
+            {/* Botón para limpiar sesiones de carga */}
+            {Object.keys(uploadSession).length > 0 && (
+              <div className="mt-3 p-2 bg-blue-100 rounded">
+                <p className="text-xs text-blue-700 mb-1">
+                  <strong>Sesiones de carga activas:</strong> {Object.keys(uploadSession).length} archivo(s)
+                </p>
+                <button
+                  type="button"
+                  onClick={clearUploadSessions}
+                  className="text-xs py-1 px-2 bg-blue-200 hover:bg-blue-300 text-blue-800 rounded-md transition"
+                >
+                  Limpiar sesiones de carga y comenzar de nuevo
+                </button>
+              </div>
+            )}
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-6">
