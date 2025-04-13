@@ -67,6 +67,9 @@ export default function NuevoCurso() {
       const formData = new FormData();
       formData.append('video', file);
       
+      console.log('Tamaño del archivo a subir:', file.size, 'bytes');
+      console.log('Tipo del archivo a subir:', file.type);
+      
       const response = await axios.post('/api/upload/video', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -90,12 +93,27 @@ export default function NuevoCurso() {
       return response.data.filePath;
     } catch (error: any) {
       console.error('Error en subida de archivo a MongoDB GridFS:', error);
+      console.error('Detalles adicionales del error:', {
+        isAxiosError: error.isAxiosError,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers,
+        config: error.config
+      });
+      
       let errorMsg = 'Error desconocido en la subida del archivo';
       
       if (error.response?.data?.error) {
         errorMsg = error.response.data.error;
       } else if (error.message) {
         errorMsg = error.message;
+      } else if (typeof error === 'object') {
+        // Intenta convertir el objeto de error a una cadena legible
+        try {
+          errorMsg = JSON.stringify(error);
+        } catch (e) {
+          errorMsg = 'Error no serializable';
+        }
       }
       
       setError(`Error al subir video: ${errorMsg}`);
@@ -173,8 +191,22 @@ export default function NuevoCurso() {
           console.log('Video de vista previa subido correctamente a MongoDB GridFS:', videoPreviewPath);
           setUploadingPreview(false);
         }
-      } catch (uploadError) {
+      } catch (uploadError: any) {
         console.error('Error durante la subida de videos a MongoDB GridFS:', uploadError);
+        // Mejorar el mensaje de error para que sea más informativo
+        let errorMsg = 'Error desconocido en la subida del archivo';
+        
+        if (uploadError.message) {
+          errorMsg = uploadError.message;
+        } else if (typeof uploadError === 'object') {
+          try {
+            errorMsg = JSON.stringify(uploadError);
+          } catch (e) {
+            errorMsg = 'Error no serializable durante la subida';
+          }
+        }
+        
+        setError(`Error durante la subida de videos: ${errorMsg}`);
         // No continuamos con la creación del curso si hay un error en la subida
         setLoading(false);
         setUploadingVideo(false);
@@ -205,7 +237,21 @@ export default function NuevoCurso() {
       }
     } catch (err: any) {
       console.error('Error al crear curso:', err);
-      setError(err.response?.data?.error || 'Ocurrió un error al crear el curso');
+      let errorMsg = 'Ocurrió un error al crear el curso';
+      
+      if (err.response?.data?.error) {
+        errorMsg = err.response.data.error;
+      } else if (err.message) {
+        errorMsg = err.message;
+      } else if (typeof err === 'object') {
+        try {
+          errorMsg = JSON.stringify(err);
+        } catch (e) {
+          errorMsg = 'Error no serializable';
+        }
+      }
+      
+      setError(errorMsg);
       // Mantener los datos del formulario para que el usuario pueda corregirlos
     } finally {
       setLoading(false);
@@ -216,11 +262,22 @@ export default function NuevoCurso() {
 
   // Componente para mostrar el progreso de subida
   const ProgressBar = ({ progress }: { progress: number }) => (
-    <div className="w-full bg-gray-200 rounded-full h-2.5">
-      <div 
-        className="bg-blue-600 h-2.5 rounded-full" 
-        style={{ width: `${progress}%` }}
-      ></div>
+    <div className="w-full">
+      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+        <div 
+          className="bg-blue-600 h-2.5 rounded-full" 
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
+      <div className="flex justify-between text-xs text-gray-500">
+        <span>{progress}% completado</span>
+        {progress > 0 && progress < 100 && (
+          <span>Subiendo... Por favor, no cierre esta página</span>
+        )}
+        {progress === 100 && (
+          <span className="text-green-600">¡Subida completada! Procesando...</span>
+        )}
+      </div>
     </div>
   );
 
@@ -247,8 +304,17 @@ export default function NuevoCurso() {
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="p-6">
           {error && (
-            <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-6 text-sm">
-              {error}
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-lg mb-6">
+              <h3 className="text-lg font-bold mb-2">Error</h3>
+              <p className="text-sm whitespace-pre-wrap overflow-auto max-h-32">{error}</p>
+              <div className="mt-3 flex justify-end">
+                <button 
+                  onClick={() => setError('')} 
+                  className="text-xs bg-red-100 hover:bg-red-200 text-red-800 py-1 px-3 rounded-md transition"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           )}
           
@@ -353,9 +419,6 @@ export default function NuevoCurso() {
                     {uploadingVideo && (
                       <div className="mt-2">
                         <ProgressBar progress={uploadProgress.main} />
-                        <p className="text-sm text-blue-600 mt-1 text-center">
-                          Subiendo a MongoDB: {uploadProgress.main}%
-                        </p>
                       </div>
                     )}
                   </div>
@@ -421,9 +484,6 @@ export default function NuevoCurso() {
                     {uploadingPreview && (
                       <div className="mt-2">
                         <ProgressBar progress={uploadProgress.preview} />
-                        <p className="text-sm text-blue-600 mt-1 text-center">
-                          Subiendo a MongoDB: {uploadProgress.preview}%
-                        </p>
                       </div>
                     )}
                   </div>
