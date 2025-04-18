@@ -7,12 +7,15 @@ import axios from 'axios';
 import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner, FaSort, FaSortUp, FaSortDown, FaSyncAlt } from 'react-icons/fa';
 import ValoracionEstrellas from '@/components/ValoracionEstrellas';
 import VideoPlayer from '@/components/VideoPlayer';
+import useVideoUrl from '@/lib/hooks/useVideoUrl';
+import { ObjectId } from 'mongodb';
 
 interface Curso {
   _id: string;
   titulo: string;
   descripcion: string;
   precio: number;
+  video: string;
   videoPreview: string;
   fechaCreacion: string;
   calificacionPromedio?: number;
@@ -67,8 +70,18 @@ export default function Cursos() {
         params.append('ordenFecha', ordenFecha);
       }
       
+      console.log('Obteniendo cursos con parámetros:', params.toString());
       const response = await axios.get<CursosResponse>(`/api/cursos?${params.toString()}`);
-      setCursos(response.data.cursos);
+      
+      // Procesar los videos para asegurar que tengan las URLs correctas
+      const cursosConVideosProcesados = response.data.cursos.map(curso => {
+        return {
+          ...curso,
+          // No procesamos los videos aquí, lo haremos en el componente
+        };
+      });
+      
+      setCursos(cursosConVideosProcesados);
       setTotalPaginas(response.data.meta.totalPaginas);
     } catch (err) {
       console.error('Error al obtener cursos:', err);
@@ -246,50 +259,55 @@ export default function Cursos() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {cursos.map((curso) => (
-            <div key={curso._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
-              <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                {/* Video de vista previa con VideoPlayer */}
-                <div className="w-full h-48 bg-blue-100 relative">
-                  {curso.videoPreview ? (
-                    <VideoPlayer 
-                      src={curso.videoPreview} 
-                      className="absolute inset-0" 
-                      autoPlay={false}
-                      stopPropagation={true}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-blue-600">Vista previa no disponible</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
-                <p className="text-gray-600 mb-4 line-clamp-3">{curso.descripcion}</p>
-                <div className="flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
-                    {curso.calificacionPromedio !== undefined && (
-                      <ValoracionEstrellas 
-                        calificacion={curso.calificacionPromedio} 
-                        totalValoraciones={curso.totalValoraciones} 
-                        tamano="sm"
-                        className="mt-1" 
+          {cursos.map((curso) => {
+            // Procesamos la URL del video aquí usando nuestro hook
+            const videoPreviewUrl = useVideoUrl(curso.videoPreview);
+            
+            return (
+              <div key={curso._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
+                <div className="aspect-w-16 aspect-h-9 bg-gray-200">
+                  {/* Video de vista previa con VideoPlayer */}
+                  <div className="w-full h-48 bg-blue-100 relative">
+                    {videoPreviewUrl ? (
+                      <VideoPlayer 
+                        src={videoPreviewUrl} 
+                        className="absolute inset-0" 
+                        autoPlay={false}
+                        stopPropagation={true}
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-blue-600">Vista previa no disponible</span>
+                      </div>
                     )}
                   </div>
-                  <Link
-                    href={`/cursos/${curso._id}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    Ver detalles
-                  </Link>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold mb-2 text-gray-900">{curso.titulo}</h3>
+                  <p className="text-gray-600 mb-4 line-clamp-3">{curso.descripcion}</p>
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-blue-600 font-bold">${curso.precio.toFixed(2)}</span>
+                      {curso.calificacionPromedio !== undefined && (
+                        <ValoracionEstrellas 
+                          calificacion={curso.calificacionPromedio} 
+                          totalValoraciones={curso.totalValoraciones} 
+                          tamano="sm"
+                          className="mt-1" 
+                        />
+                      )}
+                    </div>
+                    <Link
+                      href={`/cursos/${curso._id}`}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Ver detalles
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       

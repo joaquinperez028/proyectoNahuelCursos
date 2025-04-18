@@ -53,9 +53,26 @@ export async function GET(request: Request) {
       .limit(CURSOS_POR_PAGINA)
       .toArray();
     
+    // Asegurarnos de que las URLs de video sean correctas
+    const cursosConVideoProcesado = cursos.map(curso => {
+      const videoProcesado = {...curso};
+      
+      // Si el video es un ObjectId (referencia a GridFS), mantenemos solo el ID
+      if (curso.video && ObjectId.isValid(curso.video.toString())) {
+        videoProcesado.video = curso.video.toString();
+      }
+      
+      // Si el videoPreview es un ObjectId (referencia a GridFS), mantenemos solo el ID
+      if (curso.videoPreview && ObjectId.isValid(curso.videoPreview.toString())) {
+        videoProcesado.videoPreview = curso.videoPreview.toString();
+      }
+      
+      return videoProcesado;
+    });
+    
     // Enviar respuesta con meta información de paginación
     return NextResponse.json({
-      cursos,
+      cursos: cursosConVideoProcesado,
       meta: {
         pagina,
         totalPaginas: Math.ceil(total / CURSOS_POR_PAGINA),

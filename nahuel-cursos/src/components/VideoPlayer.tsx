@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { FaPlayCircle, FaLock, FaSpinner } from 'react-icons/fa';
+import useVideoUrl from '@/lib/hooks/useVideoUrl';
 
 interface VideoPlayerProps {
   src: string;
@@ -29,12 +30,18 @@ export default function VideoPlayer({
   const [playing, setPlaying] = useState(autoPlay);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Procesar la URL del video utilizando nuestro hook
+  const videoUrl = useVideoUrl(src);
 
   useEffect(() => {
     // Determina si es un video local (uploads) o un video de GridFS (/api/videos/...)
     // o una URL externa (YouTube, Vimeo, etc.)
-    const isLocalPath = src.startsWith('/uploads/') || src.startsWith('./uploads/');
-    const isGridFSPath = src && (src.startsWith('/api/videos/') || src.includes('fileId='));
+    const isLocalPath = videoUrl.startsWith('/uploads/') || videoUrl.startsWith('./uploads/');
+    const isGridFSPath = videoUrl && videoUrl.startsWith('/api/videos/');
+    
+    console.log('VideoPlayer - URL procesada:', videoUrl);
+    console.log('VideoPlayer - Tipo de video: ', { isLocalPath, isGridFSPath });
     
     setIsLocalVideo(isLocalPath);
     setIsGridFSVideo(isGridFSPath);
@@ -42,7 +49,7 @@ export default function VideoPlayer({
     // Si es un video GridFS, verificar que sea accesible
     if (isGridFSPath) {
       setLoading(true);
-      fetch(src, { method: 'HEAD' })
+      fetch(videoUrl, { method: 'HEAD' })
         .then(response => {
           if (!response.ok) {
             console.error('Error al verificar el video GridFS:', response.status);
@@ -56,7 +63,7 @@ export default function VideoPlayer({
           setLoading(false);
         });
     }
-  }, [src]);
+  }, [videoUrl]);
 
   // Función para preparar URL con parámetros que eviten autoplay a menos que sea explícitamente solicitado
   const prepararURLExterna = (url: string): string => {
@@ -103,16 +110,16 @@ export default function VideoPlayer({
       });
     } else if (iframeRef.current) {
       // Modificar URL para activar autoplay
-      let playUrl = src;
+      let playUrl = videoUrl;
       
-      if (src.includes('youtube.com/embed/')) {
+      if (videoUrl.includes('youtube.com/embed/')) {
         // Eliminar autoplay existente si hay
         playUrl = playUrl.replace(/[&?]autoplay=[01]/g, '');
         // Añadir autoplay=1
         playUrl = playUrl.includes('?') 
           ? `${playUrl}&autoplay=1` 
           : `${playUrl}?autoplay=1`;
-      } else if (src.includes('player.vimeo.com/video/')) {
+      } else if (videoUrl.includes('player.vimeo.com/video/')) {
         // Eliminar autoplay existente si hay
         playUrl = playUrl.replace(/[&?]autoplay=[01]/g, '');
         // Añadir autoplay=1
@@ -170,7 +177,7 @@ export default function VideoPlayer({
                 setError('Error en la reproducción del video. Intente nuevamente.');
               }}
             >
-              <source src={src} type="video/mp4" />
+              <source src={videoUrl} type="video/mp4" />
               Tu navegador no soporta la reproducción de videos.
             </video>
             
@@ -192,7 +199,7 @@ export default function VideoPlayer({
 
   // Para videos de servicios externos (YouTube, Vimeo, etc.)
   // Asume que 'src' es una URL de iframe embebido
-  const urlSegura = prepararURLExterna(src);
+  const urlSegura = prepararURLExterna(videoUrl);
   
   return (
     <div className={`relative w-full ${className}`}>
