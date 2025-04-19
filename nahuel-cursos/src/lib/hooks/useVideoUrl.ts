@@ -50,6 +50,19 @@ const isProblematicId = (url: string): boolean => {
   return PROBLEM_IDS.some(id => url.includes(id));
 };
 
+// Función para verificar si es un ID bloqueado en localStorage
+const isBlockedId = (url: string): boolean => {
+  if (typeof window === 'undefined' || !url) return false;
+  
+  try {
+    const blockedIds = JSON.parse(localStorage.getItem('blockedVideoIds') || '[]');
+    return blockedIds.some((id: string) => url.includes(id));
+  } catch (error) {
+    console.error('Error al verificar IDs bloqueados:', error);
+    return false;
+  }
+};
+
 /**
  * Procesa una URL de video para asegurarse de que sea accesible
  * @param videoUrl La URL del video a procesar
@@ -59,10 +72,30 @@ export const useVideoUrl = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
   console.log('useVideoUrl - URL original:', videoUrl);
+  
+  // Verificar si está en la lista de bloqueados
+  if (isBlockedId(videoUrl)) {
+    console.log('useVideoUrl - ID bloqueado detectado, devolviendo URL sin procesar');
+    return videoUrl;
+  }
 
   // Si es un ID problemático, devolver una URL especial de fallback o error
   if (isProblematicId(videoUrl)) {
     console.log('useVideoUrl - ID problemático detectado, devolviendo enlace de fallback');
+    
+    // Guardar en localStorage para futuras visitas
+    if (typeof window !== 'undefined') {
+      try {
+        const blockedIds = JSON.parse(localStorage.getItem('blockedVideoIds') || '[]');
+        if (!blockedIds.includes(videoUrl)) {
+          blockedIds.push(videoUrl);
+          localStorage.setItem('blockedVideoIds', JSON.stringify(blockedIds));
+        }
+      } catch (error) {
+        console.error('Error al guardar ID problemático:', error);
+      }
+    }
+    
     // Podríamos devolver una URL a un video de error o mensaje genérico
     // Por ahora devolveremos la URL original para que el componente maneje el error
     return videoUrl;

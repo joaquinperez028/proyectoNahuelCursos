@@ -5,6 +5,7 @@ import "./styles.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,6 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
+      <head>
+        {/* Script para limpiar la caché de videos problemáticos */}
+        <Script src="/clean-video-cache.js" strategy="beforeInteractive" />
+      </head>
       <body className={inter.className}>
         <Providers>
           <div className="flex flex-col min-h-screen">

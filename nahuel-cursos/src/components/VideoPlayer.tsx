@@ -60,6 +60,33 @@ export default function VideoPlayer({
     if (!url) return false;
     return PROBLEM_IDS.some(id => url.includes(id));
   };
+
+  // Guardar IDs problemáticos en localStorage para evitar solicitudes futuras
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Verificar si el ID ya está en la lista de bloqueados
+      const blockedIds = JSON.parse(localStorage.getItem('blockedVideoIds') || '[]');
+      
+      if (isProblematicId(src) || isProblematicId(videoUrl)) {
+        // Añadir a la lista de bloqueados si no está ya
+        if (!blockedIds.includes(src) && src) {
+          blockedIds.push(src);
+        }
+        if (!blockedIds.includes(videoUrl) && videoUrl) {
+          blockedIds.push(videoUrl);
+        }
+        
+        // Guardar la lista actualizada
+        localStorage.setItem('blockedVideoIds', JSON.stringify(blockedIds));
+        
+        // Mostrar mensaje en la consola una sola vez por sesión
+        if (!sessionStorage.getItem('videoErrorLogged')) {
+          console.error('VideoPlayer - ID problemático bloqueado permanentemente:', { videoUrl, src });
+          sessionStorage.setItem('videoErrorLogged', 'true');
+        }
+      }
+    }
+  }, [src, videoUrl]);
   
   // Verificamos si es un formato de video que el navegador puede reproducir
   const isPlayableVideoFormat = (url: string): boolean => {
@@ -104,10 +131,31 @@ export default function VideoPlayer({
     setIsFragmentedVideo(false);
     setAttemptCount(prev => prev + 1);
     
+    // Verificar desde localStorage si es un ID bloqueado
+    if (typeof window !== 'undefined') {
+      const blockedIds = JSON.parse(localStorage.getItem('blockedVideoIds') || '[]');
+      if (blockedIds.some((id: string) => src.includes(id) || videoUrl.includes(id))) {
+        console.log('VideoPlayer - ID previamente bloqueado, evitando cualquier solicitud');
+        setError('Este video no está disponible actualmente. Contacte al administrador del sitio.');
+        setLoading(false);
+        useFallbackVideo();
+        return;
+      }
+    }
+    
     // Si detectamos un ID problemático, mostrar error directamente y no intentar cargar
     if (isProblematicId(videoUrl) || isProblematicId(src)) {
       console.error('VideoPlayer - ID problemático detectado, cancelando carga para evitar bucles', { videoUrl, src });
       setError('Este video no está disponible actualmente. Contacte al administrador del sitio.');
+      setLoading(false);
+      useFallbackVideo();
+      return;
+    }
+    
+    // Limitar el número de intentos para evitar bucles
+    if (attemptCount > 3) {
+      console.error('VideoPlayer - Demasiados intentos, cancelando para evitar bucles');
+      setError('No se pudo cargar el video después de múltiples intentos.');
       setLoading(false);
       useFallbackVideo();
       return;
