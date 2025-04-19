@@ -41,6 +41,7 @@ export default function VideoPlayer({
   const [iframeFallback, setIframeFallback] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
+  const [isFragmentedVideo, setIsFragmentedVideo] = useState(false);
   
   // Procesar la URL del video utilizando nuestro hook
   const videoUrl = useVideoUrl(src);
@@ -52,6 +53,13 @@ export default function VideoPlayer({
            lowerUrl.endsWith('.webm') || 
            lowerUrl.endsWith('.ogg') || 
            lowerUrl.endsWith('.mov');
+  };
+  
+  // Detectar si el video es fragmentado
+  const checkIfFragmented = (url: string): boolean => {
+    return url.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74') || 
+           url.includes('/api/videos/fragmentados/') ||
+           (url.includes('/api/videos/') && !isPlayableVideoFormat(url));
   };
   
   // Método para usar fallback a YouTube cuando todo lo demás falla
@@ -74,6 +82,7 @@ export default function VideoPlayer({
     setIsYouTube(false);
     setIsVimeo(false);
     setIframeFallback(false);
+    setIsFragmentedVideo(false);
     setAttemptCount(prev => prev + 1);
     
     // Determina el tipo de video
@@ -83,6 +92,7 @@ export default function VideoPlayer({
     const isGridFSPath = videoUrl && videoUrl.startsWith('/api/videos/');
     const isYoutubePath = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
     const isVimeoPath = videoUrl && videoUrl.includes('vimeo.com');
+    const isFragmented = checkIfFragmented(videoUrl);
     
     console.log('VideoPlayer - URL procesada:', videoUrl);
     console.log('VideoPlayer - URL original:', src);
@@ -90,18 +100,49 @@ export default function VideoPlayer({
       isLocalPath, 
       isGridFSPath,
       isYoutubePath,
-      isVimeoPath
+      isVimeoPath,
+      isFragmented
     });
     
     setIsLocalVideo(isLocalPath);
     setIsGridFSVideo(isGridFSPath);
     setIsYouTube(isYoutubePath);
     setIsVimeo(isVimeoPath);
+    setIsFragmentedVideo(isFragmented);
     
     // Si después de varios intentos no funciona, usar fallback
     if (attemptCount > 2) {
       useFallbackVideo();
       setLoading(false);
+      return;
+    }
+    
+    // Manejo especial para video fragmentado
+    if (isFragmented) {
+      console.log('VideoPlayer - Detectado video fragmentado, verificando disponibilidad');
+      setLoading(true);
+      
+      // Para videos fragmentados, verificamos específicamente si el API está respondiendo
+      fetch(videoUrl, { method: 'HEAD' })
+        .then(response => {
+          if (!response.ok) {
+            console.error('VideoPlayer - Error al verificar video fragmentado:', response.status);
+            if (response.status === 404) {
+              throw new Error(`Video fragmentado no encontrado (${response.status})`);
+            } else {
+              throw new Error(`Error al acceder al video fragmentado (${response.status})`);
+            }
+          }
+          // La API responde correctamente, podemos proceder
+          console.log('VideoPlayer - API de video fragmentado disponible');
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('VideoPlayer - Error de verificación para video fragmentado:', err);
+          setError(`Error al cargar el video fragmentado: ${err.message}`);
+          setLoading(false);
+        });
+      
       return;
     }
     
@@ -125,7 +166,7 @@ export default function VideoPlayer({
       
       // De todos modos, pasamos a cargar después de un tiempo razonable
       setTimeout(() => setLoading(false), 1000);
-    } else if (isGridFSPath) {
+    } else if (isGridFSPath && !isFragmented) {
       setLoading(true);
       fetch(videoUrl, { method: 'HEAD' })
         .then(response => {
@@ -158,6 +199,38 @@ export default function VideoPlayer({
       setLoading(false);
     }
   }, [videoUrl, src, attemptCount]);
+
+  // Función para recargar el video (especialmente útil para videos fragmentados)
+  const handleRetryFragmented = () => {
+    console.log('VideoPlayer - Reintentando cargar video fragmentado');
+    setError(null);
+    setLoading(true);
+    
+    // Forzar una nueva solicitud a la API usando un timestamp
+    const timestampedUrl = `${videoUrl}?t=${Date.now()}`;
+    
+    fetch(timestampedUrl, { method: 'HEAD' })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`La API responde con error ${response.status}`);
+        }
+        console.log('VideoPlayer - Video fragmentado disponible ahora');
+        // Actualizar el src del video
+        if (videoRef.current) {
+          videoRef.current.src = timestampedUrl;
+          videoRef.current.load();
+          videoRef.current.play().catch(e => {
+            console.error('Error al reproducir después de recargar:', e);
+          });
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error al reintentar carga de video fragmentado:', err);
+        setError(`Error al recargar: ${err.message}`);
+        setLoading(false);
+      });
+  };
 
   // Función para manejar la reproducción
   const handlePlay = () => {
@@ -207,10 +280,11 @@ export default function VideoPlayer({
             <ul className="list-disc list-inside">
               {isLocalVideo && <li className="text-blue-400">Video Local</li>}
               {isGridFSVideo && <li className="text-yellow-400">Video GridFS</li>}
+              {isFragmentedVideo && <li className="text-orange-400">Video Fragmentado</li>}
               {isYouTube && <li className="text-red-400">YouTube</li>}
               {isVimeo && <li className="text-teal-400">Vimeo</li>}
               {iframeFallback && <li className="text-purple-400">Usando Fallback</li>}
-              {!isLocalVideo && !isGridFSVideo && !isYouTube && !isVimeo && !iframeFallback && 
+              {!isLocalVideo && !isGridFSVideo && !isYouTube && !isVimeo && !iframeFallback && !isFragmentedVideo && 
                 <li className="text-red-500">Tipo desconocido</li>}
             </ul>
           </div>
@@ -309,13 +383,13 @@ export default function VideoPlayer({
             {/* Botón para reintentar */}
             <button 
               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center"
-              onClick={() => setAttemptCount(count => count + 1)}
+              onClick={() => isFragmentedVideo ? handleRetryFragmented() : setAttemptCount(count => count + 1)}
             >
               <FaSync className="mr-1" /> Reintentar
             </button>
             
             {/* Opción para usar YouTube si está disponible */}
-            {fallbackToYoutube && (
+            {fallbackToYoutube && !isFragmentedVideo && (
               <button 
                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center"
                 onClick={useFallbackVideo}
@@ -327,12 +401,12 @@ export default function VideoPlayer({
         </div>
       )}
       
-      {/* Video nativo (para archivos locales o GridFS) */}
-      {(isLocalVideo || isGridFSVideo) && !iframeFallback && (
+      {/* Video nativo (para archivos locales, GridFS o fragmentados) */}
+      {(isLocalVideo || isGridFSVideo || isFragmentedVideo) && !iframeFallback && (
         <>
           <video
             ref={videoRef}
-            src={videoUrl}
+            src={isFragmentedVideo ? `${videoUrl}?t=${Date.now()}` : videoUrl}
             className="absolute inset-0 w-full h-full object-contain bg-black"
             controls={playing || controls}
             autoPlay={autoPlay}
@@ -347,9 +421,13 @@ export default function VideoPlayer({
             }}
             onError={(e) => {
               console.error('Error en elemento video:', e);
-              setError('No se pudo cargar el video. Formato no soportado o archivo corrupto.');
-              if (attemptCount > 1) {
-                useFallbackVideo();
+              if (isFragmentedVideo) {
+                setError('Error al cargar el video fragmentado. Intenta recargar la página o presiona "Reintentar".');
+              } else {
+                setError('No se pudo cargar el video. Formato no soportado o archivo corrupto.');
+                if (attemptCount > 1) {
+                  useFallbackVideo();
+                }
               }
             }}
           />
@@ -386,8 +464,8 @@ export default function VideoPlayer({
         />
       )}
       
-      {/* Botón de depuración (solo visible en modo desarrollo) */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Botón de depuración (visible en modo desarrollo y producción si hay errores) */}
+      {(process.env.NODE_ENV === 'development' || error) && (
         <button 
           onClick={toggleDebugInfo}
           className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-50 text-white p-1 rounded-full z-20 hover:bg-opacity-80"

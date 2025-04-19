@@ -5,7 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { FaSpinner, FaArrowRight, FaPlayCircle, FaVideo, FaSyncAlt, FaLock, FaGraduationCap } from 'react-icons/fa';
 import ValoracionEstrellas from './ValoracionEstrellas';
-import VideoPlayer from './VideoPlayer';
+import SmartVideoPlayer from './SmartVideoPlayer';
 
 interface Curso {
   _id: string;
@@ -201,7 +201,7 @@ export default function CursosRecientes() {
             >
               <div className="w-full h-48 bg-gray-200 relative">
                 {curso.videoPreview ? (
-                  <VideoPlayer 
+                  <SmartVideoPlayer 
                     src={curso.videoPreview} 
                     className="absolute inset-0" 
                     autoPlay={false}
@@ -272,7 +272,7 @@ export default function CursosRecientes() {
               {/* Video o placeholder */}
               <div className="w-full aspect-video bg-black relative">
                 {selectedCurso.videoPreview ? (
-                  <VideoPlayer 
+                  <SmartVideoPlayer 
                     src={selectedCurso.videoPreview} 
                     className="absolute inset-0" 
                     autoPlay={false}

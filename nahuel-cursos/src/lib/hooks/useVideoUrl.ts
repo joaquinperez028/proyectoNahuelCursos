@@ -27,6 +27,15 @@ const isLocalFileUrl = (url: string): boolean => {
          url.includes('.ogg');
 };
 
+// Función para verificar si el video podría ser fragmentado
+const isPossiblyFragmented = (url: string): boolean => {
+  // Los videos fragmentados suelen estar en GridFS y son accesibles por una API
+  return url.includes('chunks') || 
+         url.includes('fragment') || 
+         url.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74') || // Detectamos el ID específico del video fragmentado
+         url.includes('/api/videos/'); // O podría ser servido a través de la API
+};
+
 /**
  * Procesa una URL de video para asegurarse de que sea accesible
  * @param videoUrl La URL del video a procesar
@@ -35,7 +44,26 @@ const isLocalFileUrl = (url: string): boolean => {
 export const useVideoUrl = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
-  console.log('useVideoUrl - Processing URL:', videoUrl);
+  console.log('useVideoUrl - URL original:', videoUrl);
+
+  // Si detectamos que es un video fragmentado, asegurarnos de que use el endpoint especializado
+  if (isPossiblyFragmented(videoUrl)) {
+    console.log('useVideoUrl - Video posiblemente fragmentado detectado');
+    
+    // Si ya parece una URL de API de videos pero tiene un formato incorrecto, corregirlo
+    if (videoUrl.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74')) {
+      console.log('useVideoUrl - Usando endpoint especializado para video fragmentado');
+      // Usar el endpoint especializado para videos fragmentados
+      return `/api/videos/fragmentados/e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74`;
+    }
+    
+    // Si contiene un ID completo en el formato UUID, asegurarnos de usar la API especializada
+    const uuidMatch = videoUrl.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (uuidMatch && uuidMatch[1]) {
+      console.log('useVideoUrl - UUID detectado en URL:', uuidMatch[1]);
+      return `/api/videos/fragmentados/${uuidMatch[1]}`;
+    }
+  }
 
   // Caso especial: Si la URL contiene parte de un archivo de video local
   if (isLocalFileUrl(videoUrl)) {
@@ -48,6 +76,10 @@ export const useVideoUrl = (videoUrl: string): string => {
       
       if (nombreArchivo) {
         console.log('useVideoUrl - Usando solo el nombre del archivo:', nombreArchivo);
+        // Si el nombre del archivo es de un UUID específico para un video fragmentado
+        if (nombreArchivo.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74')) {
+          return `/api/videos/fragmentados/e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74`;
+        }
         // Construir una ruta correcta para acceder desde la carpeta pública
         return `/uploads/videos/${nombreArchivo}`;
       }
@@ -70,6 +102,10 @@ export const useVideoUrl = (videoUrl: string): string => {
   // Si ya es una URL de API de videos, devolverla tal cual
   if (videoUrl.startsWith('/api/videos/')) {
     console.log('useVideoUrl - Ya es una URL de API');
+    // Si parece ser un video fragmentado, redirigir al endpoint especializado
+    if (videoUrl.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74')) {
+      return videoUrl.replace('/api/videos/', '/api/videos/fragmentados/');
+    }
     return videoUrl;
   }
 

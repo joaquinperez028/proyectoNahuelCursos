@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FaPlay, FaLock, FaSpinner, FaShoppingCart, FaCheckCircle, FaTimes, FaSyncAlt } from 'react-icons/fa';
-import VideoPlayer from '@/components/VideoPlayer';
+import SmartVideoPlayer from '@/components/SmartVideoPlayer';
 import ValoracionEstrellas from '@/components/ValoracionEstrellas';
 import ValoracionesCurso from '@/components/ValoracionesCurso';
 import { useParams } from 'next/navigation';
@@ -340,10 +340,10 @@ export default function DetalleCurso({ params }: CursoProps) {
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
             <div className="aspect-w-16 aspect-h-9 bg-gray-200">
               {tieneAcceso ? (
-                <VideoPlayer src={curso.video!} controls={true} autoPlay={false} />
+                <SmartVideoPlayer src={curso.video!} controls={true} autoPlay={false} />
               ) : (
                 <div className="relative">
-                  <VideoPlayer src={curso.videoPreview} controls={true} autoPlay={false} />
+                  <SmartVideoPlayer src={curso.videoPreview} controls={true} autoPlay={false} />
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                     <div className="text-center">
                       <FaLock className="text-white text-5xl mx-auto mb-4" />
