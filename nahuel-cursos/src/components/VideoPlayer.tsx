@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FaPlayCircle, FaLock, FaSpinner, FaExclamationTriangle, FaCode, FaBug, FaYoutube, FaSync, FaPlay } from 'react-icons/fa';
 import useVideoUrl from '@/lib/hooks/useVideoUrl';
+import VideoFallback from './VideoFallback';
 
 interface VideoPlayerProps {
   src: string;
@@ -47,10 +48,16 @@ export default function VideoPlayer({
   const videoUrl = useVideoUrl(src);
 
   // IDs problemáticos que causan bucles
-  const PROBLEM_IDS = ['67fc1bcf6a2add8684b98814'];
+  const PROBLEM_IDS = [
+    '67fc1bcf6a2add8684b98814',
+    '67fc1bcf6a2add0604b98814',
+    'e4349070-10d5-4fbc-b7d9-d4e1e030c74',
+    'e4349070-1bd5-4fbc-b7d9-d4e1e03b0c74'
+  ];
   
   // Verificar si estamos manejando un ID problemático
   const isProblematicId = (url: string): boolean => {
+    if (!url) return false;
     return PROBLEM_IDS.some(id => url.includes(id));
   };
   
@@ -96,6 +103,15 @@ export default function VideoPlayer({
     setIframeFallback(false);
     setIsFragmentedVideo(false);
     setAttemptCount(prev => prev + 1);
+    
+    // Si detectamos un ID problemático, mostrar error directamente y no intentar cargar
+    if (isProblematicId(videoUrl) || isProblematicId(src)) {
+      console.error('VideoPlayer - ID problemático detectado, cancelando carga para evitar bucles', { videoUrl, src });
+      setError('Este video no está disponible actualmente. Contacte al administrador del sitio.');
+      setLoading(false);
+      useFallbackVideo();
+      return;
+    }
     
     // Determina el tipo de video
     const isLocalPath = videoUrl.startsWith('/uploads/') || 
@@ -386,31 +402,14 @@ export default function VideoPlayer({
         </div>
       )}
       
-      {/* Mensaje de error */}
+      {/* Mensaje de error - Usar el nuevo componente VideoFallback */}
       {error && !iframeFallback && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-90 z-10 p-4">
-          <div className="text-red-500 mb-4 font-semibold text-center">{error}</div>
-          
-          <div className="flex flex-wrap gap-2 justify-center">
-            {/* Botón para reintentar */}
-            <button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center"
-              onClick={() => isFragmentedVideo ? handleRetryFragmented() : setAttemptCount(count => count + 1)}
-            >
-              <FaSync className="mr-1" /> Reintentar
-            </button>
-            
-            {/* Opción para usar YouTube si está disponible */}
-            {fallbackToYoutube && !isFragmentedVideo && (
-              <button 
-                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center"
-                onClick={useFallbackVideo}
-              >
-                <FaYoutube className="mr-1" /> Ver en YouTube
-              </button>
-            )}
-          </div>
-        </div>
+        <VideoFallback 
+          message={error}
+          showYoutubeOption={fallbackToYoutube && !isFragmentedVideo}
+          onYoutubeClick={useFallbackVideo}
+          className="absolute inset-0 z-10"
+        />
       )}
       
       {/* Video nativo (para archivos locales, GridFS o fragmentados) */}

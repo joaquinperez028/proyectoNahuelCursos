@@ -37,10 +37,16 @@ const isPossiblyFragmented = (url: string): boolean => {
 };
 
 // Lista de IDs problemáticos que causan bucles
-const PROBLEM_IDS = ['67fc1bcf6a2add8684b98814'];
+const PROBLEM_IDS = [
+  '67fc1bcf6a2add8684b98814',
+  '67fc1bcf6a2add0604b98814',
+  'e4349070-10d5-4fbc-b7d9-d4e1e030c74',
+  'e4349070-1bd5-4fbc-b7d9-d4e1e03b0c74'
+];
 
 // Verificar si la URL contiene un ID problemático
 const isProblematicId = (url: string): boolean => {
+  if (!url) return false;
   return PROBLEM_IDS.some(id => url.includes(id));
 };
 
@@ -54,9 +60,11 @@ export const useVideoUrl = (videoUrl: string): string => {
   
   console.log('useVideoUrl - URL original:', videoUrl);
 
-  // Si es un ID problemático, devolverlo sin procesar para evitar bucles
+  // Si es un ID problemático, devolver una URL especial de fallback o error
   if (isProblematicId(videoUrl)) {
-    console.log('useVideoUrl - ID problemático detectado, devolviendo sin procesar');
+    console.log('useVideoUrl - ID problemático detectado, devolviendo enlace de fallback');
+    // Podríamos devolver una URL a un video de error o mensaje genérico
+    // Por ahora devolveremos la URL original para que el componente maneje el error
     return videoUrl;
   }
 

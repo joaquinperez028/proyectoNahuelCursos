@@ -11,7 +11,12 @@ export const config = {
 };
 
 // Agregar verificación para prevenir bucles infinitos
-const KNOWN_BAD_ID = '67fc1bcf6a2add8684b98814';
+const KNOWN_BAD_IDS = [
+  '67fc1bcf6a2add8684b98814',
+  '67fc1bcf6a2add0604b98814',
+  'e4349070-10d5-4fbc-b7d9-d4e1e030c74',
+  'e4349070-1bd5-4fbc-b7d9-d4e1e03b0c74'
+];
 
 export async function GET(
   request: NextRequest,
@@ -29,8 +34,8 @@ export async function GET(
       );
     }
 
-    // Fix para el ID problemático que causa bucles
-    if (params.id === KNOWN_BAD_ID) {
+    // Fix para los IDs problemáticos que causan bucles
+    if (KNOWN_BAD_IDS.some(id => params.id.includes(id))) {
       console.log('API Videos: Detectado ID problemático, evitando bucle');
       return NextResponse.json(
         { 
