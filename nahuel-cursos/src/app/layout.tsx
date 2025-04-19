@@ -22,8 +22,13 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Script para limpiar la caché de videos problemáticos */}
-        <Script src="/clean-video-cache.js" strategy="beforeInteractive" />
+        {/* Scripts para reparar problemas de video y hipervínculos */}
+        <Script src="/fix-video-issues.js" strategy="beforeInteractive" />
+
+        {/* Meta tag para evitar caché de navegador */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body className={inter.className}>
         <Providers>

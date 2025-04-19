@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { FaUser, FaSignOutAlt, FaShoppingCart, FaBars, FaTimes, FaSync, FaExclamationTriangle } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import SafeLink from './SafeLink';
 
 export default function Navbar() {
   const { data: session, status, update } = useSession();
@@ -22,6 +22,17 @@ export default function Navbar() {
       setSyncNeeded(false);
     }
   }, [session]);
+
+  // Función alternativa de navegación en caso de enlaces rotos
+  const navigateTo = (path: string) => {
+    try {
+      router.push(path);
+    } catch (error) {
+      console.error('Error al navegar con router:', error);
+      // Fallback a navegación tradicional
+      window.location.href = path;
+    }
+  };
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -41,7 +52,7 @@ export default function Navbar() {
       if (session?.user?.id && session.user.id.startsWith('temp_')) {
         // Si sigue siendo temporal, intentar cerrar sesión y volver a iniciarla
         await signOut({ redirect: false });
-        router.push('/auth/login?reason=sync');
+        navigateTo('/auth/login?reason=sync');
       } else {
         // Recargar la página para refrescar todos los componentes
         window.location.reload();
@@ -84,29 +95,29 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/" className="flex-shrink-0 flex items-center">
+            <SafeLink href="/" className="flex-shrink-0 flex items-center">
               <span className="font-bold text-xl text-white">Nahuel Lozano</span>
-            </Link>
+            </SafeLink>
           </div>
           
           {/* Enlaces de navegación para pantallas medianas y grandes */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/cursos" className="px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
+            <SafeLink href="/cursos" className="px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
               Cursos
-            </Link>
+            </SafeLink>
             {session?.user?.role === 'admin' && (
-              <Link href="/admin" className="px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
+              <SafeLink href="/admin" className="px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
                 Administración
-              </Link>
+              </SafeLink>
             )}
             
             {session ? (
               <div className="relative ml-3 flex items-center space-x-3">
                 {isSyncNeeded && renderSyncIndicator()}
-                <Link href="/perfil" className="flex items-center text-sm px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
+                <SafeLink href="/perfil" className="flex items-center text-sm px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium">
                   <FaUser className="mr-1" /> 
                   {session.user?.name || 'Perfil'}
-                </Link>
+                </SafeLink>
                 <button 
                   onClick={() => signOut()} 
                   className="flex items-center text-sm px-3 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium"
@@ -116,15 +127,15 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex space-x-2">
-                <Link href="/auth/login" className="px-4 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium border border-white">
+                <SafeLink href="/auth/login" className="px-4 py-2 rounded-md text-white hover:bg-green-700 transition-colors font-medium border border-white">
                   Iniciar Sesión
-                </Link>
-                <Link 
+                </SafeLink>
+                <SafeLink 
                   href="/auth/registro" 
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
                 >
                   Registrarse
-                </Link>
+                </SafeLink>
               </div>
             )}
           </div>
@@ -169,33 +180,33 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link 
+            <SafeLink 
               href="/cursos" 
               className="block px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Cursos
-            </Link>
+            </SafeLink>
             {session?.user?.role === 'admin' && (
-              <Link 
+              <SafeLink 
                 href="/admin" 
                 className="block px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 Administración
-              </Link>
+              </SafeLink>
             )}
             
             {session ? (
               <div className="space-y-1">
-                <Link 
+                <SafeLink 
                   href="/perfil" 
                   className="flex items-center text-sm px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   <FaUser className="mr-1" /> 
                   {session.user?.name || 'Perfil'}
-                </Link>
+                </SafeLink>
                 <button 
                   onClick={() => {
                     signOut();
@@ -208,20 +219,20 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="space-y-1">
-                <Link 
+                <SafeLink 
                   href="/auth/login" 
                   className="block px-3 py-2 rounded-md hover:bg-green-700 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Iniciar Sesión
-                </Link>
-                <Link 
+                </SafeLink>
+                <SafeLink 
                   href="/auth/registro" 
                   className="block px-3 py-2 bg-green-600 rounded-md hover:bg-green-700 transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
                   Registrarse
-                </Link>
+                </SafeLink>
               </div>
             )}
           </div>
