@@ -46,6 +46,14 @@ export default function VideoPlayer({
   // Procesar la URL del video utilizando nuestro hook
   const videoUrl = useVideoUrl(src);
 
+  // IDs problemáticos que causan bucles
+  const PROBLEM_IDS = ['67fc1bcf6a2add8684b98814'];
+  
+  // Verificar si estamos manejando un ID problemático
+  const isProblematicId = (url: string): boolean => {
+    return PROBLEM_IDS.some(id => url.includes(id));
+  };
+  
   // Verificamos si es un formato de video que el navegador puede reproducir
   const isPlayableVideoFormat = (url: string): boolean => {
     const lowerUrl = url.toLowerCase();
@@ -57,9 +65,13 @@ export default function VideoPlayer({
   
   // Detectar si el video es fragmentado
   const checkIfFragmented = (url: string): boolean => {
+    // Para IDs problemáticos, nunca tratar como fragmentados
+    if (isProblematicId(url)) {
+      return false;
+    }
+    
     return url.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74') || 
-           url.includes('/api/videos/fragmentados/') ||
-           (url.includes('/api/videos/') && !isPlayableVideoFormat(url));
+           url.includes('/api/videos/fragmentados/');
   };
   
   // Método para usar fallback a YouTube cuando todo lo demás falla

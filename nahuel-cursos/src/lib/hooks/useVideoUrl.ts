@@ -29,11 +29,19 @@ const isLocalFileUrl = (url: string): boolean => {
 
 // Función para verificar si el video podría ser fragmentado
 const isPossiblyFragmented = (url: string): boolean => {
-  // Los videos fragmentados suelen estar en GridFS y son accesibles por una API
+  // Los videos fragmentados se identifican por su UUID específico o por estar en el endpoint específico
   return url.includes('chunks') || 
          url.includes('fragment') || 
          url.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74') || // Detectamos el ID específico del video fragmentado
-         url.includes('/api/videos/'); // O podría ser servido a través de la API
+         url.includes('/api/videos/fragmentados/'); // Solo considerar fragmentados los que usan este endpoint específico
+};
+
+// Lista de IDs problemáticos que causan bucles
+const PROBLEM_IDS = ['67fc1bcf6a2add8684b98814'];
+
+// Verificar si la URL contiene un ID problemático
+const isProblematicId = (url: string): boolean => {
+  return PROBLEM_IDS.some(id => url.includes(id));
 };
 
 /**
@@ -45,6 +53,12 @@ export const useVideoUrl = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
   console.log('useVideoUrl - URL original:', videoUrl);
+
+  // Si es un ID problemático, devolverlo sin procesar para evitar bucles
+  if (isProblematicId(videoUrl)) {
+    console.log('useVideoUrl - ID problemático detectado, devolviendo sin procesar');
+    return videoUrl;
+  }
 
   // Si detectamos que es un video fragmentado, asegurarnos de que use el endpoint especializado
   if (isPossiblyFragmented(videoUrl)) {
@@ -102,8 +116,9 @@ export const useVideoUrl = (videoUrl: string): string => {
   // Si ya es una URL de API de videos, devolverla tal cual
   if (videoUrl.startsWith('/api/videos/')) {
     console.log('useVideoUrl - Ya es una URL de API');
-    // Si parece ser un video fragmentado, redirigir al endpoint especializado
-    if (videoUrl.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74')) {
+    // Solo redirigir el video fragmentado específico, no cualquier video
+    if (videoUrl.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74') && 
+        !videoUrl.includes('/api/videos/fragmentados/')) {
       return videoUrl.replace('/api/videos/', '/api/videos/fragmentados/');
     }
     return videoUrl;

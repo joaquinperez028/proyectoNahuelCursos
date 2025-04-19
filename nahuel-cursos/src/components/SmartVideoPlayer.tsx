@@ -29,14 +29,24 @@ export default function SmartVideoPlayer(props: SmartVideoPlayerProps) {
   // Detectar si el video es fragmentado
   useEffect(() => {
     const detectFragmentedVideo = () => {
-      // Patrones específicos para videos fragmentados
-      const isUUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(props.src);
+      // IDs problemáticos que causan bucles
+      const PROBLEM_IDS = ['67fc1bcf6a2add8684b98814'];
       
-      const isFragmentsEndpoint = props.src.includes('/api/videos/fragmentados/');
+      // Verificar si la URL contiene un ID problemático
+      const containsProblemId = PROBLEM_IDS.some(id => props.src.includes(id));
+      if (containsProblemId) {
+        // Para los IDs problemáticos, usar siempre el reproductor estándar
+        setIsFragmented(false);
+        setFragmentedVideoId(null);
+        return;
+      }
+      
+      // Solo detectar videos específicos como fragmentados
       const isKnownFragmentedVideo = props.src.includes('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74');
+      const isFragmentsEndpoint = props.src.includes('/api/videos/fragmentados/');
       
-      // Si es un video fragmentado, extraer el ID
-      if (isFragmentsEndpoint || isKnownFragmentedVideo || isUUID) {
+      // Si es uno de los videos fragmentados conocidos o usa el endpoint específico
+      if (isFragmentsEndpoint || isKnownFragmentedVideo) {
         setIsFragmented(true);
         
         // Extraer el ID del video fragmentado
@@ -45,9 +55,6 @@ export default function SmartVideoPlayer(props: SmartVideoPlayerProps) {
           setFragmentedVideoId(id || null);
         } else if (isKnownFragmentedVideo) {
           setFragmentedVideoId('e434907b-1bd5-4fbc-b7d9-d4e1e03b0c74');
-        } else if (isUUID) {
-          const match = props.src.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-          setFragmentedVideoId(match ? match[1] : null);
         }
       } else {
         setIsFragmented(false);

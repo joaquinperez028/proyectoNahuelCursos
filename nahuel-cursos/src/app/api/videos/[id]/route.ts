@@ -10,6 +10,9 @@ export const config = {
   },
 };
 
+// Agregar verificación para prevenir bucles infinitos
+const KNOWN_BAD_ID = '67fc1bcf6a2add8684b98814';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -22,6 +25,19 @@ export async function GET(
       console.error('API Videos: ID de video no proporcionado');
       return NextResponse.json(
         { error: 'ID de video no proporcionado' },
+        { status: 400 }
+      );
+    }
+
+    // Fix para el ID problemático que causa bucles
+    if (params.id === KNOWN_BAD_ID) {
+      console.log('API Videos: Detectado ID problemático, evitando bucle');
+      return NextResponse.json(
+        { 
+          error: 'Este video necesita ser solicitado directamente, no a través de la API',
+          message: `El video ${params.id} está causando bucles de redirección`,
+          timestamp: new Date().toISOString()
+        },
         { status: 400 }
       );
     }
