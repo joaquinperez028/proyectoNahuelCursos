@@ -17,6 +17,8 @@ export async function GET(request: Request) {
     const ordenPrecio = searchParams.get('ordenPrecio') || '';
     const ordenFecha = searchParams.get('ordenFecha') || 'desc';
 
+    // Conectar a la base de datos
+    console.log('API Cursos: Conectando a la base de datos...');
     const { db } = await connectToDatabase();
     
     // Construir el filtro de búsqueda
@@ -45,6 +47,8 @@ export async function GET(request: Request) {
     // Obtener el total de cursos que coinciden con el filtro
     const total = await db.collection('cursos').countDocuments(filtro);
     
+    console.log(`API Cursos: Encontrados ${total} cursos en total.`);
+    
     // Obtener los cursos paginados
     const cursos = await db.collection('cursos')
       .find(filtro)
@@ -53,26 +57,54 @@ export async function GET(request: Request) {
       .limit(CURSOS_POR_PAGINA)
       .toArray();
     
-    // Asegurarnos de que las URLs de video sean correctas
-    const cursosConVideoProcesado = cursos.map(curso => {
-      const videoProcesado = {...curso};
+    console.log(`API Cursos: Obtenidos ${cursos.length} cursos para la página ${pagina}.`);
+    
+    // Inspeccionar y procesar las URLs de video para asegurar que sean válidas
+    const cursosConVideosProcesados = cursos.map(curso => {
+      const cursoConVideosProcesados = {...curso};
       
-      // Si el video es un ObjectId (referencia a GridFS), mantenemos solo el ID
-      if (curso.video && ObjectId.isValid(curso.video.toString())) {
-        videoProcesado.video = curso.video.toString();
+      // Logs para depuración
+      console.log(`API Cursos: Procesando curso: ${curso._id}`);
+      console.log(`- Título: ${curso.titulo}`);
+      console.log(`- Video original: ${curso.video}`);
+      console.log(`- Video preview original: ${curso.videoPreview}`);
+      
+      // Verificar si el campo video es un ObjectId o una cadena que representa un ObjectId
+      if (curso.video) {
+        if (ObjectId.isValid(curso.video.toString())) {
+          console.log(`- Video parece ser un ObjectId`);
+          cursoConVideosProcesados.video = curso.video.toString();
+        } else if (typeof curso.video === 'string' && curso.video.startsWith('http')) {
+          console.log(`- Video es una URL externa: ${curso.video}`);
+          // Mantener URLs externas
+        } else {
+          console.log(`- Video tiene un formato no reconocido: ${typeof curso.video}`);
+        }
+      } else {
+        console.log(`- No se encontró campo video`);
       }
       
-      // Si el videoPreview es un ObjectId (referencia a GridFS), mantenemos solo el ID
-      if (curso.videoPreview && ObjectId.isValid(curso.videoPreview.toString())) {
-        videoProcesado.videoPreview = curso.videoPreview.toString();
+      // Verificar si el campo videoPreview es un ObjectId o una cadena que representa un ObjectId
+      if (curso.videoPreview) {
+        if (ObjectId.isValid(curso.videoPreview.toString())) {
+          console.log(`- VideoPreview parece ser un ObjectId`);
+          cursoConVideosProcesados.videoPreview = curso.videoPreview.toString();
+        } else if (typeof curso.videoPreview === 'string' && curso.videoPreview.startsWith('http')) {
+          console.log(`- VideoPreview es una URL externa: ${curso.videoPreview}`);
+          // Mantener URLs externas
+        } else {
+          console.log(`- VideoPreview tiene un formato no reconocido: ${typeof curso.videoPreview}`);
+        }
+      } else {
+        console.log(`- No se encontró campo videoPreview`);
       }
       
-      return videoProcesado;
+      return cursoConVideosProcesados;
     });
     
     // Enviar respuesta con meta información de paginación
     return NextResponse.json({
-      cursos: cursosConVideoProcesado,
+      cursos: cursosConVideosProcesados,
       meta: {
         pagina,
         totalPaginas: Math.ceil(total / CURSOS_POR_PAGINA),
@@ -83,7 +115,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error al obtener cursos:', error);
     return NextResponse.json(
-      { error: 'Error al obtener los cursos' },
+      { error: 'Error al obtener los cursos', detalles: error instanceof Error ? error.message : 'Error desconocido' },
       { status: 500 }
     );
   }

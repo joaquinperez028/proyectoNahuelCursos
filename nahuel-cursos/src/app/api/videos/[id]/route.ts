@@ -15,9 +15,32 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    console.log(`API Videos: Solicitud para el video con ID: ${params.id}`);
+    
     // Validar el ID
-    if (!params.id || !ObjectId.isValid(params.id)) {
-      console.error('ID de video inválido:', params.id);
+    if (!params.id) {
+      console.error('API Videos: ID de video no proporcionado');
+      return NextResponse.json(
+        { error: 'ID de video no proporcionado' },
+        { status: 400 }
+      );
+    }
+    
+    // Si el ID no parece un ObjectId válido pero es una URL externa, redirigir
+    if (params.id.startsWith('http')) {
+      console.log('API Videos: Redirigiendo a URL externa:', params.id);
+      return NextResponse.redirect(params.id);
+    }
+    
+    // Si el ID parece un YouTube ID, redirigir a YouTube
+    if (params.id.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(params.id)) {
+      console.log('API Videos: Posible ID de YouTube, redirigiendo:', params.id);
+      return NextResponse.redirect(`https://www.youtube.com/embed/${params.id}`);
+    }
+    
+    // Intentar como ObjectId
+    if (!ObjectId.isValid(params.id)) {
+      console.error('API Videos: ID de video inválido:', params.id);
       return NextResponse.json(
         { error: 'ID de video inválido' },
         { status: 400 }
@@ -27,9 +50,37 @@ export async function GET(
     const fileId = new ObjectId(params.id);
     
     // Conectar a MongoDB
-    console.log(`Buscando archivo con ID: ${fileId}`);
+    console.log(`API Videos: Buscando archivo con ID: ${fileId}`);
     const client = await clientPromise;
     const db = client.db();
+    
+    // Primero verificar si hay una referencia en la colección de cursos
+    try {
+      const curso = await db.collection('cursos').findOne({
+        $or: [
+          { video: params.id },
+          { videoPreview: params.id },
+          { video: fileId },
+          { videoPreview: fileId }
+        ]
+      });
+      
+      if (curso) {
+        console.log('API Videos: Encontrada referencia en curso:', curso._id);
+        // Verificar si los campos contienen URLs externas
+        if (curso.video === params.id && curso.video.startsWith('http')) {
+          console.log('API Videos: Redirigiendo a URL externa del curso (video completo)');
+          return NextResponse.redirect(curso.video);
+        }
+        if (curso.videoPreview === params.id && curso.videoPreview.startsWith('http')) {
+          console.log('API Videos: Redirigiendo a URL externa del curso (vista previa)');
+          return NextResponse.redirect(curso.videoPreview);
+        }
+      }
+    } catch (error) {
+      console.error('API Videos: Error al buscar referencia en cursos:', error);
+      // Continuar con la búsqueda en GridFS aunque falle esta parte
+    }
     
     // Buscar el archivo en ambas colecciones: videos.files y fs.files
     const videosCollection = await db.collection('videos.files').findOne({ _id: fileId });
@@ -38,18 +89,54 @@ export async function GET(
     const files = videosCollection || fsCollection;
     
     if (!files) {
-      console.error(`No se encontró ningún archivo con ID: ${fileId}`);
+      console.error(`API Videos: No se encontró ningún archivo con ID: ${fileId}`);
       
       // Intentar buscar por metadata.fileId
-      const fileByMetadata = await db.collection('fs.files').findOne({ 'metadata.fileId': params.id });
+      try {
+        const fileByMetadata = await db.collection('fs.files').findOne({ 'metadata.fileId': params.id });
+        
+        if (fileByMetadata) {
+          console.log(`API Videos: Archivo encontrado por metadata.fileId: ${params.id}`);
+          return streamGridFSFile(db, fileByMetadata, request);
+        }
+      } catch (metadataError) {
+        console.error('API Videos: Error al buscar por metadata:', metadataError);
+      }
       
-      if (fileByMetadata) {
-        console.log(`Archivo encontrado por metadata.fileId: ${params.id}`);
-        return streamGridFSFile(db, fileByMetadata, request);
+      // Como último recurso, comprobar si es una URL o referencia externa en la colección de cursos
+      try {
+        const curso = await db.collection('cursos').findOne({
+          $or: [
+            { video: { $regex: new RegExp(params.id, 'i') } },
+            { videoPreview: { $regex: new RegExp(params.id, 'i') } }
+          ]
+        });
+        
+        if (curso) {
+          // Intentar ver si alguno de los campos contiene el ID como parte de una URL
+          if (curso.video && curso.video.includes(params.id)) {
+            console.log('API Videos: Encontrada coincidencia parcial en video:', curso.video);
+            if (curso.video.startsWith('http')) {
+              return NextResponse.redirect(curso.video);
+            }
+          }
+          if (curso.videoPreview && curso.videoPreview.includes(params.id)) {
+            console.log('API Videos: Encontrada coincidencia parcial en videoPreview:', curso.videoPreview);
+            if (curso.videoPreview.startsWith('http')) {
+              return NextResponse.redirect(curso.videoPreview);
+            }
+          }
+        }
+      } catch (regexError) {
+        console.error('API Videos: Error al buscar con regex:', regexError);
       }
       
       return NextResponse.json(
-        { error: 'Video no encontrado' },
+        { 
+          error: 'Video no encontrado',
+          message: `No se encontró ningún archivo con el ID: ${params.id}`,
+          timestamp: new Date().toISOString()
+        },
         { status: 404 }
       );
     }
@@ -57,9 +144,13 @@ export async function GET(
     return streamGridFSFile(db, files, request);
     
   } catch (error) {
-    console.error('Error al servir el video:', error);
+    console.error('API Videos: Error al servir el video:', error);
     return NextResponse.json(
-      { error: 'Error al servir el video', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Error al servir el video', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }

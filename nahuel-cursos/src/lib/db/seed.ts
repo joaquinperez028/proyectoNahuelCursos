@@ -9,7 +9,7 @@ const cursosDePrueba = [
     descripcion: 'Aprende los conceptos básicos para invertir en las dos criptomonedas más importantes del mercado. Este curso cubre desde los fundamentos técnicos hasta estrategias prácticas de inversión.',
     precio: 99.99,
     video: 'https://www.youtube.com/embed/Yb6825iv0Vk',
-    videoPreview: 'https://www.youtube.com/embed/Yb6825iv0Vk',
+    videoPreview: 'https://www.youtube.com/embed/Yb6825iv0Vk?controls=1',
     fechaCreacion: new Date(),
     categorias: ['Bitcoin', 'Ethereum', 'Principiantes']
   },
@@ -19,7 +19,7 @@ const cursosDePrueba = [
     descripcion: 'Domina las técnicas de análisis de gráficos y patrones para tomar mejores decisiones en el mercado de criptomonedas. Aprenderás a identificar tendencias y momentos óptimos para comprar o vender.',
     precio: 149.99,
     video: 'https://www.youtube.com/embed/yd0cSAH31oA',
-    videoPreview: 'https://www.youtube.com/embed/yd0cSAH31oA',
+    videoPreview: 'https://www.youtube.com/embed/yd0cSAH31oA?start=15&controls=1',
     fechaCreacion: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 días antes
     categorias: ['Trading', 'Análisis Técnico', 'Intermedio']
   },
@@ -29,19 +29,19 @@ const cursosDePrueba = [
     descripcion: 'Explora el mundo de DeFi y aprende a utilizar protocolos como Uniswap, Aave y Compound para generar rendimientos con tus activos digitales. Un curso completo para entender el futuro de las finanzas.',
     precio: 199.99,
     video: 'https://www.youtube.com/embed/k9HYC0EJU6E',
-    videoPreview: 'https://www.youtube.com/embed/k9HYC0EJU6E',
+    videoPreview: 'https://www.youtube.com/embed/k9HYC0EJU6E?controls=1',
     fechaCreacion: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 días antes
     categorias: ['DeFi', 'Avanzado', 'Yield Farming']
   },
   {
     _id: new ObjectId(),
-    titulo: 'NFTs: Inversión en tokens no fungibles',
-    descripcion: 'Descubre cómo funcionan los NFTs y por qué están revolucionando el mundo del arte digital y el coleccionismo. Aprenderás a evaluar proyectos, comprar, vender y hasta crear tus propios NFTs.',
-    precio: 129.99,
-    video: 'https://www.youtube.com/embed/FkUn86bH34M',
-    videoPreview: 'https://www.youtube.com/embed/FkUn86bH34M',
+    titulo: 'Valorant: Curso completo de entrenamiento',
+    descripcion: 'Aprende las mejores estrategias y técnicas para dominar Valorant. Curso completo para mejorar tu juego desde principiante hasta niveles avanzados.',
+    precio: 50.00,
+    video: 'https://www.youtube.com/embed/TFzkVmPurp4',
+    videoPreview: 'https://www.youtube.com/embed/TFzkVmPurp4?controls=1',
     fechaCreacion: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 días antes
-    categorias: ['NFT', 'Arte Digital', 'Coleccionables']
+    categorias: ['Gaming', 'Valorant', 'E-Sports']
   }
 ];
 
@@ -67,6 +67,13 @@ const valoracionesEjemplo = [
     calificacion: 5,
     comentario: 'Las estrategias de trading presentadas son muy efectivas, ya estoy viendo resultados.',
     fechaCreacion: new Date()
+  },
+  {
+    cursoId: cursosDePrueba[3]._id,
+    usuarioId: new ObjectId(),
+    calificacion: 4,
+    comentario: 'Excelente curso para mejorar en Valorant. Los consejos sobre posicionamiento son muy útiles.',
+    fechaCreacion: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
   }
 ];
 

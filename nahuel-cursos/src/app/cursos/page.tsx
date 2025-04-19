@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
-import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner, FaSort, FaSortUp, FaSortDown, FaSyncAlt } from 'react-icons/fa';
+import { FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaSpinner, FaSort, FaSortUp, FaSortDown, FaSyncAlt, FaExclamationCircle } from 'react-icons/fa';
 import ValoracionEstrellas from '@/components/ValoracionEstrellas';
 import VideoPlayer from '@/components/VideoPlayer';
 import useVideoUrl from '@/lib/hooks/useVideoUrl';
@@ -36,6 +36,7 @@ export default function Cursos() {
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [errorDetalle, setErrorDetalle] = useState('');
   const [cargandoDatos, setCargandoDatos] = useState(false);
   const [datosGenerados, setDatosGenerados] = useState(false);
   
@@ -55,6 +56,8 @@ export default function Cursos() {
     try {
       setLoading(true);
       setError('');
+      setErrorDetalle('');
+      
       const params = new URLSearchParams();
       params.append('pagina', pagina.toString());
       
@@ -73,19 +76,33 @@ export default function Cursos() {
       console.log('Obteniendo cursos con parámetros:', params.toString());
       const response = await axios.get<CursosResponse>(`/api/cursos?${params.toString()}`);
       
-      // Procesar los videos para asegurar que tengan las URLs correctas
-      const cursosConVideosProcesados = response.data.cursos.map(curso => {
-        return {
-          ...curso,
-          // No procesamos los videos aquí, lo haremos en el componente
-        };
+      console.log('Respuesta de API:', response.data);
+      console.log(`Se obtuvieron ${response.data.cursos.length} cursos`);
+      
+      // Solo para depuración, imprimir información sobre cada curso
+      response.data.cursos.forEach((curso, index) => {
+        console.log(`Curso #${index + 1}: ${curso.titulo}`);
+        console.log(`- ID: ${curso._id}`);
+        console.log(`- Video: ${curso.video}`);
+        console.log(`- VideoPreview: ${curso.videoPreview}`);
       });
       
-      setCursos(cursosConVideosProcesados);
+      setCursos(response.data.cursos);
       setTotalPaginas(response.data.meta.totalPaginas);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al obtener cursos:', err);
       setError('Ocurrió un error al cargar los cursos. Intenta de nuevo más tarde.');
+      
+      // Mostrar información detallada del error si está disponible
+      if (err.response?.data?.error) {
+        setErrorDetalle(err.response.data.error);
+        if (err.response.data.detalles) {
+          console.error('Detalles del error:', err.response.data.detalles);
+          setErrorDetalle(prev => `${prev}: ${err.response.data.detalles}`);
+        }
+      } else if (err.message) {
+        setErrorDetalle(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -105,9 +122,14 @@ export default function Cursos() {
       } else {
         setError('No se pudieron generar los datos de ejemplo: ' + response.data.message);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al generar datos de ejemplo:', err);
       setError('No se pudieron generar los datos de ejemplo.');
+      if (err.response?.data?.message) {
+        setErrorDetalle(err.response.data.message);
+      } else if (err.message) {
+        setErrorDetalle(err.message);
+      }
     } finally {
       setCargandoDatos(false);
     }
@@ -217,16 +239,30 @@ export default function Cursos() {
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <FaSpinner className="animate-spin text-blue-600 text-4xl" />
+          <span className="ml-3 text-blue-600 text-xl">Cargando cursos...</span>
         </div>
       ) : error ? (
         <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-8">
-          <p>{error}</p>
-          <button 
-            onClick={obtenerCursos}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            Reintentar
-          </button>
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <FaExclamationCircle className="text-red-600 text-xl mt-1" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-medium text-red-800">Error</h3>
+              <p className="mt-2">{error}</p>
+              {errorDetalle && (
+                <div className="mt-2 p-2 bg-red-100 rounded-md text-sm overflow-auto">
+                  <p className="font-mono">{errorDetalle}</p>
+                </div>
+              )}
+              <button 
+                onClick={obtenerCursos}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
         </div>
       ) : cursos.length === 0 ? (
         <div className="text-center py-20 bg-gray-50 rounded-lg p-8">
@@ -263,6 +299,10 @@ export default function Cursos() {
             // Procesamos la URL del video aquí usando nuestro hook
             const videoPreviewUrl = useVideoUrl(curso.videoPreview);
             
+            console.log(`Renderizando curso ${curso._id}:`);
+            console.log(`- URL original: ${curso.videoPreview}`);
+            console.log(`- URL procesada: ${videoPreviewUrl}`);
+            
             return (
               <div key={curso._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
                 <div className="aspect-w-16 aspect-h-9 bg-gray-200">
@@ -277,7 +317,11 @@ export default function Cursos() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-blue-600">Vista previa no disponible</span>
+                        <div className="text-center p-4">
+                          <FaExclamationCircle className="text-amber-500 text-4xl mx-auto mb-2" />
+                          <span className="text-blue-600 block">Vista previa no disponible</span>
+                          <span className="text-gray-500 text-sm block mt-1">ID: {curso._id}</span>
+                        </div>
                       </div>
                     )}
                   </div>
