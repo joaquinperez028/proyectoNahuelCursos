@@ -17,6 +17,16 @@ const isVimeoUrl = (url: string): boolean => {
   return url.includes('vimeo.com');
 };
 
+// Función para verificar si parece ser un archivo local
+const isLocalFileUrl = (url: string): boolean => {
+  return url.includes('/uploads/') || 
+         url.includes('uploads/') || 
+         url.includes('.mp4') || 
+         url.includes('.webm') || 
+         url.includes('.mov') || 
+         url.includes('.ogg');
+};
+
 /**
  * Procesa una URL de video para asegurarse de que sea accesible
  * @param videoUrl La URL del video a procesar
@@ -26,6 +36,30 @@ export const useVideoUrl = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
   console.log('useVideoUrl - Processing URL:', videoUrl);
+
+  // Caso especial: Si la URL contiene parte de un archivo de video local
+  if (isLocalFileUrl(videoUrl)) {
+    console.log('useVideoUrl - Parece un archivo local de video');
+    
+    // Si contiene un UUID y extensión .mp4, asegurarse de que la ruta sea correcta
+    if (videoUrl.includes('-') && (videoUrl.includes('.mp4') || videoUrl.includes('.webm'))) {
+      // Extraer solo el nombre del archivo si es una ruta completa
+      const nombreArchivo = videoUrl.split('/').pop();
+      
+      if (nombreArchivo) {
+        console.log('useVideoUrl - Usando solo el nombre del archivo:', nombreArchivo);
+        // Construir una ruta correcta para acceder desde la carpeta pública
+        return `/uploads/videos/${nombreArchivo}`;
+      }
+    }
+    
+    // Si la URL ya tiene el formato correcto, asegurarse de que comience con /
+    if (!videoUrl.startsWith('/')) {
+      return `/${videoUrl}`;
+    }
+    
+    return videoUrl;
+  }
 
   // Si parece un ObjectId de MongoDB, convertirlo a una URL de API
   if (isObjectIdLike(videoUrl)) {
@@ -63,15 +97,7 @@ export const useVideoUrl = (videoUrl: string): string => {
     return videoUrl;
   }
 
-  // Si es una URL de un archivo local en /uploads/, asegurarse de que comience correctamente
-  if (videoUrl.includes('/uploads/') || videoUrl.includes('uploads/')) {
-    console.log('useVideoUrl - Es archivo local');
-    // Normalizar la URL para que siempre comience con /
-    const normalizedPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`;
-    return normalizedPath;
-  }
-
-  // Si es una URL externa (http/https) que no es YouTube ni Vimeo, devolverla tal cual
+  // URL externa genérica (http/https) que no es YouTube ni Vimeo
   if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
     console.log('useVideoUrl - Es URL externa genérica');
     return videoUrl;

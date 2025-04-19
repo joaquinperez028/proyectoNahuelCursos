@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { FaPlayCircle, FaLock, FaSpinner, FaExclamationTriangle, FaCode, FaBug } from 'react-icons/fa';
+import React, { useRef, useEffect, useState } from 'react';
+import { FaPlayCircle, FaLock, FaSpinner, FaExclamationTriangle, FaCode, FaBug, FaYoutube, FaSync, FaPlay } from 'react-icons/fa';
 import useVideoUrl from '@/lib/hooks/useVideoUrl';
 
 interface VideoPlayerProps {
@@ -12,6 +12,9 @@ interface VideoPlayerProps {
   loop?: boolean;
   muted?: boolean;
   stopPropagation?: boolean;
+  fallbackToYoutube?: boolean;
+  aspectRatio?: string;
+  style?: React.CSSProperties;
 }
 
 export default function VideoPlayer({
@@ -21,7 +24,10 @@ export default function VideoPlayer({
   controls = true,
   loop = false,
   muted = false,
-  stopPropagation = false
+  stopPropagation = false,
+  fallbackToYoutube = true,
+  aspectRatio,
+  style
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -34,9 +40,30 @@ export default function VideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [iframeFallback, setIframeFallback] = useState(false);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
   
   // Procesar la URL del video utilizando nuestro hook
   const videoUrl = useVideoUrl(src);
+
+  // Verificamos si es un formato de video que el navegador puede reproducir
+  const isPlayableVideoFormat = (url: string): boolean => {
+    const lowerUrl = url.toLowerCase();
+    return lowerUrl.endsWith('.mp4') || 
+           lowerUrl.endsWith('.webm') || 
+           lowerUrl.endsWith('.ogg') || 
+           lowerUrl.endsWith('.mov');
+  };
+  
+  // Método para usar fallback a YouTube cuando todo lo demás falla
+  const useFallbackVideo = () => {
+    if (fallbackToYoutube) {
+      console.log('VideoPlayer - Usando video de fallback de YouTube');
+      setIframeFallback(true);
+      setIsYouTube(true);
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     // Reset states
@@ -47,9 +74,12 @@ export default function VideoPlayer({
     setIsYouTube(false);
     setIsVimeo(false);
     setIframeFallback(false);
+    setAttemptCount(prev => prev + 1);
     
     // Determina el tipo de video
-    const isLocalPath = videoUrl.startsWith('/uploads/') || videoUrl.startsWith('./uploads/');
+    const isLocalPath = videoUrl.startsWith('/uploads/') || 
+                        videoUrl.startsWith('./uploads/') || 
+                        isPlayableVideoFormat(videoUrl);
     const isGridFSPath = videoUrl && videoUrl.startsWith('/api/videos/');
     const isYoutubePath = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
     const isVimeoPath = videoUrl && videoUrl.includes('vimeo.com');
@@ -68,8 +98,34 @@ export default function VideoPlayer({
     setIsYouTube(isYoutubePath);
     setIsVimeo(isVimeoPath);
     
+    // Si después de varios intentos no funciona, usar fallback
+    if (attemptCount > 2) {
+      useFallbackVideo();
+      setLoading(false);
+      return;
+    }
+    
     // Verificar si las URLs son accesibles
-    if (isLocalPath || isGridFSPath) {
+    if (isLocalPath) {
+      setLoading(true);
+      
+      // Para archivos locales, intentamos cargar una imagen del video para ver si existe
+      const img = new Image();
+      img.onload = () => {
+        console.log('VideoPlayer - Archivo local accesible');
+        setLoading(false);
+      };
+      img.onerror = () => {
+        console.error('VideoPlayer - Error al verificar archivo local');
+        // Si no podemos cargar una imagen, aún podríamos reproducir el video
+        setLoading(false);
+      };
+      // Intentar cargar una imagen relacionada con el video (puede no existir)
+      img.src = videoUrl.replace(/\.(mp4|webm|ogg|mov)$/, '.jpg');
+      
+      // De todos modos, pasamos a cargar después de un tiempo razonable
+      setTimeout(() => setLoading(false), 1000);
+    } else if (isGridFSPath) {
       setLoading(true);
       fetch(videoUrl, { method: 'HEAD' })
         .then(response => {
@@ -77,9 +133,9 @@ export default function VideoPlayer({
             console.error('Error al verificar el video:', response.status);
             setError(`Error al cargar el video (${response.status})`);
             // Si es un error 404 y parece una URL de GridFS, intentar como iframe por si es un enlace externo
-            if (response.status === 404 && isGridFSPath) {
+            if (response.status === 404) {
               console.log('Intentando como iframe después de error 404');
-              setIframeFallback(true);
+              useFallbackVideo();
             }
           }
           setLoading(false);
@@ -88,17 +144,111 @@ export default function VideoPlayer({
           console.error('Error al verificar el video:', err);
           setError('Error al cargar el video');
           // Intentar como iframe si falla la verificación
-          if (isGridFSPath) {
-            console.log('Intentando como iframe después de error de conexión');
-            setIframeFallback(true);
-          }
+          useFallbackVideo();
           setLoading(false);
         });
+    } else if (isYoutubePath || isVimeoPath) {
+      // Para videos externos, cargar directamente
+      setLoading(false);
     } else {
-      // Para videos externos no necesitamos verificar
+      // Para tipos desconocidos, intentar usar fallback
+      if (!useFallbackVideo()) {
+        setError('Formato de video no soportado');
+      }
       setLoading(false);
     }
-  }, [videoUrl, src]);
+  }, [videoUrl, src, attemptCount]);
+
+  // Función para manejar la reproducción
+  const handlePlay = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(error => {
+        console.error('Error al intentar reproducir el video:', error);
+        setError(`Error al reproducir: ${error.message}`);
+        
+        // Si falla la reproducción después de varios intentos, usar fallback
+        if (attemptCount > 1) {
+          useFallbackVideo();
+        }
+      });
+      setPlaying(true);
+    }
+  };
+
+  // Maneja clicks en el contenedor
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (stopPropagation) {
+      e.stopPropagation();
+    }
+  };
+
+  // Toggle para mostrar/ocultar el panel de depuración
+  const toggleDebugInfo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDebugInfo(!showDebugInfo);
+  };
+
+  // Renderiza el panel de información de depuración
+  const renderDebugInfo = () => {
+    return (
+      <div className="absolute top-0 left-0 w-full bg-black bg-opacity-80 text-white p-3 z-20 overflow-auto max-h-[50vh]">
+        <h3 className="font-bold mb-2 text-green-400">Información de depuración del video</h3>
+        <div className="grid grid-cols-1 gap-2 text-xs">
+          <div>
+            <p className="font-semibold text-gray-300">URL Original:</p>
+            <code className="block bg-gray-900 p-1 rounded">{src}</code>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-300">URL Procesada:</p>
+            <code className="block bg-gray-900 p-1 rounded">{videoUrl}</code>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-300">Tipo de Video:</p>
+            <ul className="list-disc list-inside">
+              {isLocalVideo && <li className="text-blue-400">Video Local</li>}
+              {isGridFSVideo && <li className="text-yellow-400">Video GridFS</li>}
+              {isYouTube && <li className="text-red-400">YouTube</li>}
+              {isVimeo && <li className="text-teal-400">Vimeo</li>}
+              {iframeFallback && <li className="text-purple-400">Usando Fallback</li>}
+              {!isLocalVideo && !isGridFSVideo && !isYouTube && !isVimeo && !iframeFallback && 
+                <li className="text-red-500">Tipo desconocido</li>}
+            </ul>
+          </div>
+          <div>
+            <p className="font-semibold text-gray-300">Estado:</p>
+            <ul className="list-disc list-inside">
+              {loading && <li className="text-yellow-400">Cargando</li>}
+              {error && <li className="text-red-500">Error: {error}</li>}
+              {playing && <li className="text-green-400">Reproduciendo</li>}
+              <li>Intento #: {attemptCount}</li>
+            </ul>
+          </div>
+          
+          <div className="flex justify-between mt-2">
+            <button 
+              className="bg-blue-600 text-white px-2 py-1 rounded text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAttemptCount(0);
+                window.location.reload();
+              }}
+            >
+              Reintentar
+            </button>
+            <button 
+              className="bg-red-600 text-white px-2 py-1 rounded text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDebugInfo(false);
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Función para preparar URL con parámetros que eviten autoplay a menos que sea explícitamente solicitado
   const prepararURLExterna = (url: string): string => {
@@ -133,232 +283,119 @@ export default function VideoPlayer({
     return urlModificada;
   };
 
-  // Iniciar la reproducción cuando se hace clic en el overlay
-  const handlePlay = (e: React.MouseEvent) => {
-    // Detener la propagación si se solicita
-    if (stopPropagation) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    
-    setPlaying(true);
-    
-    if ((isLocalVideo || isGridFSVideo) && videoRef.current) {
-      videoRef.current.play().catch(err => {
-        console.error('Error al reproducir el video:', err);
-        setError('Error al reproducir el video');
-        // Intentar como iframe si falla la reproducción
-        setIframeFallback(true);
-      });
-    } else if (iframeRef.current) {
-      // Modificar URL para activar autoplay
-      let playUrl = videoUrl;
-      
-      if (isYouTube) {
-        // Extraer el ID y añadir autoplay
-        const videoId = videoUrl.includes('/embed/') 
-          ? videoUrl.split('/embed/')[1]?.split('?')[0]
-          : videoUrl.includes('v=')
-            ? videoUrl.split('v=')[1]?.split('&')[0]
-            : '';
-            
-        if (videoId) {
-          playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${muted ? '1' : '0'}`;
-        }
-      } else if (isVimeo) {
-        // Extraer el ID y añadir autoplay
-        const videoId = videoUrl.includes('/video/') 
-          ? videoUrl.split('/video/')[1]?.split('?')[0]
-          : videoUrl.split('vimeo.com/')[1]?.split('?')[0];
-            
-        if (videoId) {
-          playUrl = `https://player.vimeo.com/video/${videoId}?autoplay=1&muted=${muted ? '1' : '0'}`;
-        }
-      }
-      
-      iframeRef.current.src = playUrl;
-    }
-  };
-  
-  // Para interceptar clics en el iframe
-  const handleContainerClick = (e: React.MouseEvent) => {
-    if (stopPropagation) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-  };
-  
-  // Para mostrar información de depuración
-  const toggleDebugInfo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setShowDebugInfo(!showDebugInfo);
-  };
-  
-  // Información de depuración
-  const renderDebugInfo = () => {
-    return (
-      <div className="absolute top-0 right-0 bg-black bg-opacity-80 text-white p-3 text-xs rounded-bl-lg max-w-xs overflow-auto max-h-40">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="font-bold">Debug Info</h4>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDebugInfo(false);
-            }}
-            className="text-gray-400 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="space-y-1">
-          <p><span className="text-gray-400">Original URL:</span> {src}</p>
-          <p><span className="text-gray-400">Processed URL:</span> {videoUrl}</p>
-          <p>
-            <span className="text-gray-400">Type:</span> 
-            {isLocalVideo ? 'Local' : ''}
-            {isGridFSVideo ? 'GridFS' : ''}
-            {isYouTube ? 'YouTube' : ''}
-            {isVimeo ? 'Vimeo' : ''}
-            {!isLocalVideo && !isGridFSVideo && !isYouTube && !isVimeo ? 'Unknown' : ''}
-            {iframeFallback ? ' (Fallback)' : ''}
-          </p>
-          <p><span className="text-gray-400">Status:</span> {error ? 'Error' : loading ? 'Loading' : playing ? 'Playing' : 'Ready'}</p>
-          {error && <p><span className="text-red-400">Error:</span> {error}</p>}
-        </div>
-      </div>
-    );
-  };
-
-  // Si es un enlace externo de YouTube o Vimeo
-  if (isYouTube || isVimeo || iframeFallback) {
-    const urlSegura = prepararURLExterna(videoUrl);
-    
-    return (
-      <div className={`relative w-full ${className}`} onClick={handleContainerClick}>
-        {loading ? (
-          <div className="aspect-video bg-gray-800 flex items-center justify-center">
-            <FaSpinner className="animate-spin text-4xl text-blue-500" />
-            <span className="ml-2 text-white">Cargando video...</span>
-          </div>
-        ) : !urlSegura ? (
-          <div className="aspect-video bg-black flex items-center justify-center">
-            <div className="text-center p-8">
-              <FaLock className="text-6xl text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Contenido Premium</h2>
-              <p className="text-green-400">Adquiere este curso para acceder al contenido completo</p>
-            </div>
-          </div>
-        ) : (
-          <iframe
-            ref={iframeRef}
-            src={urlSegura}
-            className="w-full aspect-video rounded-lg"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
-        )}
-        
-        {/* Botón de depuración */}
-        <button 
-          onClick={toggleDebugInfo} 
-          className="absolute bottom-2 right-2 p-1 bg-black bg-opacity-50 rounded text-white text-xs hover:bg-opacity-70 z-10"
-          title="Mostrar información de depuración"
-        >
-          <FaBug className="text-xl" />
-        </button>
-        
-        {/* Panel de información de depuración */}
-        {showDebugInfo && renderDebugInfo()}
-      </div>
-    );
-  }
-
-  // Para videos locales o GridFS
+  // Renderizado del componente
   return (
-    <div className={`relative w-full ${className}`} onClick={handleContainerClick}>
-      {loading ? (
-        <div className="aspect-video bg-gray-800 flex items-center justify-center">
-          <FaSpinner className="animate-spin text-4xl text-blue-500" />
-          <span className="ml-2 text-white">Cargando video...</span>
+    <div 
+      className={`relative overflow-hidden ${className}`} 
+      style={{ aspectRatio: aspectRatio || '16/9', ...style }}
+      onClick={handleContainerClick}
+    >
+      {/* Panel de depuración */}
+      {showDebugInfo && renderDebugInfo()}
+      
+      {/* Indicador de carga */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : error ? (
-        <div className="aspect-video bg-gray-800 flex items-center justify-center text-center p-4">
-          <div>
-            <FaExclamationTriangle className="text-6xl text-yellow-500 mx-auto mb-4" />
-            <div className="text-red-500 text-xl mb-2">Error al cargar el video</div>
-            <div className="text-white text-sm">{error}</div>
-            <div className="mt-4 flex gap-2 justify-center">
+      )}
+      
+      {/* Mensaje de error */}
+      {error && !iframeFallback && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-90 z-10 p-4">
+          <div className="text-red-500 mb-4 font-semibold text-center">{error}</div>
+          
+          <div className="flex flex-wrap gap-2 justify-center">
+            {/* Botón para reintentar */}
+            <button 
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center"
+              onClick={() => setAttemptCount(count => count + 1)}
+            >
+              <FaSync className="mr-1" /> Reintentar
+            </button>
+            
+            {/* Opción para usar YouTube si está disponible */}
+            {fallbackToYoutube && (
               <button 
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                onClick={() => window.location.reload()}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center"
+                onClick={useFallbackVideo}
               >
-                Reintentar
+                <FaYoutube className="mr-1" /> Ver en YouTube
               </button>
-              <button 
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                onClick={() => setIframeFallback(true)}
-              >
-                Intentar como video externo
-              </button>
-              <button 
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                onClick={toggleDebugInfo}
-              >
-                <FaCode className="inline-block mr-1" />
-                Analizar URL
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      ) : (
+      )}
+      
+      {/* Video nativo (para archivos locales o GridFS) */}
+      {(isLocalVideo || isGridFSVideo) && !iframeFallback && (
         <>
           <video
             ref={videoRef}
-            className={`w-full rounded-lg`}
+            src={videoUrl}
+            className="absolute inset-0 w-full h-full object-contain bg-black"
+            controls={playing || controls}
             autoPlay={autoPlay}
-            controls={controls}
             loop={loop}
             muted={muted}
-            onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-            onError={(e) => {
-              console.error('Error en la reproducción del video:', e);
-              setError('Error en la reproducción del video. Intente nuevamente.');
-              // Intentar como iframe si falla la reproducción
-              if (isGridFSVideo) {
-                console.log('Error de reproducción, intentando como iframe');
-                setIframeFallback(true);
+            playsInline
+            onCanPlay={() => {
+              setLoading(false);
+              if (autoPlay) {
+                setPlaying(true);
               }
             }}
-          >
-            <source src={videoUrl} type="video/mp4" />
-            Tu navegador no soporta la reproducción de videos.
-          </video>
+            onError={(e) => {
+              console.error('Error en elemento video:', e);
+              setError('No se pudo cargar el video. Formato no soportado o archivo corrupto.');
+              if (attemptCount > 1) {
+                useFallbackVideo();
+              }
+            }}
+          />
           
-          {!playing && !autoPlay && (
+          {/* Overlay para reproducir (solo si no está reproduciendo) */}
+          {!playing && !controls && (
             <div 
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer hover:bg-opacity-40 transition-all"
+              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 cursor-pointer z-5 group"
               onClick={handlePlay}
             >
-              <div className="rounded-full bg-green-600 bg-opacity-80 p-4 transform hover:scale-110 transition-transform">
-                <FaPlayCircle className="text-white text-4xl" />
+              <div className="w-16 h-16 bg-blue-600 bg-opacity-80 rounded-full flex items-center justify-center group-hover:bg-opacity-100 transition-all transform group-hover:scale-110">
+                <FaPlayCircle className="text-white text-lg ml-1" />
               </div>
             </div>
           )}
         </>
       )}
       
-      {/* Botón de depuración */}
-      <button 
-        onClick={toggleDebugInfo} 
-        className="absolute bottom-2 right-2 p-1 bg-black bg-opacity-50 rounded text-white text-xs hover:bg-opacity-70 z-10"
-        title="Mostrar información de depuración"
-      >
-        <FaBug className="text-xl" />
-      </button>
+      {/* iFrame para YouTube, Vimeo o fallbacks */}
+      {(isYouTube || isVimeo || iframeFallback) && (
+        <iframe
+          ref={iframeRef}
+          src={videoUrl}
+          className="absolute inset-0 w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title="Embedded video"
+          onLoad={() => setLoading(false)}
+          onError={() => {
+            setError('No se pudo cargar el video desde la fuente externa.');
+            console.error('Error al cargar iframe');
+          }}
+        />
+      )}
       
-      {/* Panel de información de depuración */}
-      {showDebugInfo && renderDebugInfo()}
+      {/* Botón de depuración (solo visible en modo desarrollo) */}
+      {process.env.NODE_ENV === 'development' && (
+        <button 
+          onClick={toggleDebugInfo}
+          className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-50 text-white p-1 rounded-full z-20 hover:bg-opacity-80"
+          title="Mostrar/ocultar información de depuración"
+        >
+          <FaBug size={14} />
+        </button>
+      )}
     </div>
   );
 }
