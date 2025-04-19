@@ -1,6 +1,6 @@
 /**
  * Hook para procesar URLs de videos y asegurarse de que sean accesibles
- * VERSIÓN MEJORADA - Con soporte para videos fragmentados y protección anti-bucles
+ * VERSIÓN MEJORADA v2 - Con mapeo específico de videos problemáticos
  */
 
 // Función para verificar si una cadena parece ser un ObjectId de MongoDB
@@ -36,6 +36,17 @@ const PROBLEM_IDS = [
   'e4349070-1bd5-4fbc-b7d9-d4e1e03b0c74'
 ];
 
+// Mapeo específico para videos conocidos
+const VIDEO_MAPPINGS = {
+  // El video de Valorant debe mostrar la URL correcta, no un fallback genérico
+  '67fc1bcf6a2add8684b98814': 'https://www.youtube.com/embed/TFzkVmPurp4',
+  '67fc1bcf6a2a8d8684b98814': 'https://www.youtube.com/embed/TFzkVmPurp4',
+  
+  // Video fragmentado debe usar la ruta del archivo local
+  'e434907b-18d5-4fbc-b7d9-d4e1e0300c74': '/uploads/videos/e434907b-18d5-4fbc-b7d9-d4e1e0300c74.mp4',
+  'e434907b-18d5-4fbc-b7d9-d4e1e0300c74.mp4': '/uploads/videos/e434907b-18d5-4fbc-b7d9-d4e1e0300c74.mp4'
+};
+
 // Verificar si la URL contiene un ID problemático
 const isProblematicId = (url: string): boolean => {
   if (!url) return false;
@@ -49,29 +60,44 @@ const isFragmentedVideo = (url: string): boolean => {
   return url.includes('fragmentado') || 
          url.includes('chunks') || 
          url.includes('fragment') ||
+         url.includes('e434907b') ||
          (url.includes('-') && (url.includes('.mp4') || url.includes('.webm')));
 };
 
 // Procesar URL para video fragmentado
 const processFragmentedVideoUrl = (url: string): string => {
-  // Si ya tiene el formato correcto
+  // Verificar si tenemos un mapeo específico para este video
+  for (const [id, mappedUrl] of Object.entries(VIDEO_MAPPINGS)) {
+    if (url.includes(id)) {
+      console.log(`🎯 Usando URL específica para video ID: ${id}`);
+      return mappedUrl;
+    }
+  }
+  
+  // Si ya tiene el formato correcto de fragmentado
   if (url.startsWith('/api/videos/fragmentados/')) {
     return url;
+  }
+  
+  // Prueba específica para el video fragmentado conocido
+  if (url.includes('e434907b')) {
+    return '/uploads/videos/e434907b-18d5-4fbc-b7d9-d4e1e0300c74.mp4';
   }
   
   // Si contiene un UUID, extraerlo
   const uuidMatch = url.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   if (uuidMatch && uuidMatch[1]) {
-    return `/api/videos/fragmentados/${uuidMatch[1]}`;
+    return `/uploads/videos/${uuidMatch[1]}.mp4`;
   }
   
   // Si es un archivo con nombre específico
   if (url.includes('.mp4') || url.includes('.webm')) {
+    // Extraer solo el nombre del archivo
     const parts = url.split('/');
     const fileName = parts[parts.length - 1];
     
     if (fileName && fileName.includes('-')) {
-      return `/api/videos/fragmentados/archivo/${fileName}`;
+      return `/uploads/videos/${fileName}`;
     }
   }
   
@@ -100,34 +126,42 @@ const isBlockedId = (url: string): boolean => {
 export const useVideoUrl = (videoUrl: string): string => {
   if (!videoUrl) return '';
   
-  // 1. SEGURIDAD: Si es un ID problemático, devolver inmediatamente video seguro
-  if (isProblematicId(videoUrl)) {
-    console.log('⚠️ VIDEO PROBLEMÁTICO DETECTADO - Usando fallback seguro:', videoUrl);
-    return 'https://www.youtube.com/embed/dQw4w9WgXcQ'; // URL de fallback segura
+  // 1. MAPPINGS ESPECÍFICOS: Verificar si tenemos un mapeo directo para este video
+  for (const [id, mappedUrl] of Object.entries(VIDEO_MAPPINGS)) {
+    if (videoUrl.includes(id)) {
+      console.log(`🎯 Usando URL específica mapeada para: ${id}`);
+      return mappedUrl;
+    }
   }
   
-  // 2. VIDEOS FRAGMENTADOS: Procesamiento especial
+  // 2. ID PROBLEMÁTICO GENÉRICO: Si es un ID problemático sin mapeo específico
+  if (isProblematicId(videoUrl) && !Object.keys(VIDEO_MAPPINGS).some(id => videoUrl.includes(id))) {
+    console.log('⚠️ VIDEO PROBLEMÁTICO DETECTADO - Usando fallback seguro:', videoUrl);
+    return 'https://www.youtube.com/embed/dQw4w9WgXcQ'; // URL de fallback genérica
+  }
+  
+  // 3. VIDEOS FRAGMENTADOS: Procesamiento especial
   if (isFragmentedVideo(videoUrl)) {
     console.log('🎬 Video fragmentado detectado:', videoUrl);
     return processFragmentedVideoUrl(videoUrl);
   }
   
-  // 3. URLs EXTERNAS: Para YouTube, Vimeo o cualquier URL externa, devolverla tal cual
+  // 4. URLs EXTERNAS: YouTube, Vimeo o URLs externas
   if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
     return videoUrl;
   }
   
-  // 4. MONGODB IDs: Si parece un ObjectId, convertir a URL de API
+  // 5. MONGODB IDs: Si parece un ObjectId
   if (/^[0-9a-fA-F]{24}$/.test(videoUrl)) {
     return `/api/videos/${videoUrl}`;
   }
   
-  // 5. API URLs: Si ya es una URL de API, devolverla tal cual
+  // 6. API URLs: Si ya es una URL de API
   if (videoUrl.startsWith('/api/')) {
     return videoUrl;
   }
   
-  // 6. DEFAULT: Para cualquier otro caso, devolver la URL original
+  // 7. DEFAULT: Cualquier otro caso
   return videoUrl;
 };
 
