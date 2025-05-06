@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { EstadoVideoMux } from '@/components/EstadoVideoMux';
 
 export default function SubirVideoPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [subiendo, setSubiendo] = useState(false);
-  const [resultado, setResultado] = useState<string | null>(null);
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [playbackId, setPlaybackId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -16,7 +18,6 @@ export default function SubirVideoPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setResultado(null);
     setError(null);
 
     if (!videoFile) {
@@ -56,12 +57,19 @@ export default function SubirVideoPage() {
         return;
       }
 
-      setResultado(`¡Video subido correctamente! ID de subida: ${data.uploadId}. Ahora MUX procesará el video.`);
+      setUploadId(data.uploadId);
     } catch (err: any) {
       setError('Error inesperado al subir el video');
     } finally {
       setSubiendo(false);
     }
+  };
+
+  // Cuando el video esté listo, puedes guardar el playbackId en tu base de datos
+  const handleReady = async (playbackId: string) => {
+    setPlaybackId(playbackId);
+    // Aquí podrías hacer una petición a tu backend para asociar el playbackId a un curso
+    // await fetch('/api/cursos/asociar-video', { ... })
   };
 
   return (
@@ -86,11 +94,19 @@ export default function SubirVideoPage() {
           {subiendo ? 'Subiendo...' : 'Subir video'}
         </button>
       </form>
-      {resultado && (
-        <div className="mt-4 p-3 bg-green-100 text-green-800 rounded">{resultado}</div>
+      {uploadId && (
+        <div className="mt-4">
+          <EstadoVideoMux uploadId={uploadId} onReady={handleReady} />
+        </div>
       )}
       {error && (
         <div className="mt-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>
+      )}
+      {playbackId && (
+        <div className="mt-4 p-3 bg-blue-100 text-blue-800 rounded">
+          <p>URL de reproducción (guárdala para tu curso):</p>
+          <code>{`https://stream.mux.com/${playbackId}.m3u8`}</code>
+        </div>
       )}
     </div>
   );
