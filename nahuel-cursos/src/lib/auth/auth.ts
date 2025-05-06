@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
         }
         user.telefono = '';
         
-        console.log('Usuario temporal creado para autenticación rápida:', user.email);
+        console.log('Usuario temporal creado para autenticación rápido:', user.email);
         
         // Iniciamos un proceso asíncrono para guardar/actualizar el usuario
         // Este proceso se ejecuta en paralelo sin bloquear la autenticación
