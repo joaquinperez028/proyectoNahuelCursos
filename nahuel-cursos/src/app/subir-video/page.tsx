@@ -1,0 +1,82 @@
+'use client';
+
+import { useState } from 'react';
+
+export default function SubirVideoPage() {
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [resultado, setResultado] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setVideoFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResultado(null);
+    setError(null);
+
+    if (!videoFile) {
+      setError('Selecciona un archivo de video');
+      return;
+    }
+
+    setSubiendo(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', videoFile);
+
+      const res = await fetch('/api/upload/mux', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Error al subir el video');
+      } else {
+        setResultado(`¡Video enviado a MUX! ID de subida: ${data.uploadId}`);
+      }
+    } catch (err: any) {
+      setError('Error inesperado al subir el video');
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <div className="max-w-xl mx-auto mt-10 bg-white p-8 rounded shadow">
+      <h1 className="text-2xl font-bold mb-6">Subir video nuevo</h1>
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block mb-2 font-medium">Archivo de video</label>
+          <input
+            type="file"
+            accept="video/*"
+            onChange={handleVideoChange}
+            className="w-full"
+            disabled={subiendo}
+          />
+        </div>
+        <button
+          type="submit"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          disabled={subiendo}
+        >
+          {subiendo ? 'Subiendo...' : 'Subir video'}
+        </button>
+      </form>
+      {resultado && (
+        <div className="mt-4 p-3 bg-green-100 text-green-800 rounded">{resultado}</div>
+      )}
+      {error && (
+        <div className="mt-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>
+      )}
+    </div>
+  );
+} 

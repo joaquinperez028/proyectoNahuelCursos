@@ -28,6 +28,10 @@ export default function Navbar() {
             <Link href="/cursos" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
               Cursos
             </Link>
+            {/* Botón para subir video nuevo */}
+            <Link href="/subir-video" className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 transition-colors">
+              Subir video nuevo
+            </Link>
             {session?.user?.role === 'admin' && (
               <Link href="/admin" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
                 Administración
@@ -84,6 +88,14 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)}
             >
               Cursos
+            </Link>
+            {/* Botón para subir video nuevo en móvil */}
+            <Link 
+              href="/subir-video" 
+              className="block px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              Subir video nuevo
             </Link>
             {session?.user?.role === 'admin' && (
               <Link 
