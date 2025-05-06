@@ -27,21 +27,36 @@ export default function SubirVideoPage() {
     setSubiendo(true);
 
     try {
-      const formData = new FormData();
-      formData.append('video', videoFile);
-
-      const res = await fetch('/api/upload/mux', {
+      // 1. Pedir la URL de subida a tu backend
+      const res = await fetch('/api/mux/direct-upload', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: videoFile.name }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Error al subir el video');
-      } else {
-        setResultado(`¡Video enviado a MUX! ID de subida: ${data.uploadId}`);
+        setError(data.error || 'Error al obtener URL de subida');
+        setSubiendo(false);
+        return;
       }
+
+      // 2. Subir el archivo directamente a MUX
+      const uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': videoFile.type,
+        },
+        body: videoFile,
+      });
+
+      if (!uploadRes.ok) {
+        setError('Error al subir el video a MUX');
+        setSubiendo(false);
+        return;
+      }
+
+      setResultado(`¡Video subido correctamente! ID de subida: ${data.uploadId}. Ahora MUX procesará el video.`);
     } catch (err: any) {
       setError('Error inesperado al subir el video');
     } finally {
