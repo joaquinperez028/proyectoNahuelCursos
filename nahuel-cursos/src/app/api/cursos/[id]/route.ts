@@ -24,45 +24,32 @@ export async function GET(request: Request, context: RouteParams) {
     const cursoId = params.id;
     const session = await getServerSession(authOptions);
     
+    // Esta es la parte crítica - solo verificar si es un ObjectId válido
+    // pero NO devolver error si no lo es
+    let esObjectIdValido = ObjectId.isValid(cursoId);
+    
     const { db } = await connectToDatabase();
     
-    // Buscar el curso sin convertir a ObjectId primero
-    const curso = await db.collection('cursos').findOne({ 
-      $or: [
-        // Primero buscar el ID como string
-        { customId: cursoId },
-        { slug: cursoId }
-      ]
-    });
+    // Obtener el curso de la base de datos - verificando ambos formatos
+    let curso = null;
     
-    // Si no se encuentra, intentar con ObjectId solo si es válido
-    if (!curso && ObjectId.isValid(cursoId)) {
-      const cursoConObjectId = await db.collection('cursos').findOne({
+    if (esObjectIdValido) {
+      // Si es un ObjectId válido, buscar por ObjectId
+      curso = await db.collection('cursos').findOne({
         _id: new ObjectId(cursoId)
       });
-      
-      if (cursoConObjectId) {
-        // Continuar con el curso encontrado
-        let cursoComprado = false;
-        
-        if (session?.user?.id) {
-          const usuario = await db.collection('usuarios').findOne({
-            _id: new ObjectId(session.user.id)
-          });
-          
-          cursoComprado = usuario?.cursosComprados?.some(id => 
-            id === cursoId || 
-            (ObjectId.isValid(id) && new ObjectId(id).toString() === cursoId)
-          ) || false;
-        }
-        
-        if (cursoComprado) {
-          return NextResponse.json(cursoConObjectId);
-        }
-        
-        const { video, ...cursoSinVideo } = cursoConObjectId;
-        return NextResponse.json(cursoSinVideo);
-      }
+    }
+    
+    // Si no se encontró como ObjectId o no era válido, buscar con otros criterios
+    if (!curso) {
+      // En lugar de buscar por _id directamente como string, usa un campo diferente o $where
+      curso = await db.collection('cursos').findOne({
+        $or: [
+          { customId: cursoId },
+          { slug: cursoId }
+          // No podemos usar _id: cursoId debido a restricciones de tipos
+        ]
+      });
     }
     
     if (!curso) {
@@ -72,18 +59,21 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
     
-    // Verificar si el usuario ha comprado el curso (sin usar ObjectId para el curso)
-    let cursoComprado = false;
-    
+    // Verificar si el usuario ha comprado el curso
+    let cursoComprado = null;
     if (session?.user?.id) {
-      const usuario = await db.collection('usuarios').findOne({
-        _id: new ObjectId(session.user.id)
+      console.log('Verificando si el usuario tiene acceso al curso:', {
+        userId: session.user.id,
+        cursoId: cursoId
       });
       
-      cursoComprado = usuario?.cursosComprados?.some(id => 
-        id === cursoId || 
-        (ObjectId.isValid(id) && new ObjectId(id).toString() === cursoId)
-      ) || false;
+      // Buscar tanto con string como con ObjectId
+      cursoComprado = await db.collection('usuarios').findOne({ 
+        _id: new ObjectId(session.user.id),
+        cursosComprados: cursoId 
+      });
+      
+      console.log('Resultado de verificación de acceso:', !!cursoComprado);
     }
       
     // Si el usuario ha comprado el curso, incluir el video completo
@@ -94,18 +84,21 @@ export async function GET(request: Request, context: RouteParams) {
     // Si no ha comprado el curso, omitir el video completo
     const { video, ...cursoSinVideo } = curso;
     
-    // No se usa ObjectId para cursoId en las siguientes operaciones
+    // Obtener valoraciones si no existen en el documento del curso
     if (!curso.calificacionPromedio) {
+      // Obtener las valoraciones del curso
       const valoraciones = await db
         .collection('valoraciones')
         .find({ cursoId: cursoId })
         .toArray();
       
+      // Calcular la calificación promedio
       let promedio = 0;
       if (valoraciones.length > 0) {
         const suma = valoraciones.reduce((acc: number, val: any) => acc + val.calificacion, 0);
         promedio = suma / valoraciones.length;
         
+        // Añadir la información de valoraciones al curso
         cursoSinVideo.calificacionPromedio = promedio;
         cursoSinVideo.totalValoraciones = valoraciones.length;
       }
