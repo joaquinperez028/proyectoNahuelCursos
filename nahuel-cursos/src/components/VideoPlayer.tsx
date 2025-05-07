@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface VideoPlayerProps {
   src: string;
@@ -21,19 +20,18 @@ export default function VideoPlayer({
   muted = false
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuxVideo, setIsMuxVideo] = useState(false);
-  const [isLocalVideo, setIsLocalVideo] = useState(false);
 
   useEffect(() => {
-    // Determinar tipo de video
-    const isMux = src.includes('stream.mux.com') || src.includes('.m3u8');
-    const isLocalPath = src.startsWith('/uploads/') || src.startsWith('./uploads/');
-    setIsMuxVideo(isMux);
-    setIsLocalVideo(isLocalPath);
-  }, [src]);
+    // Asegurarnos que el componente está montado
+    if (!videoRef.current) return;
+    
+    // Forzar el tipo MIME correcto para streaming
+    const video = videoRef.current;
+    video.type = "application/x-mpegURL";
+  }, []);
 
   // Para videos de Mux (HLS) o videos locales
-  if (isMuxVideo || isLocalVideo) {
+  if (src.includes('stream.mux.com') || src.includes('.m3u8')) {
     // Asegurarse de que la URL sea para streaming (m3u8)
     const videoUrl = src.includes('.m3u8') 
       ? src 
@@ -51,11 +49,10 @@ export default function VideoPlayer({
           loop={loop}
           muted={muted}
           playsInline
+          src={videoUrl}
+          type="application/x-mpegURL"
+          preload="auto"
         >
-          <source 
-            src={videoUrl} 
-            type="application/x-mpegURL" 
-          />
           Tu navegador no soporta la reproducción de videos.
         </video>
       </div>

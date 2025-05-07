@@ -24,28 +24,16 @@ export async function GET(request: Request, context: RouteParams) {
     const cursoId = params.id;
     const session = await getServerSession(authOptions);
     
-    // NUEVO: No usar inmediatamente ObjectId.isValid para permitir otros formatos
     const { db } = await connectToDatabase();
     
-    let curso;
-    
-    // Intentar buscar por _id directamente si es un ObjectId válido
-    if (ObjectId.isValid(cursoId)) {
-      curso = await db.collection('cursos').findOne({
-        _id: new ObjectId(cursoId)
-      });
-    }
-    
-    // Si no encontramos con ObjectId, buscar por campo alternativo (como slug o id personalizado)
-    if (!curso) {
-      curso = await db.collection('cursos').findOne({
-        // Buscar por otros campos como id personalizado o slug
-        $or: [
-          { customId: cursoId },
-          { slug: cursoId }
-        ]
-      });
-    }
+    let curso = await db.collection('cursos').findOne({
+      $or: [
+        // Intentar como string
+        { _id: cursoId },
+        // Intentar como ObjectId si es válido
+        ...(ObjectId.isValid(cursoId) ? [{ _id: new ObjectId(cursoId) }] : [])
+      ]
+    });
     
     if (!curso) {
       return NextResponse.json(
