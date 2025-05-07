@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Mux } from '@mux/mux-node';
+import Mux from '@mux/mux-node';
 
-// Inicializar Mux correctamente
-const muxClient = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
+// Inicializar Mux según la documentación de v11
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID || '',
+  tokenSecret: process.env.MUX_TOKEN_SECRET || '',
 });
-
-// Acceder a Video
-const { Video } = muxClient;
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,32 +13,17 @@ export async function POST(req: NextRequest) {
     console.log('[MUX] upload-status: recibido uploadId:', uploadId);
 
     if (!uploadId) {
-      console.log('[MUX] upload-status: falta uploadId');
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
-    // Consultar el estado del upload con la sintaxis correcta para v11
-    let upload;
-    try {
-      // Forma correcta según documentación de MUX v11
-      upload = await Video.Uploads.get(uploadId);
-      console.log('[MUX] upload-status: upload encontrado:', upload);
-    } catch (err) {
-      console.error('[MUX] Error al consultar upload:', err);
-      return NextResponse.json({ error: 'Error al consultar upload: ' + ((err as Error)?.message || String(err)) }, { status: 500 });
-    }
+    // Consultar el estado del upload con la API correcta
+    const upload = await mux.video.uploads.get(uploadId);
+    console.log('[MUX] upload-status: upload encontrado:', upload);
 
     // Si ya tiene asset_id, consultar el asset
     if (upload.asset_id) {
-      let asset;
-      try {
-        // Forma correcta para obtener asset según documentación de MUX v11
-        asset = await Video.Assets.get(upload.asset_id);
-        console.log('[MUX] upload-status: asset encontrado:', asset);
-      } catch (err) {
-        console.error('[MUX] Error al consultar asset:', err);
-        return NextResponse.json({ error: 'Error al consultar asset: ' + ((err as Error)?.message || String(err)) }, { status: 500 });
-      }
+      const asset = await mux.video.assets.get(upload.asset_id);
+      console.log('[MUX] upload-status: asset encontrado:', asset);
 
       // Si el asset está listo, devolver el playback_id
       if (asset.status === 'ready' && asset.playback_ids && asset.playback_ids.length > 0) {
@@ -64,10 +46,9 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error('[MUX] Error general en upload-status:', error, error?.stack);
+    console.error('[MUX] Error general en upload-status:', error);
     return NextResponse.json({ 
       error: error.message || 'Error consultando estado de upload', 
-      stack: error?.stack 
     }, { status: 500 });
   }
 }
