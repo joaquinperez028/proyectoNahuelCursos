@@ -9,16 +9,33 @@ const mux = new Mux({
 export async function POST(req: NextRequest) {
   try {
     const { uploadId } = await req.json();
+    console.log('[MUX] upload-status: recibido uploadId:', uploadId);
+
     if (!uploadId) {
+      console.log('[MUX] upload-status: falta uploadId');
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
     // Consultar el estado del upload
-    const upload = await mux.video.uploads.get(uploadId);
+    let upload;
+    try {
+      upload = await mux.video.uploads.get(uploadId);
+      console.log('[MUX] upload-status: upload encontrado:', upload);
+    } catch (err) {
+      console.error('[MUX] Error al consultar upload:', err);
+      return NextResponse.json({ error: 'Error al consultar upload: ' + (err.message || err) }, { status: 500 });
+    }
 
     // Si ya tiene asset_id, consultar el asset
     if (upload.asset_id) {
-      const asset = await mux.video.assets.get(upload.asset_id);
+      let asset;
+      try {
+        asset = await mux.video.assets.get(upload.asset_id);
+        console.log('[MUX] upload-status: asset encontrado:', asset);
+      } catch (err) {
+        console.error('[MUX] Error al consultar asset:', err);
+        return NextResponse.json({ error: 'Error al consultar asset: ' + (err.message || err) }, { status: 500 });
+      }
 
       // Si el asset está listo, devolver el playback_id
       if (asset.status === 'ready' && asset.playback_ids && asset.playback_ids.length > 0) {
@@ -41,7 +58,7 @@ export async function POST(req: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error('Error consultando estado de upload:', error);
-    return NextResponse.json({ error: error.message || 'Error consultando estado de upload' }, { status: 500 });
+    console.error('[MUX] Error general en upload-status:', error, error?.stack);
+    return NextResponse.json({ error: error.message || 'Error consultando estado de upload', stack: error?.stack }, { status: 500 });
   }
 }
