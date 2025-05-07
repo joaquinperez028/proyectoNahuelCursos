@@ -6,13 +6,16 @@ const mux = new Mux({
   tokenSecret: process.env.MUX_TOKEN_SECRET!,
 });
 
+// Los Videos API clients en Mux SDK v11+ se estructuran diferente
+const { Video } = mux;
+
 export async function POST(req: NextRequest) {
   try {
     const { filename } = await req.json();
 
-    const upload = await mux.video.uploads.create({
+    // En v11, Uploads es directamente una propiedad del objeto Video
+    const upload = await Video.Uploads.create({
       new_asset_settings: { playback_policy: 'public' },
-      playback_policy: 'public',
       cors_origin: '*',
     });
 
@@ -22,6 +25,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error creando direct upload:', error);
-    return NextResponse.json({ error: error.message || 'Error creando direct upload' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'Error creando direct upload',
+      stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+    }, { status: 500 });
   }
 }
