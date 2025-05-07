@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       cors_origin: '*',
     });
 
-    console.log('[MUX] Direct upload creado con éxito, ID:', upload.id);
+    console.log('[MUX] Direct upload creado con éxit0, ID:', upload.id);
     
     return NextResponse.json({
       uploadUrl: upload.url,
