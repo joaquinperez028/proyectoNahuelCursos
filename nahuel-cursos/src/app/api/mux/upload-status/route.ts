@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Mux from '@mux/mux-node';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Mux = require('@mux/mux-node');
 
-// Inicializar Mux con las credenciales
-const { Video } = new Mux.Mux({
-  tokenId: process.env.MUX_TOKEN_ID || '',
-  tokenSecret: process.env.MUX_TOKEN_SECRET || '',
+// Inicializar cliente Mux con las credenciales
+const muxClient = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
 });
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     // Consultar el estado del upload con la API correcta
     let upload;
     try {
-      upload = await Video.Uploads.get(uploadId);
+      upload = await muxClient.video.uploads.get(uploadId);
       console.log('[MUX] upload-status: upload encontrado:', upload);
     } catch (err) {
       console.error('[MUX] Error al consultar upload:', err);
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     if (upload.asset_id) {
       let asset;
       try {
-        asset = await Video.Assets.get(upload.asset_id);
+        asset = await muxClient.video.assets.get(upload.asset_id);
         console.log('[MUX] upload-status: asset encontrado:', asset);
       } catch (err) {
         console.error('[MUX] Error al consultar asset:', err);

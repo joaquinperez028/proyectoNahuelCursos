@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as Mux from '@mux/mux-node';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Mux = require('@mux/mux-node');
 
-// Inicializar Mux con las credenciales
-const { Video } = new Mux.Mux({
-  tokenId: process.env.MUX_TOKEN_ID || '',
-  tokenSecret: process.env.MUX_TOKEN_SECRET || '',
+// Inicializar cliente Mux con las credenciales
+const muxClient = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
 });
+
+// Debug para verificar la estructura
+console.log('[MUX] Verificando propiedades del cliente:', Object.keys(muxClient));
+console.log('[MUX] ¿Video existe?', muxClient.video ? 'Sí' : 'No');
+if (muxClient.video) {
+  console.log('[MUX] Propiedades de Video:', Object.keys(muxClient.video));
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { filename } = await req.json();
     console.log('[MUX] Creando direct upload para archivo:', filename);
 
-    // Crear la directa upload usando la API correcta en v11
-    const upload = await Video.Uploads.create({
+    // Crear direct upload usando la estructura correcta para v11
+    const upload = await muxClient.video.uploads.create({
       new_asset_settings: { playback_policy: 'public' },
       cors_origin: '*',
     });
