@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Mux } from '@mux/mux-node';
 
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID!,
-  tokenSecret: process.env.MUX_TOKEN_SECRET!,
+// Inicializar Mux con las credenciales
+const { Video } = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID || '',
+  tokenSecret: process.env.MUX_TOKEN_SECRET || '',
 });
-
-// Los Videos API clients en Mux SDK v11+ se estructuran diferente
-const { Video } = mux;
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,10 +17,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
-    // Consultar el estado del upload con la nueva estructura
+    // Consultar el estado del upload con la API correcta
     let upload;
     try {
-      // En v11, uploads es directamente una propiedad del objeto Video
       upload = await Video.Uploads.get(uploadId);
       console.log('[MUX] upload-status: upload encontrado:', upload);
     } catch (err) {
@@ -34,7 +31,6 @@ export async function POST(req: NextRequest) {
     if (upload.asset_id) {
       let asset;
       try {
-        // En v11, Assets es directamente una propiedad del objeto Video
         asset = await Video.Assets.get(upload.asset_id);
         console.log('[MUX] upload-status: asset encontrado:', asset);
       } catch (err) {
