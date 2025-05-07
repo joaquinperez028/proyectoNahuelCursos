@@ -7,23 +7,29 @@ const muxClient = new Mux({
   tokenSecret: process.env.MUX_TOKEN_SECRET,
 });
 
-// Acceder a Video
-const { Video } = muxClient;
+// Acceder a Video y verificar que existe
+const Video = muxClient.Video;
 
-// Debug para verificar la estructura
-console.log('[MUX] Verificando propiedades del Video:', Object.keys(Video));
+if (!Video) {
+  console.error('[MUX] Error: Video no está disponible en muxClient');
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { filename } = await req.json();
     console.log('[MUX] Creando direct upload para archivo:', filename);
 
-    // Crear direct upload usando la estructura correcta para v11
+    // Verificar que Video existe
+    if (!Video || !Video.Uploads) {
+      throw new Error('No se pudo acceder a la API de MUX Video');
+    }
+
+    // Crear direct upload
     const upload = await Video.Uploads.create({
       new_asset_settings: { playback_policy: 'public' },
       cors_origin: '*',
     });
-
+    
     console.log('[MUX] Direct upload creado con éxito, ID:', upload.id);
     
     return NextResponse.json({
