@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Mux } from '@mux/mux-node';
+import * as Mux from '@mux/mux-node';
 
 // Inicializar Mux con las credenciales
-const { Video } = new Mux({
+const { Video } = new Mux.Mux({
   tokenId: process.env.MUX_TOKEN_ID || '',
   tokenSecret: process.env.MUX_TOKEN_SECRET || '',
 });
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       cors_origin: '*',
     });
 
-    console.log('[MUX] Direct upload creado con éxit0, ID:', upload.id);
+    console.log('[MUX] Direct upload creado con éxito, ID:', upload.id);
     
     return NextResponse.json({
       uploadUrl: upload.url,
