@@ -29,12 +29,6 @@ export default function NuevoCurso() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Verificar si el usuario es administrador
-  if (status === 'authenticated' && session?.user?.role !== 'admin') {
-    router.push('/');
-    return null;
-  }
-
   if (status === 'unauthenticated') {
     router.push('/auth/login?redirect=/admin/cursos/nuevo');
     return null;

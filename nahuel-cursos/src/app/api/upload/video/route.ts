@@ -43,9 +43,9 @@ async function parseFormData(req: NextRequest): Promise<{ fields: formidable.Fie
 
 export async function POST(req: NextRequest) {
   try {
-    // Verificar autenticación y permisos de administrador
+    // Verificar solo autenticación
     const session = await getServerSession(authOptions);
-    if (!session || !isAdmin(session)) {
+    if (!session) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }

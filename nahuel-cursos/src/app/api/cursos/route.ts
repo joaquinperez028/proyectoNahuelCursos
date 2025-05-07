@@ -70,12 +70,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/cursos - Crear un nuevo curso (solo admin)
+// POST /api/cursos - Crear un nuevo curso
 export async function POST(request: Request) {
   try {
-    // Verificar autenticación y permisos de administrador
+    // Verificar solo autenticación
     const session = await getServerSession(authOptions);
-    if (!session || !isAdmin(session)) {
+    if (!session) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
