@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Mux from '@mux/mux-node';
+// Importación correcta
+const Mux = require('@mux/mux-node');
 
-// Inicializar Mux según la documentación de v11
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID || '',
-  tokenSecret: process.env.MUX_TOKEN_SECRET || '',
+// Inicialización simple
+const muxClient = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET,
 });
 
 export async function POST(req: NextRequest) {
@@ -16,16 +17,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
-    // Consultar el estado del upload con la API correcta
-    const upload = await mux.video.uploads.get(uploadId);
+    const upload = await muxClient.video.uploads.get(uploadId);
     console.log('[MUX] upload-status: upload encontrado:', upload);
 
-    // Si ya tiene asset_id, consultar el asset
     if (upload.asset_id) {
-      const asset = await mux.video.assets.get(upload.asset_id);
+      const asset = await muxClient.video.assets.get(upload.asset_id);
       console.log('[MUX] upload-status: asset encontrado:', asset);
 
-      // Si el asset está listo, devolver el playback_id
       if (asset.status === 'ready' && asset.playback_ids && asset.playback_ids.length > 0) {
         return NextResponse.json({
           status: 'ready',
@@ -39,7 +37,6 @@ export async function POST(req: NextRequest) {
         });
       }
     } else {
-      // Aún no tiene asset_id, sigue procesando
       return NextResponse.json({
         status: upload.status,
         uploadId: upload.id,
@@ -48,7 +45,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[MUX] Error general en upload-status:', error);
     return NextResponse.json({ 
-      error: error.message || 'Error consultando estado de upload', 
+      error: error.message || 'Error consultando estado de upload'
     }, { status: 500 });
   }
 }
