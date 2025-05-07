@@ -10,9 +10,9 @@ const muxClient = new Mux({
 
 // Debug para verificar la estructura
 console.log('[MUX] Verificando propiedades del cliente:', Object.keys(muxClient));
-console.log('[MUX] ¿Video existe?', muxClient.video ? 'Sí' : 'No');
-if (muxClient.video) {
-  console.log('[MUX] Propiedades de Video:', Object.keys(muxClient.video));
+console.log('[MUX] ¿Video existe?', muxClient.Video ? 'Sí' : 'No');
+if (muxClient.Video) {
+  console.log('[MUX] Propiedades de Video:', Object.keys(muxClient.Video));
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     console.log('[MUX] Creando direct upload para archivo:', filename);
 
     // Crear direct upload usando la estructura correcta para v11
-    const upload = await muxClient.video.uploads.create({
+    const upload = await muxClient.Video.Uploads.create({
       new_asset_settings: { playback_policy: 'public' },
       cors_origin: '*',
     });
