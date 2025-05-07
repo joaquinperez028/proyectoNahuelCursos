@@ -26,14 +26,44 @@ export async function GET(request: Request, context: RouteParams) {
     
     const { db } = await connectToDatabase();
     
-    let curso = await db.collection('cursos').findOne({
+    // Buscar el curso sin convertir a ObjectId primero
+    const curso = await db.collection('cursos').findOne({ 
       $or: [
-        // Intentar como string
-        { _id: cursoId },
-        // Intentar como ObjectId si es válido
-        ...(ObjectId.isValid(cursoId) ? [{ _id: new ObjectId(cursoId) }] : [])
+        // Primero buscar el ID como string
+        { customId: cursoId },
+        { slug: cursoId }
       ]
     });
+    
+    // Si no se encuentra, intentar con ObjectId solo si es válido
+    if (!curso && ObjectId.isValid(cursoId)) {
+      const cursoConObjectId = await db.collection('cursos').findOne({
+        _id: new ObjectId(cursoId)
+      });
+      
+      if (cursoConObjectId) {
+        // Continuar con el curso encontrado
+        let cursoComprado = false;
+        
+        if (session?.user?.id) {
+          const usuario = await db.collection('usuarios').findOne({
+            _id: new ObjectId(session.user.id)
+          });
+          
+          cursoComprado = usuario?.cursosComprados?.some(id => 
+            id === cursoId || 
+            (ObjectId.isValid(id) && new ObjectId(id).toString() === cursoId)
+          ) || false;
+        }
+        
+        if (cursoComprado) {
+          return NextResponse.json(cursoConObjectId);
+        }
+        
+        const { video, ...cursoSinVideo } = cursoConObjectId;
+        return NextResponse.json(cursoSinVideo);
+      }
+    }
     
     if (!curso) {
       return NextResponse.json(
@@ -42,20 +72,18 @@ export async function GET(request: Request, context: RouteParams) {
       );
     }
     
-    // Verificar si el usuario ha comprado el curso
-    let cursoComprado = null;
+    // Verificar si el usuario ha comprado el curso (sin usar ObjectId para el curso)
+    let cursoComprado = false;
+    
     if (session?.user?.id) {
-      console.log('Verificando si el usuario tiene acceso al curso:', {
-        userId: session.user.id,
-        cursoId: cursoId
+      const usuario = await db.collection('usuarios').findOne({
+        _id: new ObjectId(session.user.id)
       });
       
-      cursoComprado = await db.collection('usuarios').findOne({ 
-        _id: new ObjectId(session.user.id),
-        cursosComprados: cursoId  // Buscar solo como string, sin convertir a ObjectId
-      });
-      
-      console.log('Resultado de verificación de acceso:', !!cursoComprado);
+      cursoComprado = usuario?.cursosComprados?.some(id => 
+        id === cursoId || 
+        (ObjectId.isValid(id) && new ObjectId(id).toString() === cursoId)
+      ) || false;
     }
       
     // Si el usuario ha comprado el curso, incluir el video completo
@@ -66,21 +94,18 @@ export async function GET(request: Request, context: RouteParams) {
     // Si no ha comprado el curso, omitir el video completo
     const { video, ...cursoSinVideo } = curso;
     
-    // Obtener valoraciones si no existen en el documento del curso
+    // No se usa ObjectId para cursoId en las siguientes operaciones
     if (!curso.calificacionPromedio) {
-      // Obtener las valoraciones del curso
       const valoraciones = await db
         .collection('valoraciones')
-        .find({ cursoId: new ObjectId(cursoId) })
+        .find({ cursoId: cursoId })
         .toArray();
       
-      // Calcular la calificación promedio
       let promedio = 0;
       if (valoraciones.length > 0) {
         const suma = valoraciones.reduce((acc: number, val: any) => acc + val.calificacion, 0);
         promedio = suma / valoraciones.length;
         
-        // Añadir la información de valoraciones al curso
         cursoSinVideo.calificacionPromedio = promedio;
         cursoSinVideo.totalValoraciones = valoraciones.length;
       }
