@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     
     const resultado = await db.collection('usuarios').updateOne(
       { _id: new ObjectId(session.user.id) },
-      { $addToSet: { cursosComprados: cursoId.toString() } }
+      { $addToSet: { cursosComprados: cursoObjectId.toString() } }
     );
     
     if (!resultado.acknowledged || resultado.modifiedCount === 0) {
