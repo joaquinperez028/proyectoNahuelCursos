@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Mux = require('@mux/mux-node');
+import { Mux } from '@mux/mux-node';
 
-// Inicializar cliente Mux con las credenciales
+// Inicializar Mux correctamente
 const muxClient = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
   tokenSecret: process.env.MUX_TOKEN_SECRET,
 });
+
+// Acceder a Video
+const { Video } = muxClient;
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,10 +20,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
-    // Usar la estructura correcta según los logs: video.uploads (minúsculas)
+    // Consultar el estado del upload con la sintaxis correcta para v11
     let upload;
     try {
-      upload = await muxClient.video.uploads.get(uploadId);
+      // Forma correcta según documentación de MUX v11
+      upload = await Video.Uploads.get(uploadId);
       console.log('[MUX] upload-status: upload encontrado:', upload);
     } catch (err) {
       console.error('[MUX] Error al consultar upload:', err);
@@ -32,8 +35,8 @@ export async function POST(req: NextRequest) {
     if (upload.asset_id) {
       let asset;
       try {
-        // Usar la estructura correcta: video.assets (minúsculas)
-        asset = await muxClient.video.assets.get(upload.asset_id);
+        // Forma correcta para obtener asset según documentación de MUX v11
+        asset = await Video.Assets.get(upload.asset_id);
         console.log('[MUX] upload-status: asset encontrado:', asset);
       } catch (err) {
         console.error('[MUX] Error al consultar asset:', err);
