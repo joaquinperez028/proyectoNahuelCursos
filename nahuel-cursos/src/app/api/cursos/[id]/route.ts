@@ -13,7 +13,7 @@ interface RouteParams {
 // GET /api/cursos/[id] - Obtener un curso específico
 export async function GET(request: Request, context: RouteParams) {
   try {
-    const params = await context.params;
+    const params = context.params;
     if (!params || !params.id) {
       return NextResponse.json(
         { error: 'ID de curso no proporcionado' },
@@ -24,20 +24,28 @@ export async function GET(request: Request, context: RouteParams) {
     const cursoId = params.id;
     const session = await getServerSession(authOptions);
     
-    // Validar el ID del curso
-    if (!ObjectId.isValid(cursoId)) {
-      return NextResponse.json(
-        { error: 'ID de curso inválido' },
-        { status: 400 }
-      );
-    }
-    
+    // NUEVO: No usar inmediatamente ObjectId.isValid para permitir otros formatos
     const { db } = await connectToDatabase();
     
-    // Obtener el curso de la base de datos
-    const curso = await db.collection('cursos').findOne({
-      _id: new ObjectId(cursoId)
-    });
+    let curso;
+    
+    // Intentar buscar por _id directamente si es un ObjectId válido
+    if (ObjectId.isValid(cursoId)) {
+      curso = await db.collection('cursos').findOne({
+        _id: new ObjectId(cursoId)
+      });
+    }
+    
+    // Si no encontramos con ObjectId, buscar por campo alternativo (como slug o id personalizado)
+    if (!curso) {
+      curso = await db.collection('cursos').findOne({
+        // Buscar por otros campos como id personalizado o slug
+        $or: [
+          { customId: cursoId },
+          { slug: cursoId }
+        ]
+      });
+    }
     
     if (!curso) {
       return NextResponse.json(
