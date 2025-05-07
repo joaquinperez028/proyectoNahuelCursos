@@ -49,10 +49,9 @@ export default function VideoPlayer({
           loop={loop}
           muted={muted}
           playsInline
-          src={videoUrl}
-          type="application/x-mpegURL"
           preload="auto"
         >
+          <source src={videoUrl} type="application/x-mpegURL" />
           Tu navegador no soporta la reproducción de videos.
         </video>
       </div>
