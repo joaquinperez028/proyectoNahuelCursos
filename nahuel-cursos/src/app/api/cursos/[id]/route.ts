@@ -56,10 +56,7 @@ export async function GET(request: Request, context: RouteParams) {
       
       cursoComprado = await db.collection('usuarios').findOne({ 
         _id: new ObjectId(session.user.id),
-        $or: [
-          { cursosComprados: { $in: [cursoId] } },
-          { cursosComprados: { $in: [new ObjectId(cursoId)] } }
-        ]
+        cursosComprados: cursoId  // Buscar solo como string, sin convertir a ObjectId
       });
       
       console.log('Resultado de verificación de acceso:', !!cursoComprado);
