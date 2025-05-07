@@ -6,26 +6,29 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
 import { FaSave, FaTimes, FaSpinner, FaUpload, FaVideo } from 'react-icons/fa';
+import { EstadoVideoMux } from '@/components/EstadoVideoMux';
 
 export default function NuevoCurso() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const videoPreviewInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
     precio: '',
-    video: '',
-    videoPreview: '',
     categorias: ''
   });
   
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreviewFile, setVideoPreviewFile] = useState<File | null>(null);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
-  const [uploadingPreview, setUploadingPreview] = useState(false);
+  // Estados para los videos de Mux
+  const [videoCompleto, setVideoCompleto] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<File | null>(null);
+  const [videoCompletoUploadId, setVideoCompletoUploadId] = useState<string | null>(null);
+  const [videoPreviewUploadId, setVideoPreviewUploadId] = useState<string | null>(null);
+  const [videoCompletoPlaybackId, setVideoCompletoPlaybackId] = useState<string | null>(null);
+  const [videoPreviewPlaybackId, setVideoPreviewPlaybackId] = useState<string | null>(null);
+  const [subiendoVideoCompleto, setSubiendoVideoCompleto] = useState(false);
+  const [subiendoVideoPreview, setSubiendoVideoPreview] = useState(false);
+  
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,29 +45,78 @@ export default function NuevoCurso() {
     });
   };
 
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoCompletoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setVideoFile(e.target.files[0]);
+      setVideoCompleto(e.target.files[0]);
     }
   };
 
   const handleVideoPreviewChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setVideoPreviewFile(e.target.files[0]);
+      setVideoPreview(e.target.files[0]);
     }
   };
 
-  const uploadVideoFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('video', file);
-    
-    const response = await axios.post('/api/upload/video', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    return response.data.filePath;
+  const subirVideoAMux = async (file: File, esVideoCompleto: boolean) => {
+    try {
+      if (esVideoCompleto) {
+        setSubiendoVideoCompleto(true);
+      } else {
+        setSubiendoVideoPreview(true);
+      }
+
+      // 1. Obtener URL de subida directa a Mux
+      const res = await fetch('/api/mux/direct-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al obtener URL de subida');
+      }
+
+      // 2. Subir el archivo directamente a Mux
+      const uploadRes = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+        },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error('Error al subir el video a Mux');
+      }
+
+      // 3. Guardar el ID de subida
+      if (esVideoCompleto) {
+        setVideoCompletoUploadId(data.uploadId);
+      } else {
+        setVideoPreviewUploadId(data.uploadId);
+      }
+
+      return data.uploadId;
+    } catch (error: any) {
+      console.error('Error al subir video a Mux:', error);
+      setError(error.message || 'Error al subir video');
+      return null;
+    } finally {
+      if (esVideoCompleto) {
+        setSubiendoVideoCompleto(false);
+      } else {
+        setSubiendoVideoPreview(false);
+      }
+    }
+  };
+
+  const handleVideoCompletoReady = (playbackId: string) => {
+    setVideoCompletoPlaybackId(playbackId);
+  };
+
+  const handleVideoPreviewReady = (playbackId: string) => {
+    setVideoPreviewPlaybackId(playbackId);
   };
 
   const validateForm = () => {
@@ -73,13 +125,13 @@ export default function NuevoCurso() {
       return false;
     }
     
-    if (!formData.video && !videoFile) {
-      setError('Debes proporcionar un video completo (ya sea URL o archivo)');
+    if (!videoCompletoPlaybackId) {
+      setError('Debes subir el video completo del curso y esperar a que se procese');
       return false;
     }
     
-    if (!formData.videoPreview && !videoPreviewFile) {
-      setError('Debes proporcionar un video de vista previa (ya sea URL o archivo)');
+    if (!videoPreviewPlaybackId) {
+      setError('Debes subir el video de vista previa del curso y esperar a que se procese');
       return false;
     }
     
@@ -103,29 +155,15 @@ export default function NuevoCurso() {
       setLoading(true);
       setError('');
       
-      // Subir archivos de video si se proporcionaron
-      let videoPath = formData.video;
-      let videoPreviewPath = formData.videoPreview;
-      
-      if (videoFile) {
-        setUploadingVideo(true);
-        videoPath = await uploadVideoFile(videoFile);
-        setUploadingVideo(false);
-      }
-      
-      if (videoPreviewFile) {
-        setUploadingPreview(true);
-        videoPreviewPath = await uploadVideoFile(videoPreviewFile);
-        setUploadingPreview(false);
-      }
-      
       // Preparar datos para enviar
       const cursoData = {
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         precio: parseFloat(formData.precio),
-        video: videoPath,
-        videoPreview: videoPreviewPath,
+        video: `https://stream.mux.com/${videoCompletoPlaybackId}.m3u8`,
+        videoPreview: `https://stream.mux.com/${videoPreviewPlaybackId}.m3u8`,
+        muxVideoId: videoCompletoPlaybackId,
+        muxVideoPreviewId: videoPreviewPlaybackId,
         categorias: formData.categorias ? formData.categorias.split(',').map(cat => cat.trim()) : []
       };
       
@@ -224,120 +262,8 @@ export default function NuevoCurso() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Video Completo del Curso *
-              </label>
-              
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1">
-                    <div 
-                      className="border border-gray-300 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-50"
-                      onClick={() => videoInputRef.current?.click()}
-                    >
-                      <input
-                        type="file"
-                        ref={videoInputRef}
-                        onChange={handleVideoChange}
-                        accept="video/*"
-                        className="hidden"
-                      />
-                      <div className="flex flex-col items-center">
-                        <FaUpload className="text-blue-500 text-2xl mb-2" />
-                        <span className="text-sm text-gray-700">
-                          {videoFile ? videoFile.name : 'Subir archivo de video completo'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {uploadingVideo && (
-                    <div className="flex items-center text-blue-600">
-                      <FaSpinner className="animate-spin mr-2" />
-                      <span>Subiendo...</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center">
-                  <span className="text-gray-500 text-sm mx-auto">O</span>
-                </div>
-                
-                <div>
-                  <input
-                    type="url"
-                    id="video"
-                    name="video"
-                    value={formData.video}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="URL del video completo (opcional si subes archivo)"
-                  />
-                </div>
-              </div>
-              
-              <p className="mt-1 text-sm text-gray-500">Sube un archivo de video o proporciona una URL externa.</p>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Video de Vista Previa *
-              </label>
-              
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1">
-                    <div 
-                      className="border border-gray-300 rounded-lg p-4 flex items-center justify-center cursor-pointer hover:bg-gray-50"
-                      onClick={() => videoPreviewInputRef.current?.click()}
-                    >
-                      <input
-                        type="file"
-                        ref={videoPreviewInputRef}
-                        onChange={handleVideoPreviewChange}
-                        accept="video/*"
-                        className="hidden"
-                      />
-                      <div className="flex flex-col items-center">
-                        <FaUpload className="text-blue-500 text-2xl mb-2" />
-                        <span className="text-sm text-gray-700">
-                          {videoPreviewFile ? videoPreviewFile.name : 'Subir archivo de vista previa'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {uploadingPreview && (
-                    <div className="flex items-center text-blue-600">
-                      <FaSpinner className="animate-spin mr-2" />
-                      <span>Subiendo...</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center">
-                  <span className="text-gray-500 text-sm mx-auto">O</span>
-                </div>
-                
-                <div>
-                  <input
-                    type="url"
-                    id="videoPreview"
-                    name="videoPreview"
-                    value={formData.videoPreview}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="URL del video de vista previa (opcional si subes archivo)"
-                  />
-                </div>
-              </div>
-              
-              <p className="mt-1 text-sm text-gray-500">Sube un archivo de video corto para vista previa o proporciona una URL externa.</p>
-            </div>
-            
-            <div>
               <label htmlFor="categorias" className="block text-sm font-medium text-gray-700 mb-1">
-                Categorías
+                Categorías (separadas por comas)
               </label>
               <input
                 type="text"
@@ -346,26 +272,141 @@ export default function NuevoCurso() {
                 value={formData.categorias}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: Bitcoin, Ethereum, Trading (separadas por comas)"
+                placeholder="Ej: Inversiones, Bitcoin, Finanzas"
               />
-              <p className="mt-1 text-sm text-gray-500">Introduce las categorías separadas por comas.</p>
             </div>
             
-            <div className="flex justify-end">
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Videos del Curso
+              </h3>
+              
+              {/* Video Completo */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Video Completo del Curso *
+                </label>
+                
+                {!videoCompletoUploadId ? (
+                  <div className="space-y-4">
+                    <input
+                      type="file"
+                      onChange={handleVideoCompletoChange}
+                      accept="video/*"
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                    />
+                    {videoCompleto && (
+                      <button
+                        type="button"
+                        onClick={() => subirVideoAMux(videoCompleto, true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                        disabled={subiendoVideoCompleto}
+                      >
+                        {subiendoVideoCompleto ? (
+                          <>
+                            <FaSpinner className="animate-spin mr-2" />
+                            Subiendo...
+                          </>
+                        ) : (
+                          <>
+                            <FaUpload className="mr-2" />
+                            Subir a Mux
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <EstadoVideoMux 
+                      uploadId={videoCompletoUploadId} 
+                      onReady={handleVideoCompletoReady} 
+                    />
+                    {videoCompletoPlaybackId && (
+                      <div className="mt-2 text-green-600 font-medium">
+                        ✓ Video completo listo para usar
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Video de vista previa */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Video de Vista Previa (Trailer) *
+                </label>
+                
+                {!videoPreviewUploadId ? (
+                  <div className="space-y-4">
+                    <input
+                      type="file"
+                      onChange={handleVideoPreviewChange}
+                      accept="video/*"
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                    />
+                    {videoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => subirVideoAMux(videoPreview, false)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                        disabled={subiendoVideoPreview}
+                      >
+                        {subiendoVideoPreview ? (
+                          <>
+                            <FaSpinner className="animate-spin mr-2" />
+                            Subiendo...
+                          </>
+                        ) : (
+                          <>
+                            <FaUpload className="mr-2" />
+                            Subir a Mux
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-4 bg-gray-50">
+                    <EstadoVideoMux 
+                      uploadId={videoPreviewUploadId} 
+                      onReady={handleVideoPreviewReady} 
+                    />
+                    {videoPreviewPlaybackId && (
+                      <div className="mt-2 text-green-600 font-medium">
+                        ✓ Video de vista previa listo para usar
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-end pt-6">
               <button
                 type="submit"
-                disabled={loading || uploadingVideo || uploadingPreview}
-                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || !videoCompletoPlaybackId || !videoPreviewPlaybackId}
               >
-                {(loading || uploadingVideo || uploadingPreview) ? (
+                {loading ? (
                   <>
                     <FaSpinner className="animate-spin mr-2" />
-                    {uploadingVideo || uploadingPreview ? 'Subiendo archivos...' : 'Guardando...'}
+                    Guardando...
                   </>
                 ) : (
                   <>
                     <FaSave className="mr-2" />
-                    Crear Curso
+                    Guardar Curso
                   </>
                 )}
               </button>

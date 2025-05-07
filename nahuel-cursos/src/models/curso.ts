@@ -9,6 +9,10 @@ export interface Curso {
   videoPreview: string; // URL del video de vista previa
   fechaCreacion: Date;
   categorias?: string[];
+  // Campos para Mux
+  muxVideoId?: string; // ID de reproducción de Mux para el video completo
+  muxVideoPreviewId?: string; // ID de reproducción de Mux para la vista previa
+  muxAssetId?: string; // ID del asset en Mux
 }
 
 const cursoSchema = new Schema<Curso>(
@@ -44,6 +48,19 @@ const cursoSchema = new Schema<Curso>(
     categorias: {
       type: [String],
       default: []
+    },
+    // Campos para Mux
+    muxVideoId: {
+      type: String,
+      default: null
+    },
+    muxVideoPreviewId: {
+      type: String,
+      default: null
+    },
+    muxAssetId: {
+      type: String,
+      default: null
     }
   },
   {

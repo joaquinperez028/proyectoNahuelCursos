@@ -56,12 +56,6 @@ export default function Navbar() {
                 <Link href="/auth/login" className="px-3 py-2 rounded-md hover:bg-blue-800 transition-colors">
                   Iniciar Sesión
                 </Link>
-                <Link 
-                  href="/auth/registro" 
-                  className="px-3 py-2 bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Registrarse
-                </Link>
               </div>
             )}
           </div>
@@ -135,13 +129,6 @@ export default function Navbar() {
                   onClick={() => setIsOpen(false)}
                 >
                   Iniciar Sesión
-                </Link>
-                <Link 
-                  href="/auth/registro" 
-                  className="block px-3 py-2 bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Registrarse
                 </Link>
               </div>
             )}

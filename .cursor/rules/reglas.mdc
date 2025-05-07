@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+recuerda que siempre manejamos las variables de entorno en nuestro servidor de vercel por lo tanto no las encontraras en el proyecto de manera local
