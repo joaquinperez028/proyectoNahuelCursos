@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el uploadId' }, { status: 400 });
     }
 
-    // Consultar el estado del upload con la API correcta
+    // Usar la estructura correcta según los logs: video.uploads (minúsculas)
     let upload;
     try {
-      upload = await muxClient.Video.Uploads.get(uploadId);
+      upload = await muxClient.video.uploads.get(uploadId);
       console.log('[MUX] upload-status: upload encontrado:', upload);
     } catch (err) {
       console.error('[MUX] Error al consultar upload:', err);
@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
     if (upload.asset_id) {
       let asset;
       try {
-        asset = await muxClient.Video.Assets.get(upload.asset_id);
+        // Usar la estructura correcta: video.assets (minúsculas)
+        asset = await muxClient.video.assets.get(upload.asset_id);
         console.log('[MUX] upload-status: asset encontrado:', asset);
       } catch (err) {
         console.error('[MUX] Error al consultar asset:', err);
