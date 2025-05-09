@@ -202,16 +202,28 @@ export default async function CoursePage({ params }: PageProps) {
     );
   }
   
-  // Generar tokens para cada video si el usuario ha comprado el curso
-  const mainToken = userHasCourse && course.playbackId ? createMuxPlaybackToken(course.playbackId as string) : null;
+  // Si es desarrollo y no tenemos claves de MUX, simplemente mostramos los videos
+  // sin token de autenticación (modo de reproducción pública)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const hasMuxCredentials = !!process.env.MUX_SIGNING_KEY && !!process.env.MUX_SIGNING_KEY_ID;
   
-  // Generar tokens para videos adicionales
-  const videoTokens = userHasCourse ? course.videos.reduce((tokens: Record<string, string>, video) => {
-    if (video.playbackId) {
-      tokens[video.playbackId] = createMuxPlaybackToken(video.playbackId);
-    }
-    return tokens;
-  }, {}) : {};
+  // Generar tokens para cada video si el usuario ha comprado el curso y estamos en producción o tenemos credenciales
+  const useTokens = userHasCourse && (!isDevelopment || hasMuxCredentials);
+  
+  // Token para el video principal
+  const mainToken = useTokens && course.playbackId
+    ? createMuxPlaybackToken(course.playbackId)
+    : '';
+  
+  // Tokens para videos adicionales
+  const videoTokens = useTokens 
+    ? course.videos.reduce((tokens: Record<string, string>, video) => {
+        if (video.playbackId) {
+          tokens[video.playbackId] = createMuxPlaybackToken(video.playbackId);
+        }
+        return tokens;
+      }, {})
+    : {};
   
   return (
     <div className="py-10">

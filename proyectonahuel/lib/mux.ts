@@ -104,9 +104,45 @@ export const deleteMuxAsset = async (assetId: string) => {
 };
 
 /**
- * Genera un token de reproducción (simulado)
+ * Genera un token de reproducción JWT para MUX
  */
 export const createMuxPlaybackToken = (playbackId: string, expiryInSeconds = 3600) => {
-  // En producción, aquí implementaríamos la generación real del token JWT
-  return 'simulated_token_' + playbackId;
+  try {
+    // En desarrollo sin credenciales, no usamos tokens
+    if (process.env.NODE_ENV === 'development' && !process.env.MUX_SIGNING_KEY) {
+      console.log('Modo desarrollo: no se generan tokens JWT para MUX');
+      return ''; // En MUX, si no se proporciona un token, se usa reproducción pública
+    }
+    
+    // Verificar que tengamos las credenciales necesarias
+    const signingKey = process.env.MUX_SIGNING_KEY;
+    const signingKeyId = process.env.MUX_SIGNING_KEY_ID;
+    
+    if (!signingKey || !signingKeyId) {
+      console.warn('Faltan credenciales para generar token JWT de MUX');
+      return '';
+    }
+    
+    // Importar jsonwebtoken
+    const jwt = require('jsonwebtoken');
+    
+    // Tiempo actual en segundos
+    const now = Math.floor(Date.now() / 1000);
+    
+    // Crear payload del token
+    const payload = {
+      sub: playbackId,
+      exp: now + expiryInSeconds,
+      aud: 'v',  // 'v' para video
+      kid: signingKeyId
+    };
+    
+    // Generar token JWT
+    const token = jwt.sign(payload, signingKey, { algorithm: 'RS256' });
+    
+    return token;
+  } catch (error) {
+    console.error('Error al generar token JWT para MUX:', error);
+    return '';
+  }
 }; 
