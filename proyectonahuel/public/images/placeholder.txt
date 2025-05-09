@@ -1,0 +1,5 @@
+Por favor, crea una imagen placeholder.jpg de 800x450 píxeles con el texto "No Image" y colócala en esta carpeta.
+
+La imagen debe usarse como respaldo cuando no se pueda cargar la imagen del curso.
+
+Este archivo es solo un recordatorio y puede ser eliminado una vez se añada la imagen. 
