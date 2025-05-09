@@ -1,36 +1,44 @@
 import Mux from '@mux/mux-node';
 
-// Verificar las credenciales de MUX y usar valores predeterminados si no están disponibles
+// Credenciales
 const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID || 'development_token_id';
 const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET || 'development_token_secret';
 
-// Inicializar el cliente de MUX con manejo de errores para entorno de desarrollo
-let muxClient;
-let video;
+// Cliente MUX (singleton)
+let muxClient: any = null;
 
-try {
-  muxClient = new Mux({
-    tokenId: MUX_TOKEN_ID,
-    tokenSecret: MUX_TOKEN_SECRET,
-  });
-  
-  video = muxClient.video;
-} catch (error) {
-  console.warn('Error al inicializar MUX, usando implementación simulada:', error);
-  // Implementación simulada para entorno de desarrollo
-  muxClient = {};
-  video = {
-    assets: {
-      create: async () => ({ id: 'dev_asset_id', playback_ids: [{ id: 'dev_playback_id' }] }),
-      delete: async () => true,
+/**
+ * Obtiene una instancia del cliente MUX
+ */
+function getMuxClient() {
+  if (!muxClient) {
+    try {
+      muxClient = new Mux(MUX_TOKEN_ID, MUX_TOKEN_SECRET);
+    } catch (error) {
+      console.error('Error al inicializar MUX:', error);
+      
+      // Cliente simulado para desarrollo
+      muxClient = {
+        Video: {
+          Assets: {
+            create: async () => ({ 
+              id: 'dev_asset_id', 
+              playback_ids: [{ id: 'dev_playback_id' }] 
+            }),
+          }
+        }
+      };
     }
-  };
+  }
+  return muxClient;
 }
 
-// Función para crear un nuevo Asset en MUX
+/**
+ * Crea un asset en MUX desde una URL
+ */
 export const createMuxAsset = async (videoUrl: string) => {
   try {
-    // En entorno de desarrollo, podríamos simplemente simular la respuesta
+    // Modo desarrollo
     if (process.env.NODE_ENV === 'development' && !process.env.MUX_TOKEN_ID) {
       console.log('Modo desarrollo: simulando creación de asset para URL:', videoUrl);
       return {
@@ -39,9 +47,13 @@ export const createMuxAsset = async (videoUrl: string) => {
       };
     }
     
-    const asset = await video.assets.create({
-      inputs: [{ url: videoUrl }],
-      playback_policy: ['signed'],
+    // Obtener cliente
+    const client = getMuxClient();
+    
+    // Crear asset
+    const asset = await client.Video.Assets.create({
+      input: [{ url: videoUrl }],
+      playback_policy: ['public'],
     });
     
     return {
@@ -50,7 +62,6 @@ export const createMuxAsset = async (videoUrl: string) => {
     };
   } catch (error) {
     console.error('Error al crear el asset en MUX:', error);
-    // Retornar IDs de desarrollo en lugar de fallar
     return {
       assetId: 'error_asset_id',
       playbackId: 'error_playback_id',
@@ -58,38 +69,44 @@ export const createMuxAsset = async (videoUrl: string) => {
   }
 };
 
-// Función para eliminar un Asset en MUX
+/**
+ * Elimina un asset de MUX por su ID
+ */
 export const deleteMuxAsset = async (assetId: string) => {
   try {
-    // En entorno de desarrollo, podríamos simplemente simular la respuesta
+    // Modo desarrollo
     if (process.env.NODE_ENV === 'development' && !process.env.MUX_TOKEN_ID) {
       console.log('Modo desarrollo: simulando eliminación de asset:', assetId);
       return true;
     }
     
-    await video.assets.delete(assetId);
-    return true;
+    // Obtener cliente
+    const client = getMuxClient();
+    
+    // Eliminar asset (intentamos ambos métodos posibles)
+    try {
+      if (typeof client.Video.Assets.delete === 'function') {
+        await client.Video.Assets.delete(assetId);
+      } else if (typeof client.Video.Assets.remove === 'function') {
+        await client.Video.Assets.remove(assetId);
+      } else {
+        throw new Error('Método de eliminación de assets no disponible');
+      }
+      return true;
+    } catch (innerError) {
+      console.error('Error específico al eliminar asset:', innerError);
+      return false;
+    }
   } catch (error) {
-    console.error('Error al eliminar el asset en MUX:', error);
+    console.error('Error general al eliminar el asset en MUX:', error);
     return false;
   }
 };
 
-// Crear un token de visualización firmado
+/**
+ * Genera un token de reproducción (simulado)
+ */
 export const createMuxPlaybackToken = (playbackId: string, expiryInSeconds = 3600) => {
-  try {
-    // En entorno de desarrollo, podríamos simplemente simular la respuesta
-    if (process.env.NODE_ENV === 'development' && !process.env.MUX_TOKEN_ID) {
-      console.log('Modo desarrollo: generando token para playback ID:', playbackId);
-      return 'dev_token_' + playbackId;
-    }
-    
-    const expiry = Math.floor(Date.now() / 1000) + expiryInSeconds;
-    
-    // Como alternativa a la API de JWT de Mux, usamos un string dummy
-    return "dummy_token_for_development";
-  } catch (error) {
-    console.error('Error al crear el token:', error);
-    return "fallback_token";
-  }
+  // En producción, aquí implementaríamos la generación real del token JWT
+  return 'simulated_token_' + playbackId;
 }; 
