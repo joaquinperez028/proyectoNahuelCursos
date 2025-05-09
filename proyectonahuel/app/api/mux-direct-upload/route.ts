@@ -20,12 +20,20 @@ export async function POST(request: NextRequest) {
       process.env.MUX_TOKEN_ID || '',
       process.env.MUX_TOKEN_SECRET || ''
     );
+    
+    // Siempre usar política pública en desarrollo o si no tenemos credenciales de firma
+    const usePublicPolicy = 
+      process.env.NODE_ENV === 'development' || 
+      !process.env.MUX_SIGNING_KEY || 
+      !process.env.MUX_SIGNING_KEY_ID;
+    
+    console.log('Creando direct upload con política:', usePublicPolicy ? 'public' : 'signed');
 
     // Crear un nuevo direct upload URL
     const upload = await muxClient.Video.Uploads.create({
       cors_origin: '*', // O configura solo tu dominio
       new_asset_settings: {
-        playback_policy: ['public'],
+        playback_policy: [usePublicPolicy ? 'public' : 'signed'],
       }
     });
 
@@ -34,6 +42,7 @@ export async function POST(request: NextRequest) {
       success: true,
       uploadId: upload.id,
       uploadUrl: upload.url,
+      policy: usePublicPolicy ? 'public' : 'signed'
     });
   } catch (error) {
     console.error("Error al crear URL de carga directa:", error);

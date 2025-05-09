@@ -50,10 +50,22 @@ export const createMuxAsset = async (videoUrl: string) => {
     // Obtener cliente
     const client = getMuxClient();
     
-    // Crear asset
+    // Siempre usar política pública en desarrollo o si no tenemos credenciales de firma
+    const usePublicPolicy = 
+      process.env.NODE_ENV === 'development' || 
+      !process.env.MUX_SIGNING_KEY || 
+      !process.env.MUX_SIGNING_KEY_ID;
+    
+    // Crear asset con la política adecuada
     const asset = await client.Video.Assets.create({
       input: [{ url: videoUrl }],
-      playback_policy: ['public'],
+      playback_policy: [usePublicPolicy ? 'public' : 'signed'],
+    });
+    
+    console.log('Asset creado en MUX:', {
+      id: asset.id,
+      playbackId: asset.playback_ids?.[0]?.id,
+      policy: asset.playback_ids?.[0]?.policy
     });
     
     return {
