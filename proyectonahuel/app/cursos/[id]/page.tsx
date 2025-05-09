@@ -21,21 +21,24 @@ type PageProps = {
 };
 
 // Definir interfaces para los datos
-interface CourseType {
+interface VideoType {
   _id: string;
   title: string;
   description: string;
-  price: number;
-  thumbnailUrl?: string;
-  playbackId?: string;
-  videoId?: string;
-  createdBy: {
-    _id: string;
-    name: string;
+  videoId: string;
+  playbackId: string;
+  order: number;
+}
+
+interface ExerciseType {
+  _id: string;
+  title: string;
+  description: string;
+  fileData: {
+    data: string;
+    contentType: string;
   };
-  reviews: ReviewType[];
-  createdAt: string;
-  updatedAt: string;
+  order: number;
 }
 
 interface ReviewType {
@@ -48,6 +51,26 @@ interface ReviewType {
     image?: string;
   };
   courseId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CourseType {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  thumbnailUrl?: string;
+  hasThumbnailImage: boolean;
+  playbackId?: string;
+  videoId?: string;
+  videos: VideoType[];
+  exercises: ExerciseType[];
+  createdBy: {
+    _id: string;
+    name: string;
+  };
+  reviews: ReviewType[];
   createdAt: string;
   updatedAt: string;
 }
@@ -102,6 +125,7 @@ async function getCourse(id: string): Promise<CourseType | null> {
       description: courseDoc.description || '',
       price: courseDoc.price || 0,
       thumbnailUrl: courseDoc.thumbnailUrl || '',
+      hasThumbnailImage: !!courseDoc.thumbnailImage?.data,
       playbackId: courseDoc.playbackId || '',
       videoId: courseDoc.videoId || '',
       createdBy: {
@@ -110,6 +134,35 @@ async function getCourse(id: string): Promise<CourseType | null> {
       },
       createdAt: courseDoc.createdAt ? new Date(courseDoc.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: courseDoc.updatedAt ? new Date(courseDoc.updatedAt).toISOString() : new Date().toISOString(),
+      
+      // Agregar videos adicionales
+      videos: Array.isArray(courseDoc.videos) 
+        ? courseDoc.videos.map((video: any) => ({
+            _id: video._id.toString(),
+            title: video.title || '',
+            description: video.description || '',
+            videoId: video.videoId || '',
+            playbackId: video.playbackId || '',
+            order: video.order || 0
+          })).sort((a: any, b: any) => a.order - b.order)
+        : [],
+      
+      // Agregar ejercicios
+      exercises: Array.isArray(courseDoc.exercises)
+        ? courseDoc.exercises.map((exercise: any) => ({
+            _id: exercise._id.toString(),
+            title: exercise.title || '',
+            description: exercise.description || '',
+            fileData: exercise.fileData 
+              ? {
+                  data: exercise.fileData._id?.toString() || '',
+                  contentType: exercise.fileData.contentType || ''
+                }
+              : null,
+            order: exercise.order || 0
+          })).sort((a: any, b: any) => a.order - b.order)
+        : [],
+      
       reviews: reviewDocs.map(review => ({
         _id: review._id.toString(),
         rating: review.rating || 0,
@@ -149,8 +202,16 @@ export default async function CoursePage({ params }: PageProps) {
     );
   }
   
-  // Generar token para reproducción segura si el usuario ha comprado el curso
-  const token = userHasCourse && course.playbackId ? createMuxPlaybackToken(course.playbackId as string) : null;
+  // Generar tokens para cada video si el usuario ha comprado el curso
+  const mainToken = userHasCourse && course.playbackId ? createMuxPlaybackToken(course.playbackId as string) : null;
+  
+  // Generar tokens para videos adicionales
+  const videoTokens = userHasCourse ? course.videos.reduce((tokens: Record<string, string>, video) => {
+    if (video.playbackId) {
+      tokens[video.playbackId] = createMuxPlaybackToken(video.playbackId);
+    }
+    return tokens;
+  }, {}) : {};
   
   return (
     <div className="py-10">
@@ -168,18 +229,24 @@ export default async function CoursePage({ params }: PageProps) {
             
             {/* Vista previa o reproductor completo según si el usuario ha comprado */}
             <div className="mb-8 overflow-hidden rounded-lg shadow-lg">
-              {userHasCourse && course.playbackId && token ? (
-                <CourseViewer playbackId={course.playbackId} token={token} />
+              {userHasCourse && course.playbackId && mainToken ? (
+                <CourseViewer playbackId={course.playbackId} token={mainToken} />
               ) : (
                 <div className="relative">
                   <div className="aspect-video w-full bg-black">
-                    {course.thumbnailUrl && (
+                    {course.hasThumbnailImage ? (
+                      <img 
+                        src={`/api/course-image?id=${course._id}`}
+                        alt={course.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : course.thumbnailUrl ? (
                       <img 
                         src={course.thumbnailUrl} 
                         alt={course.title} 
                         className="w-full h-full object-cover"
                       />
-                    )}
+                    ) : null}
                     <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                       <div className="text-center text-white p-4">
                         <p className="text-xl font-bold mb-2">Vista previa no disponible</p>
@@ -195,6 +262,87 @@ export default async function CoursePage({ params }: PageProps) {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Descripción del curso</h2>
               <p className="text-gray-700">{course.description}</p>
             </div>
+            
+            {/* Listado de videos adicionales */}
+            {course.videos.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Videos del curso</h2>
+                <div className="space-y-4">
+                  {course.videos.map((video) => (
+                    <div key={video._id} className="border rounded-lg overflow-hidden bg-white">
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold text-gray-900">{video.title}</h3>
+                        {video.description && (
+                          <p className="text-gray-700 mt-1">{video.description}</p>
+                        )}
+                      </div>
+                      
+                      {userHasCourse && video.playbackId && videoTokens[video.playbackId] ? (
+                        <div className="border-t">
+                          <CourseViewer 
+                            playbackId={video.playbackId} 
+                            token={videoTokens[video.playbackId]} 
+                          />
+                        </div>
+                      ) : (
+                        <div className="border-t p-4 bg-gray-50">
+                          <p className="text-gray-500 text-sm">
+                            <svg className="inline-block h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            Este video estará disponible cuando compres el curso
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Listado de ejercicios */}
+            {course.exercises.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Ejercicios del curso</h2>
+                <div className="space-y-4">
+                  {course.exercises.map((exercise) => (
+                    <div key={exercise._id} className="border rounded-lg p-4 bg-white">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{exercise.title}</h3>
+                          {exercise.description && (
+                            <p className="text-gray-700 mt-1">{exercise.description}</p>
+                          )}
+                        </div>
+                        
+                        {userHasCourse && (
+                          <a 
+                            href={`/api/course-exercise?id=${exercise._id}`} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Descargar PDF
+                          </a>
+                        )}
+                      </div>
+                      
+                      {!userHasCourse && (
+                        <div className="mt-3 text-gray-500 text-sm">
+                          <svg className="inline-block h-4 w-4 text-gray-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          Este material estará disponible cuando compres el curso
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Sección de reseñas */}
             <div className="mt-12">
@@ -223,8 +371,19 @@ export default async function CoursePage({ params }: PageProps) {
                     <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Acceso completo al video
+                    {course.videos.length > 0 
+                      ? `${course.videos.length + 1} videos en total`
+                      : 'Video principal del curso'
+                    }
                   </li>
+                  {course.exercises.length > 0 && (
+                    <li className="flex items-center text-gray-700">
+                      <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {course.exercises.length} {course.exercises.length === 1 ? 'ejercicio en PDF' : 'ejercicios en PDF'}
+                    </li>
+                  )}
                   <li className="flex items-center text-gray-700">
                     <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
