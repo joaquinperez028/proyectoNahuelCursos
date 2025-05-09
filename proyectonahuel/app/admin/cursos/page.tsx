@@ -7,25 +7,45 @@ import Image from "next/image";
 
 export const dynamic = 'force-dynamic';
 
+// Definir una interfaz para el curso
+interface CourseType {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  thumbnailUrl?: string;
+  createdBy: {
+    _id: string;
+    name: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 async function getAdminStatus() {
   const session = await getServerSession();
   return session?.user?.role === 'admin';
 }
 
-async function getCourses() {
+async function getCourses(): Promise<CourseType[]> {
   try {
     await connectDB();
     const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
     
-    return courses.map(course => ({
+    return courses.map((course: any) => ({
       ...course,
-      _id: course._id.toString(),
+      _id: course._id ? course._id.toString() : '',
       createdBy: {
         ...course.createdBy,
-        _id: course.createdBy._id.toString(),
+        _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
+        name: course.createdBy?.name || ''
       },
-      createdAt: course.createdAt.toISOString(),
-      updatedAt: course.updatedAt.toISOString(),
+      title: course.title || '',
+      description: course.description || '',
+      price: course.price || 0,
+      thumbnailUrl: course.thumbnailUrl || '',
+      createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
     }));
   } catch (error) {
     console.error('Error al obtener cursos:', error);

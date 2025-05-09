@@ -7,7 +7,24 @@ import CourseCard from "@/components/CourseCard";
 
 export const dynamic = 'force-dynamic';
 
-async function getUserCourses() {
+interface CourseType {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  thumbnailUrl: string;
+  playbackId: string;
+  videoId: string;
+  createdBy: {
+    _id: string;
+    name: string;
+  };
+  reviews: any[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+async function getUserCourses(): Promise<CourseType[] | null> {
   try {
     const session = await getServerSession();
     
@@ -27,15 +44,23 @@ async function getUserCourses() {
       _id: { $in: user.courses }
     }).populate('createdBy', 'name').lean();
     
-    return courses.map(course => ({
+    return courses.map((course: any) => ({
       ...course,
-      _id: course._id.toString(),
+      _id: course._id ? course._id.toString() : '',
+      title: course.title || '',
+      description: course.description || '',
+      price: course.price || 0,
+      thumbnailUrl: course.thumbnailUrl || '',
+      playbackId: course.playbackId || '',
+      videoId: course.videoId || '',
       createdBy: {
         ...course.createdBy,
-        _id: course.createdBy._id.toString(),
+        _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
+        name: course.createdBy?.name || ''
       },
-      createdAt: course.createdAt.toISOString(),
-      updatedAt: course.updatedAt.toISOString(),
+      reviews: course.reviews || [],
+      createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
     }));
   } catch (error) {
     console.error('Error al obtener los cursos del usuario:', error);

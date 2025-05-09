@@ -26,15 +26,23 @@ async function getCourses(): Promise<CourseType[]> {
     await connectDB();
     const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
     
-    return courses.map(course => ({
+    return courses.map((course: any) => ({
       ...course,
-      _id: course._id.toString(),
+      _id: course._id ? course._id.toString() : '',
+      title: course.title || '',
+      description: course.description || '',
+      price: course.price || 0,
+      thumbnailUrl: course.thumbnailUrl || '',
+      playbackId: course.playbackId || '',
+      videoId: course.videoId || '',
       createdBy: {
         ...course.createdBy,
-        _id: course.createdBy._id.toString()
+        _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
+        name: course.createdBy?.name || ''
       },
-      createdAt: course.createdAt.toISOString(),
-      updatedAt: course.updatedAt.toISOString(),
+      reviews: course.reviews || [],
+      createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
     }));
   } catch (error) {
     console.error('Error al obtener cursos:', error);
