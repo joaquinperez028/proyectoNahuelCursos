@@ -40,10 +40,11 @@ const CourseCard = ({ course }: CourseCardProps) => {
     if (isHovered) {
       timerRef.current = setTimeout(() => {
         setShouldPlayVideo(true);
-      }, 800); // Retrasar 800ms para evitar reproducciones accidentales
+      }, 300); // Reducir de 800ms a 300ms para una respuesta más rápida
     } else {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
       setShouldPlayVideo(false);
     }
@@ -51,6 +52,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [isHovered]);
@@ -68,6 +70,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
             <MuxPlayer 
               playbackId={course.introPlaybackId} 
               title={course.title}
+              autoPlay={true}
             />
           </div>
         ) : course.thumbnailUrl ? (

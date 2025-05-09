@@ -12,9 +12,10 @@ const MuxPlayerReact = dynamic(
 interface MuxPlayerProps {
   playbackId: string;
   title?: string;
+  autoPlay?: boolean;
 }
 
-export default function MuxPlayer({ playbackId, title = 'Video del curso' }: MuxPlayerProps) {
+export default function MuxPlayer({ playbackId, title = 'Video del curso', autoPlay = false }: MuxPlayerProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,9 @@ export default function MuxPlayer({ playbackId, title = 'Video del curso' }: Mux
       thumbnailTime={0}
       primaryColor="#3B82F6"
       secondaryColor="#1D4ED8"
+      autoPlay={autoPlay}
+      muted={autoPlay}
+      preload="auto"
     />
   );
 } 
