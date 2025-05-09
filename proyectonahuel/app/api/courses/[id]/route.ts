@@ -9,12 +9,12 @@ import Review from "@/models/Review";
 // GET /api/courses/[id] - Obtener un curso específico
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
     await connectDB();
     
-    const course = await Course.findById(context.params.id)
+    const course = await Course.findById(params.id)
       .populate('createdBy', 'name')
       .lean();
     
@@ -26,7 +26,7 @@ export async function GET(
     }
     
     // Obtener reseñas
-    const reviews = await Review.find({ courseId: context.params.id })
+    const reviews = await Review.find({ courseId: params.id })
       .populate('userId', 'name image')
       .sort({ createdAt: -1 })
       .lean();
