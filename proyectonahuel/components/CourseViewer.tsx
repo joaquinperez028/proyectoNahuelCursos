@@ -12,7 +12,7 @@ interface CourseViewerProps {
 const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [useToken, setUseToken] = useState(!!token);
+  const [useToken, setUseToken] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [useFallback, setUseFallback] = useState(false);
@@ -61,12 +61,6 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
     setError('Error al cargar el video. Intente con opciones alternativas.');
   };
   
-  // Cambiar entre modos con token/sin token
-  const toggleTokenMode = () => {
-    setUseToken(!useToken);
-    setError(null);
-  };
-  
   // Cambiar al reproductor de respaldo
   const switchToFallback = () => {
     setUseFallback(true);
@@ -102,13 +96,6 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
               </button>
               
               <button 
-                onClick={toggleTokenMode} 
-                className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-              >
-                Intentar {useToken ? 'sin token' : 'con token'}
-              </button>
-              
-              <button 
                 onClick={switchToFallback} 
                 className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
               >
@@ -129,7 +116,7 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
       ) : (
         <MuxPlayer
           playbackId={playbackId}
-          tokens={useToken && token ? { playback: token } : undefined}
+          tokens={undefined}
           metadata={{
             video_title: 'Video del curso',
             viewer_user_id: 'usuario',
