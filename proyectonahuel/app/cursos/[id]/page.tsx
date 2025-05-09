@@ -10,11 +10,13 @@ import { getServerSession } from "next-auth";
 
 export const dynamic = 'force-dynamic';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
+type CourseParams = {
+  id: string;
+};
+
+type PageProps = {
+  params: Promise<CourseParams>;
+};
 
 async function getUserHasCourse(courseId: string) {
   try {
@@ -32,7 +34,7 @@ async function getUserHasCourse(courseId: string) {
       return false;
     }
     
-    return user.courses.some(id => id.toString() === courseId);
+    return user.courses.some((id: any) => id.toString() === courseId);
   } catch (error) {
     console.error('Error al verificar si el usuario tiene el curso:', error);
     return false;
@@ -62,7 +64,7 @@ async function getCourse(id: string) {
       },
       createdAt: course.createdAt.toISOString(),
       updatedAt: course.updatedAt.toISOString(),
-      reviews: reviews.map(review => ({
+      reviews: reviews.map((review: any) => ({
         ...review,
         _id: review._id.toString(),
         userId: {
@@ -81,7 +83,8 @@ async function getCourse(id: string) {
 }
 
 export default async function CoursePage({ params }: PageProps) {
-  const courseId = params.id;
+  const resolvedParams = await params;
+  const courseId = resolvedParams.id;
   const course = await getCourse(courseId);
   const userHasCourse = await getUserHasCourse(courseId);
   
