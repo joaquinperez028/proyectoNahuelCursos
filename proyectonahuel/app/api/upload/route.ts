@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import * as crypto from "crypto";
 
-// Importación correcta del SDK de MUX
+// Importamos MuxClient de la manera correcta
 const Mux = require('@mux/mux-node');
 
 export async function POST(request: NextRequest) {
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Inicializar cliente de MUX con las credenciales de entorno
-    const { Video } = new Mux(
+    // Inicializar cliente de MUX según la documentación oficial
+    const muxClient = new Mux.Video(
       process.env.MUX_TOKEN_ID,
       process.env.MUX_TOKEN_SECRET
     );
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear un asset directo en MUX
-    const asset = await Video.Assets.create({
+    const asset = await muxClient.Assets.create({
       input: [{
         type: 'file',
         contents: Buffer.from(await file.arrayBuffer()),
