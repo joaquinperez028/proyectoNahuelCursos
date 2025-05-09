@@ -75,7 +75,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
           />
         ) : (
           <Image
-            src={`/api/courses/${course._id}/image`}
+            src={`/api/course-image?id=${course._id}`}
             alt={course.title}
             fill
             className="object-cover"

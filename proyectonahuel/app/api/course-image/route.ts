@@ -2,14 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Course from '@/models/Course';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
-    const courseId = params.id;
+    // Obtener el ID del curso de los query parameters
+    const url = new URL(request.url);
+    const courseId = url.searchParams.get('id');
+    
+    if (!courseId) {
+      return new NextResponse(JSON.stringify({ error: 'Falta el ID del curso' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
     
     // Buscar el curso
     const course = await Course.findById(courseId);
