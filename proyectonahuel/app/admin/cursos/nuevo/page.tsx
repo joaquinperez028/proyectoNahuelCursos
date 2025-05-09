@@ -1,19 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 export default function NewCoursePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   
   // Redireccionar si no es administrador o no está autenticado
   if (status === 'loading') {
@@ -24,6 +29,49 @@ export default function NewCoursePage() {
     router.push('/');
     return null;
   }
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVideoFile(file);
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!videoFile) return null;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', videoFile);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Error al subir el archivo');
+      }
+      
+      const data = await response.json();
+      setUploadProgress(100);
+      return data.fileUrl;
+    } catch (error) {
+      console.error('Error al subir archivo:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al subir el archivo');
+      }
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +92,13 @@ export default function NewCoursePage() {
       return;
     }
     
-    if (!videoUrl.trim()) {
+    if (uploadMethod === 'url' && !videoUrl.trim()) {
       setError('La URL del video es obligatoria');
+      return;
+    }
+    
+    if (uploadMethod === 'file' && !videoFile) {
+      setError('Debe seleccionar un archivo de video');
       return;
     }
     
@@ -53,6 +106,18 @@ export default function NewCoursePage() {
     setError('');
     
     try {
+      // Si el método es por archivo, subir primero el archivo
+      let finalVideoUrl = videoUrl;
+      
+      if (uploadMethod === 'file') {
+        const uploadedFileUrl = await uploadFile();
+        if (!uploadedFileUrl) {
+          throw new Error('Error al subir el archivo de video');
+        }
+        // Usar la URL del archivo subido
+        finalVideoUrl = `${window.location.origin}${uploadedFileUrl}`;
+      }
+      
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
@@ -62,13 +127,13 @@ export default function NewCoursePage() {
           title,
           description,
           price: Number(price),
-          videoUrl,
+          videoUrl: finalVideoUrl,
         }),
       });
       
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Error al crear el curso');
+        throw new Error(data.error || 'Error al crear el curso');
       }
       
       // Redireccionar a la lista de cursos
@@ -141,20 +206,92 @@ export default function NewCoursePage() {
           </div>
           
           <div className="mb-8">
-            <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 mb-1">
-              URL del video
-            </label>
-            <input
-              type="url"
-              id="videoUrl"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://storage.example.com/video.mp4"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              URL pública del video del curso. El sistema creará el asset en MUX automáticamente.
-            </p>
+            <div className="flex space-x-4 mb-4">
+              <div className="flex items-center">
+                <input
+                  id="urlOption"
+                  name="uploadMethod"
+                  type="radio"
+                  checked={uploadMethod === 'url'}
+                  onChange={() => setUploadMethod('url')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="urlOption" className="ml-2 block text-sm text-gray-700">
+                  URL del video
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  id="fileOption"
+                  name="uploadMethod"
+                  type="radio"
+                  checked={uploadMethod === 'file'}
+                  onChange={() => setUploadMethod('file')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="fileOption" className="ml-2 block text-sm text-gray-700">
+                  Subir archivo
+                </label>
+              </div>
+            </div>
+            
+            {uploadMethod === 'url' ? (
+              <div>
+                <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  URL del video
+                </label>
+                <input
+                  type="url"
+                  id="videoUrl"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://storage.example.com/video.mp4"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  URL pública del video del curso. El sistema creará el asset en MUX automáticamente.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="videoFile" className="block text-sm font-medium text-gray-700 mb-1">
+                  Archivo de video
+                </label>
+                <div className="mt-1 flex items-center">
+                  <input
+                    type="file"
+                    id="videoFile"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="video/*"
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor="videoFile"
+                    className="relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <span>Seleccionar archivo</span>
+                  </label>
+                  <span className="ml-3 text-sm text-gray-500">
+                    {videoFile ? videoFile.name : 'Ningún archivo seleccionado'}
+                  </span>
+                </div>
+                {isUploading && (
+                  <div className="mt-2">
+                    <div className="bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">Subiendo: {uploadProgress}%</p>
+                  </div>
+                )}
+                <p className="mt-1 text-sm text-gray-500">
+                  Sube un archivo de video. Formatos admitidos: MP4, MOV, AVI, etc.
+                </p>
+              </div>
+            )}
           </div>
           
           <div className="flex justify-end space-x-3">
@@ -167,7 +304,7 @@ export default function NewCoursePage() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
             >
               {isSubmitting ? 'Creando...' : 'Crear curso'}
