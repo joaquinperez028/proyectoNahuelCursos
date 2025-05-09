@@ -77,18 +77,30 @@ export async function POST(request: NextRequest) {
       price: data.price,
       videoId: assetId,
       playbackId: playbackId,
-      thumbnailUrl: `https://image.mux.com/${playbackId}/thumbnail.jpg`,
       createdBy: user._id,
       reviews: [],
     };
+    
+    // Si hay una imagen personalizada, agregarla
+    if (data.thumbnailImage) {
+      courseData.thumbnailImage = {
+        data: Buffer.from(data.thumbnailImage.data, 'base64'),
+        contentType: data.thumbnailImage.contentType
+      };
+      // También establecemos la URL como null para indicar que usamos la imagen almacenada
+      courseData.thumbnailUrl = null;
+    } else {
+      // Si no hay imagen personalizada, usar un fotograma de MUX
+      courseData.thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+    }
     
     // Agregar datos del video de introducción si están disponibles
     if (data.introPlaybackId) {
       courseData.introVideoId = data.introVideoId || '';
       courseData.introPlaybackId = data.introPlaybackId;
       
-      // Si no hay una miniatura específica, usar un fotograma del video de introducción
-      if (!courseData.thumbnailUrl) {
+      // Si no hay una miniatura específica y no hay imagen personalizada, usar un fotograma del video de introducción
+      if (!courseData.thumbnailUrl && !data.thumbnailImage) {
         courseData.thumbnailUrl = `https://image.mux.com/${data.introPlaybackId}/thumbnail.jpg`;
       }
     }

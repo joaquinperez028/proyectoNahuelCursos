@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function NewCoursePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const introFileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,6 +22,12 @@ export default function NewCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  
+  // Estados para la imagen de miniatura
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailImage, setThumbnailImage] = useState<{ data: string, contentType: string } | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   // Estados para la carga directa del video principal
   const [uploadId, setUploadId] = useState<string | null>(null);
@@ -141,6 +149,57 @@ export default function NewCoursePage() {
     const file = e.target.files?.[0];
     if (file) {
       setIntroVideoFile(file);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+      
+      // Crear una vista previa de la imagen
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const uploadImage = async () => {
+    if (!thumbnailFile) return null;
+    
+    setIsUploadingImage(true);
+    setError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', thumbnailFile);
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al subir la imagen');
+      }
+      
+      const data = await response.json();
+      setThumbnailImage(data.imageData);
+      setIsUploadingImage(false);
+      
+      return data.imageData;
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al subir la imagen');
+      }
+      setIsUploadingImage(false);
+      return null;
     }
   };
 
@@ -362,6 +421,23 @@ export default function NewCoursePage() {
         }
       }
       
+      // Subir la imagen si existe
+      let thumbnailData = {};
+      if (thumbnailFile) {
+        if (thumbnailImage) {
+          thumbnailData = {
+            thumbnailImage
+          };
+        } else {
+          const uploadedImage = await uploadImage();
+          if (uploadedImage) {
+            thumbnailData = {
+              thumbnailImage: uploadedImage
+            };
+          }
+        }
+      }
+      
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
@@ -372,7 +448,8 @@ export default function NewCoursePage() {
           description,
           price: Number(price),
           videoUrl: finalVideoUrl,
-          ...introVideoData
+          ...introVideoData,
+          ...thumbnailData
         }),
       });
       
@@ -467,6 +544,86 @@ export default function NewCoursePage() {
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Ej: 49.99"
             />
+          </div>
+          
+          {/* Imagen de miniatura */}
+          <div className="mb-8">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Imagen de miniatura</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Esta imagen se mostrará como vista previa del curso en la página principal
+            </p>
+            
+            <div className="flex items-start space-x-4">
+              <div className="mt-1 flex-grow">
+                <input
+                  type="file"
+                  id="thumbnailImage"
+                  ref={imageInputRef}
+                  onChange={handleImageChange}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  disabled={isUploadingImage || !!thumbnailImage}
+                />
+                <label
+                  htmlFor="thumbnailImage"
+                  className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                    isUploadingImage || !!thumbnailImage ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                >
+                  <span>{thumbnailImage ? 'Imagen lista' : 'Seleccionar imagen'}</span>
+                </label>
+                <span className="ml-3 text-sm text-gray-500">
+                  {thumbnailFile ? thumbnailFile.name : thumbnailImage ? 'Imagen procesada correctamente' : 'Ningún archivo seleccionado'}
+                </span>
+                
+                {!isUploadingImage && !thumbnailImage && thumbnailFile && (
+                  <button
+                    type="button"
+                    onClick={uploadImage}
+                    className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                  >
+                    Subir ahora
+                  </button>
+                )}
+                
+                <p className="mt-2 text-xs text-gray-500">
+                  Formatos aceptados: JPG, PNG, WEBP, GIF. Tamaño máximo: 5MB.
+                </p>
+              </div>
+              
+              {thumbnailPreview && (
+                <div className="relative w-32 h-32 border rounded-md overflow-hidden shadow-sm">
+                  <Image
+                    src={thumbnailPreview}
+                    alt="Vista previa de la imagen"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+            </div>
+            
+            {isUploadingImage && (
+              <div className="mt-2">
+                <div className="bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    style={{ width: '100%' }}
+                  ></div>
+                </div>
+                <p className="mt-1 text-sm text-gray-600">
+                  Procesando imagen...
+                </p>
+              </div>
+            )}
+            
+            {thumbnailImage && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-700">
+                  <span className="font-medium">✓ Imagen lista</span> - Procesada correctamente.
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Video de introducción */}

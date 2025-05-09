@@ -30,6 +30,10 @@ const CourseSchema = new Schema({
   thumbnailUrl: {
     type: String,
   },
+  thumbnailImage: {
+    data: Buffer,
+    contentType: String,
+  },
   duration: {
     type: Number,
   },

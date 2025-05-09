@@ -64,29 +64,43 @@ const CourseCard = ({ course }: CourseCardProps) => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Mostrar el video de introducción si existe y está en hover */}
-        {course.introPlaybackId && shouldPlayVideo ? (
-          <div className="w-full h-full">
+        {/* Siempre mostrar la imagen de fondo */}
+        {course.thumbnailUrl ? (
+          <Image
+            src={course.thumbnailUrl}
+            alt={course.title}
+            fill
+            className="object-cover"
+            style={{ opacity: shouldPlayVideo ? 0 : 1 }}
+          />
+        ) : (
+          <Image
+            src={`/api/courses/${course._id}/image`}
+            alt={course.title}
+            fill
+            className="object-cover"
+            style={{ opacity: shouldPlayVideo ? 0 : 1 }}
+            onError={(e) => {
+              // Si hay error al cargar la imagen, mostrar un placeholder
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevenir bucle infinito
+              target.src = '/images/placeholder.jpg'; // Imagen de respaldo
+            }}
+          />
+        )}
+        
+        {/* Mostrar el video de introducción solo cuando se hace hover */}
+        {course.introPlaybackId && shouldPlayVideo && (
+          <div className="absolute inset-0 w-full h-full">
             <MuxPlayer 
               playbackId={course.introPlaybackId} 
               title={course.title}
               autoPlay={true}
             />
           </div>
-        ) : course.thumbnailUrl ? (
-          <Image
-            src={course.thumbnailUrl}
-            alt={course.title}
-            fill
-            className="object-cover"
-          />
-        ) : (
-          <div className="bg-gray-200 w-full h-full flex items-center justify-center">
-            <span className="text-gray-500">Sin imagen</span>
-          </div>
         )}
         
-        {/* Botón de reproducción */}
+        {/* Botón de reproducción, solo visible cuando no se está reproduciendo el video */}
         {course.introPlaybackId && !shouldPlayVideo && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-blue-600 bg-opacity-80 rounded-full p-3 hover:bg-opacity-90 transition-opacity">
