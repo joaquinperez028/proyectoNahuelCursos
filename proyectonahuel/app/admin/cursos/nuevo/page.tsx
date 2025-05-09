@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +19,54 @@ export default function NewCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  
+  // Nuevos estados para la carga directa
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [assetId, setAssetId] = useState<string | null>(null);
+  const [playbackId, setPlaybackId] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  
+  // Verificar el estado de la carga
+  useEffect(() => {
+    if (uploadId && uploadStatus !== 'ready' && !isSubmitting) {
+      const checkUploadStatus = async () => {
+        try {
+          const response = await fetch(`/api/mux-asset-status?uploadId=${uploadId}`);
+          
+          if (!response.ok) {
+            throw new Error('Error al verificar el estado de la carga');
+          }
+          
+          const data = await response.json();
+          setUploadStatus(data.status);
+          
+          if (data.assetId) {
+            setAssetId(data.assetId);
+          }
+          
+          if (data.playbackId) {
+            setPlaybackId(data.playbackId);
+            // Si tenemos el playbackId, la carga está lista
+            setUploadProgress(100);
+            setIsUploading(false);
+          } else if (data.status === 'asset_created') {
+            setUploadProgress(90);
+          } else if (data.status === 'preparing') {
+            setUploadProgress(60);
+          } else if (data.status === 'ready') {
+            setUploadProgress(30);
+          }
+        } catch (error) {
+          console.error('Error al verificar estado:', error);
+        }
+      };
+      
+      // Verificar cada 3 segundos
+      const interval = setInterval(checkUploadStatus, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [uploadId, uploadStatus, isSubmitting]);
   
   // Redireccionar si no es administrador o no está autenticado
   if (status === 'loading') {
@@ -42,31 +90,66 @@ export default function NewCoursePage() {
     
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadStatus(null);
+    setUploadId(null);
+    setAssetId(null);
+    setPlaybackId(null);
     
     try {
+      // 1. Solicitar una URL de carga directa
+      const directUploadResponse = await fetch('/api/mux-direct-upload', {
+        method: 'POST',
+      });
+      
+      if (!directUploadResponse.ok) {
+        const errorData = await directUploadResponse.json();
+        throw new Error(errorData.error || 'Error al obtener URL de carga');
+      }
+      
+      const directUploadData = await directUploadResponse.json();
+      setUploadId(directUploadData.uploadId);
+      setUploadProgress(10);
+      
+      // 2. Subir el archivo directamente a MUX
       const formData = new FormData();
       formData.append('file', videoFile);
       
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const uploadResponse = await fetch(directUploadData.uploadUrl, {
+        method: 'PUT',
+        body: videoFile,
+        headers: {
+          'Content-Type': videoFile.type,
+        },
       });
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Error al subir el archivo');
+      if (!uploadResponse.ok) {
+        throw new Error('Error al subir el archivo a MUX');
       }
       
-      const data = await response.json();
-      setUploadProgress(100);
+      setUploadProgress(30);
+      setUploadStatus('waiting');
       
-      // Ahora MUX devuelve el muxAssetId y playbackId
-      // Construimos la URL de MUX para reproducción
-      if (data.playbackId) {
-        return `https://stream.mux.com/${data.playbackId}.m3u8`;
-      } else {
-        throw new Error('No se pudo obtener el ID de reproducción de MUX');
-      }
+      // 3. Esperar a que el archivo se procese (esto ocurre en el useEffect)
+      
+      // 4. Devolver la URL de reproducción cuando esté disponible
+      return new Promise<string>((resolve, reject) => {
+        const checkForPlaybackId = setInterval(async () => {
+          if (playbackId) {
+            clearInterval(checkForPlaybackId);
+            resolve(`https://stream.mux.com/${playbackId}.m3u8`);
+          }
+        }, 1000);
+        
+        // Timeout después de 2 minutos
+        setTimeout(() => {
+          clearInterval(checkForPlaybackId);
+          if (playbackId) {
+            resolve(`https://stream.mux.com/${playbackId}.m3u8`);
+          } else {
+            reject(new Error('Tiempo de espera agotado para la creación del asset'));
+          }
+        }, 120000);
+      });
     } catch (error) {
       console.error('Error al subir archivo:', error);
       if (error instanceof Error) {
@@ -74,9 +157,8 @@ export default function NewCoursePage() {
       } else {
         setError('Error al subir el archivo');
       }
-      return null;
-    } finally {
       setIsUploading(false);
+      return null;
     }
   };
   
@@ -104,7 +186,7 @@ export default function NewCoursePage() {
       return;
     }
     
-    if (uploadMethod === 'file' && !videoFile) {
+    if (uploadMethod === 'file' && !videoFile && !playbackId) {
       setError('Debe seleccionar un archivo de video');
       return;
     }
@@ -113,16 +195,19 @@ export default function NewCoursePage() {
     setError('');
     
     try {
-      // Si el método es por archivo, subir primero el archivo a MUX
+      // Si ya tenemos un playbackId, usamos esa URL
       let finalVideoUrl = videoUrl;
       
       if (uploadMethod === 'file') {
-        const uploadedFileUrl = await uploadFile();
-        if (!uploadedFileUrl) {
-          throw new Error('Error al subir el archivo de video a MUX');
+        if (playbackId) {
+          finalVideoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+        } else {
+          const uploadedFileUrl = await uploadFile();
+          if (!uploadedFileUrl) {
+            throw new Error('Error al subir el archivo de video a MUX');
+          }
+          finalVideoUrl = uploadedFileUrl;
         }
-        // Usar la URL del archivo subido en MUX
-        finalVideoUrl = uploadedFileUrl;
       }
       
       const response = await fetch('/api/courses', {
@@ -154,6 +239,16 @@ export default function NewCoursePage() {
       }
       setIsSubmitting(false);
     }
+  };
+  
+  // Estado de carga para mostrar en la interfaz
+  const getUploadStatusText = () => {
+    if (!uploadStatus || uploadStatus === 'waiting') return 'Subiendo archivo...';
+    if (uploadStatus === 'asset_created') return 'Procesando video...';
+    if (uploadStatus === 'ready') return 'Finalizando...';
+    if (uploadStatus === 'preparing') return 'Preparando video...';
+    if (uploadStatus === 'error') return 'Error en la carga';
+    return `Estado: ${uploadStatus}`;
   };
   
   return (
@@ -272,17 +367,31 @@ export default function NewCoursePage() {
                     onChange={handleFileChange}
                     accept="video/*"
                     className="sr-only"
+                    disabled={isUploading || !!playbackId}
                   />
                   <label
                     htmlFor="videoFile"
-                    className="relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                      isUploading || !!playbackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                   >
-                    <span>Seleccionar archivo</span>
+                    <span>{playbackId ? 'Video listo' : 'Seleccionar archivo'}</span>
                   </label>
                   <span className="ml-3 text-sm text-gray-500">
-                    {videoFile ? videoFile.name : 'Ningún archivo seleccionado'}
+                    {videoFile ? videoFile.name : playbackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
                   </span>
+                  
+                  {!isUploading && !playbackId && videoFile && (
+                    <button
+                      type="button"
+                      onClick={uploadFile}
+                      className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                    >
+                      Subir ahora
+                    </button>
+                  )}
                 </div>
+                
                 {isUploading && (
                   <div className="mt-2">
                     <div className="bg-gray-200 rounded-full h-2.5">
@@ -291,14 +400,25 @@ export default function NewCoursePage() {
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">Subiendo a MUX: {uploadProgress}%</p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {getUploadStatusText()} {uploadProgress}%
+                    </p>
                   </div>
                 )}
-                <p className="mt-1 text-sm text-gray-500">
-                  Sube un archivo de video. Se procesará a través de MUX para streaming adaptativo.
+                
+                {playbackId && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-sm text-green-700">
+                      <span className="font-medium">✓ Video listo</span> - Procesado correctamente en MUX.
+                    </p>
+                  </div>
+                )}
+                
+                <p className="mt-2 text-sm text-gray-500">
+                  Sube un archivo de video. Se cargará directamente a MUX para streaming adaptativo.
                 </p>
-                <p className="mt-1 text-xs text-blue-600">
-                  Importante: El procesamiento del video en MUX puede tomar algunos minutos después de la carga.
+                <p className="mt-1 text-xs text-amber-600">
+                  El procesamiento del video en MUX puede tomar algunos minutos después de la carga.
                 </p>
               </div>
             )}

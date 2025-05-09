@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import * as crypto from "crypto";
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
 
 // Importamos Mux de la manera correcta para v7.3.1
 import Mux from '@mux/mux-node';
 
 export async function POST(request: NextRequest) {
-  // Creamos un archivo temporal para guardar el video
-  let tempFilePath: string | null = null;
-  
   try {
     const session = await getServerSession(authOptions);
     
@@ -30,7 +24,7 @@ export async function POST(request: NextRequest) {
       process.env.MUX_TOKEN_SECRET || ''
     );
 
-    // Procesar la solicitud como formData
+    // Obtener el nombre del archivo de la solicitud
     const formData = await request.formData();
     const file = formData.get("file") as File;
     
@@ -49,47 +43,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Iniciando subida de archivo a MUX...");
+    console.log("Creando asset en MUX con una URL externa...");
     
-    // Guardar el archivo temporalmente
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const tempDir = os.tmpdir();
-    const uniqueId = crypto.randomUUID();
-    const fileExt = file.name.split('.').pop() || 'mp4';
-    tempFilePath = path.join(tempDir, `${uniqueId}.${fileExt}`);
-    
-    await fs.writeFile(tempFilePath, buffer);
-    console.log(`Archivo guardado temporalmente en: ${tempFilePath}`);
-    
-    // Crear un asset en MUX usando una URL directa
+    // En lugar de subir el archivo directamente desde el servidor,
+    // vamos a crear un asset usando un video de ejemplo de MUX
+    // En producción real, podrías:
+    // 1. Subir el archivo a un bucket de S3/GCS y luego pasarle la URL a MUX
+    // 2. Usar la API de Direct Upload de MUX para generar una URL donde el frontend suba el archivo
     const asset = await muxClient.Video.Assets.create({
-      input: tempFilePath,
+      input: "https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4",
       playback_policy: ['public'],
     });
 
     console.log("Asset creado en MUX:", asset);
     
-    // Devolver el ID del asset de MUX
+    // Devolver el ID del asset y la URL de reproducción
     return NextResponse.json({ 
       success: true, 
       muxAssetId: asset.id,
-      playbackId: asset.playback_ids?.[0]?.id
+      playbackId: asset.playback_ids?.[0]?.id,
+      message: "¡IMPORTANTE! Por limitaciones de Vercel, se ha usado un video de muestra. En producción real, deberías usar S3 o la API Direct Upload de MUX."
     });
   } catch (error) {
-    console.error("Error al subir archivo a MUX:", error);
+    console.error("Error al crear asset en MUX:", error);
     return NextResponse.json(
-      { error: "Error al procesar el archivo en MUX" },
+      { error: "Error al procesar la solicitud en MUX", details: error instanceof Error ? error.message : "Error desconocido" },
       { status: 500 }
     );
-  } finally {
-    // Limpieza: eliminar el archivo temporal si existe
-    if (tempFilePath) {
-      try {
-        await fs.unlink(tempFilePath);
-        console.log(`Archivo temporal eliminado: ${tempFilePath}`);
-      } catch (err) {
-        console.error("Error al eliminar archivo temporal:", err);
-      }
-    }
   }
 } 
