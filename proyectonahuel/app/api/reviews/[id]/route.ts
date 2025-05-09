@@ -5,10 +5,9 @@ import Review from "@/models/Review";
 import User from "@/models/User";
 
 // PUT /api/reviews/[id] - Actualizar una reseña
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
+  const id = request.nextUrl.pathname.split('/').pop();
+  
   try {
     const session = await getServerSession();
     
@@ -32,7 +31,7 @@ export async function PUT(
     }
     
     // Buscar la reseña
-    const review = await Review.findById(params.id);
+    const review = await Review.findById(id);
     
     if (!review) {
       return NextResponse.json(
@@ -84,10 +83,9 @@ export async function PUT(
 }
 
 // DELETE /api/reviews/[id] - Eliminar una reseña
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
+  const id = request.nextUrl.pathname.split('/').pop();
+  
   try {
     const session = await getServerSession();
     
@@ -111,7 +109,7 @@ export async function DELETE(
     }
     
     // Buscar la reseña
-    const review = await Review.findById(params.id);
+    const review = await Review.findById(id);
     
     if (!review) {
       return NextResponse.json(
@@ -129,7 +127,7 @@ export async function DELETE(
     }
     
     // Eliminar la reseña
-    await Review.findByIdAndDelete(params.id);
+    await Review.findByIdAndDelete(id);
     
     return NextResponse.json(
       { message: 'Reseña eliminada correctamente' }
