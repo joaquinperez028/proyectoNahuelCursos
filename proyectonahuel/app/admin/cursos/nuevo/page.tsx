@@ -120,16 +120,20 @@ export default function NewCoursePage() {
   };
 
   const uploadVideoFile = async (id: string) => {
-    const video = videos.find(v => v.id === id);
-    if (!video || !video.videoFile) return;
+    const videoIndex = videos.findIndex(v => v.id === id);
+    if (videoIndex === -1 || !videos[videoIndex].videoFile) return;
     
-    console.log(`Iniciando carga del video ${id}:`, video.title);
+    const videoFile = videos[videoIndex].videoFile;
+    console.log(`Iniciando carga del video ${id}:`, videos[videoIndex].title);
     
-    updateVideo(id, { 
+    const updatedVideos = [...videos];
+    updatedVideos[videoIndex] = {
+      ...updatedVideos[videoIndex],
       isUploading: true, 
       uploadProgress: 0,
       error: null
-    });
+    };
+    setVideos(updatedVideos);
     
     try {
       // 1. Solicitar una URL de carga directa
@@ -149,10 +153,16 @@ export default function NewCoursePage() {
       const directUploadData = await directUploadResponse.json();
       console.log('URL de carga obtenida:', directUploadData.uploadUrl);
       
-      updateVideo(id, { 
-        uploadId: directUploadData.uploadId,
-        uploadProgress: 10
-      });
+      const videosWithUploadId = [...videos];
+      const currentIndex = videosWithUploadId.findIndex(v => v.id === id);
+      if (currentIndex !== -1) {
+        videosWithUploadId[currentIndex] = {
+          ...videosWithUploadId[currentIndex],
+          uploadId: directUploadData.uploadId,
+          uploadProgress: 10
+        };
+        setVideos(videosWithUploadId);
+      }
       
       // 2. Subir el archivo directamente a MUX usando XMLHttpRequest para mejor seguimiento
       console.log('Subiendo archivo a MUX usando XMLHttpRequest...', directUploadData.uploadUrl);
@@ -165,17 +175,34 @@ export default function NewCoursePage() {
           if (event.lengthComputable) {
             // Calcular el progreso (10-70%)
             const progress = 10 + Math.round((event.loaded / event.total) * 60);
-            updateVideo(id, { uploadProgress: progress });
+            
+            const progressVideos = [...videos];
+            const idx = progressVideos.findIndex(v => v.id === id);
+            if (idx !== -1) {
+              progressVideos[idx] = {
+                ...progressVideos[idx],
+                uploadProgress: progress
+              };
+              setVideos(progressVideos);
+            }
           }
         };
         
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             console.log('Archivo subido exitosamente a MUX');
-            updateVideo(id, { 
-              uploadProgress: 70,
-              uploadStatus: 'waiting'
-            });
+            
+            const successVideos = [...videos];
+            const idx = successVideos.findIndex(v => v.id === id);
+            if (idx !== -1) {
+              successVideos[idx] = {
+                ...successVideos[idx],
+                uploadProgress: 70,
+                uploadStatus: 'waiting'
+              };
+              setVideos(successVideos);
+            }
+            
             resolve();
           } else {
             console.error('Error al subir a MUX:', xhr.status, xhr.statusText);
@@ -195,9 +222,9 @@ export default function NewCoursePage() {
         
         // Iniciar la solicitud
         xhr.open('PUT', directUploadData.uploadUrl, true);
-        if (video.videoFile) {
-          xhr.setRequestHeader('Content-Type', video.videoFile.type);
-          xhr.send(video.videoFile);
+        if (videoFile) {
+          xhr.setRequestHeader('Content-Type', videoFile.type);
+          xhr.send(videoFile);
         } else {
           reject(new Error('No se encontró el archivo de video'));
         }
@@ -209,28 +236,30 @@ export default function NewCoursePage() {
       
     } catch (error) {
       console.error(`Error al subir video ${id}:`, error);
-      if (error instanceof Error) {
-        updateVideo(id, { 
-          error: error.message,
+      
+      const errorVideos = [...videos];
+      const idx = errorVideos.findIndex(v => v.id === id);
+      
+      if (idx !== -1) {
+        errorVideos[idx] = {
+          ...errorVideos[idx],
+          error: error instanceof Error ? error.message : 'Error al subir el video',
           isUploading: false
-        });
-      } else {
-        updateVideo(id, { 
-          error: 'Error al subir el video',
-          isUploading: false
-        });
+        };
+        setVideos(errorVideos);
       }
     }
   };
 
   const checkVideoUploadStatus = async (id: string) => {
-    const video = videos.find(v => v.id === id);
-    if (!video || !video.uploadId) {
+    const videoIndex = videos.findIndex(v => v.id === id);
+    if (videoIndex === -1 || !videos[videoIndex].uploadId) {
       console.error('No se puede verificar estado: video no encontrado o sin uploadId', id);
       return;
     }
     
-    console.log(`Verificando estado para video ${id} con uploadId ${video.uploadId}`);
+    const uploadId = videos[videoIndex].uploadId;
+    console.log(`Verificando estado para video ${id} con uploadId ${uploadId}`);
     
     // Contador de intentos
     let attempts = 0;
@@ -239,9 +268,9 @@ export default function NewCoursePage() {
     const checkStatus = async () => {
       try {
         attempts++;
-        console.log(`Intento ${attempts}/${maxAttempts}: verificando estado de ${video.uploadId}`);
+        console.log(`Intento ${attempts}/${maxAttempts}: verificando estado de ${uploadId}`);
         
-        const response = await fetch(`/api/mux-asset-status?uploadId=${video.uploadId}`);
+        const response = await fetch(`/api/mux-asset-status?uploadId=${uploadId}`);
         
         if (!response.ok) {
           console.error('Error en respuesta de verificación:', response.status, response.statusText);
@@ -250,6 +279,15 @@ export default function NewCoursePage() {
         
         const data = await response.json();
         console.log('Estado de la carga:', data);
+        
+        // Obtener el estado actual del video para asegurarnos de que estamos trabajando con la última versión
+        const currentVideos = [...videos];
+        const currentVideoIndex = currentVideos.findIndex(v => v.id === id);
+        
+        if (currentVideoIndex === -1) {
+          console.error('Video no encontrado en el estado actual');
+          return true; // Detener verificación
+        }
         
         let updates: Partial<VideoItem> = { uploadStatus: data.status };
         
@@ -263,7 +301,14 @@ export default function NewCoursePage() {
           updates.playbackId = data.playbackId;
           updates.uploadProgress = 100;
           updates.isUploading = false;
-          updateVideo(id, updates);
+          
+          // Actualizar el estado directamente
+          const updatedVideos = [...currentVideos];
+          updatedVideos[currentVideoIndex] = {
+            ...updatedVideos[currentVideoIndex],
+            ...updates
+          };
+          setVideos(updatedVideos);
           return true; // Carga completa
         } else if (data.status === 'asset_created') {
           updates.uploadProgress = 90;
@@ -273,15 +318,24 @@ export default function NewCoursePage() {
           updates.uploadProgress = 70;
         }
         
-        updateVideo(id, updates);
+        // Actualizar el estado directamente
+        const updatedVideos = [...currentVideos];
+        updatedVideos[currentVideoIndex] = {
+          ...updatedVideos[currentVideoIndex],
+          ...updates
+        };
+        setVideos(updatedVideos);
         
         // Si ya intentamos demasiadas veces, detener
         if (attempts >= maxAttempts) {
           console.warn(`Máximo de intentos (${maxAttempts}) alcanzado para el video ${id}`);
-          updateVideo(id, {
+          const errorVideos = [...updatedVideos];
+          errorVideos[currentVideoIndex] = {
+            ...errorVideos[currentVideoIndex],
             error: 'Tiempo de espera agotado para la creación del asset',
             isUploading: false
-          });
+          };
+          setVideos(errorVideos);
           return true;
         }
         
@@ -291,10 +345,18 @@ export default function NewCoursePage() {
         
         // Si ya intentamos demasiadas veces, detener
         if (attempts >= maxAttempts) {
-          updateVideo(id, {
-            error: 'Demasiados errores al verificar el estado',
-            isUploading: false
-          });
+          const currentVideos = [...videos];
+          const currentVideoIndex = currentVideos.findIndex(v => v.id === id);
+          
+          if (currentVideoIndex !== -1) {
+            const errorVideos = [...currentVideos];
+            errorVideos[currentVideoIndex] = {
+              ...errorVideos[currentVideoIndex],
+              error: 'Demasiados errores al verificar el estado',
+              isUploading: false
+            };
+            setVideos(errorVideos);
+          }
           return true;
         }
         
@@ -312,6 +374,7 @@ export default function NewCoursePage() {
         if (completed) {
           console.log(`Verificación completada para video ${id}, deteniendo intervalo`);
           clearInterval(interval);
+          return;
         }
       };
       
@@ -327,13 +390,21 @@ export default function NewCoursePage() {
         clearInterval(interval);
         
         // Verificar si el video ya tiene playbackId
-        const currentVideo = videos.find(v => v.id === id);
-        if (currentVideo && !currentVideo.playbackId && currentVideo.isUploading) {
+        const currentVideos = [...videos];
+        const currentVideoIndex = currentVideos.findIndex(v => v.id === id);
+        
+        if (currentVideoIndex !== -1 && 
+            !currentVideos[currentVideoIndex].playbackId && 
+            currentVideos[currentVideoIndex].isUploading) {
           console.warn(`El video ${id} no completó el proceso en el tiempo máximo`);
-          updateVideo(id, { 
+          
+          const errorVideos = [...currentVideos];
+          errorVideos[currentVideoIndex] = {
+            ...errorVideos[currentVideoIndex],
             error: 'Tiempo de espera agotado para la creación del asset',
             isUploading: false
-          });
+          };
+          setVideos(errorVideos);
         }
       }, 120000); // 2 minutos
     };
