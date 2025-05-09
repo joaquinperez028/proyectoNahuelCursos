@@ -153,12 +153,14 @@ export default function NewCoursePage() {
       const directUploadData = await directUploadResponse.json();
       console.log('URL de carga obtenida:', directUploadData.uploadUrl);
       
+      const uploadId = directUploadData.uploadId; // Guardar uploadId localmente
+      
       const videosWithUploadId = [...videos];
       const currentIndex = videosWithUploadId.findIndex(v => v.id === id);
       if (currentIndex !== -1) {
         videosWithUploadId[currentIndex] = {
           ...videosWithUploadId[currentIndex],
-          uploadId: directUploadData.uploadId,
+          uploadId: uploadId,
           uploadProgress: 10
         };
         setVideos(videosWithUploadId);
@@ -230,9 +232,9 @@ export default function NewCoursePage() {
         }
       });
       
-      // 3. Iniciar verificación de estado
-      console.log('Iniciando verificación de estado para el video:', id);
-      checkVideoUploadStatus(id);
+      // 3. Iniciar verificación de estado - pasando directamente el uploadId
+      console.log('Iniciando verificación de estado para el video:', id, 'con uploadId:', uploadId);
+      checkVideoUploadStatusWithId(id, uploadId);
       
     } catch (error) {
       console.error(`Error al subir video ${id}:`, error);
@@ -251,15 +253,15 @@ export default function NewCoursePage() {
     }
   };
 
-  const checkVideoUploadStatus = async (id: string) => {
+  // Nueva función que recibe directamente el uploadId
+  const checkVideoUploadStatusWithId = async (id: string, uploadId: string) => {
     const videoIndex = videos.findIndex(v => v.id === id);
-    if (videoIndex === -1 || !videos[videoIndex].uploadId) {
-      console.error('No se puede verificar estado: video no encontrado o sin uploadId', id);
+    if (videoIndex === -1) {
+      console.error('No se puede verificar estado: video no encontrado', id);
       return;
     }
     
-    const uploadId = videos[videoIndex].uploadId;
-    console.log(`Verificando estado para video ${id} con uploadId ${uploadId}`);
+    console.log(`Verificando estado para video ${id} con uploadId ${uploadId} (pasado directamente)`);
     
     // Contador de intentos
     let attempts = 0;
@@ -366,7 +368,7 @@ export default function NewCoursePage() {
     
     // Función que maneja el intervalo de verificación
     const startStatusCheck = () => {
-      console.log(`Iniciando verificación periódica para video ${id}`);
+      console.log(`Iniciando verificación periódica para video ${id} con uploadId ${uploadId}`);
       
       const intervalCheck = async () => {
         const completed = await checkStatus();
@@ -411,6 +413,18 @@ export default function NewCoursePage() {
     
     // Iniciar la verificación
     startStatusCheck();
+  };
+
+  // Mantener la función original para compatibilidad
+  const checkVideoUploadStatus = async (id: string) => {
+    const videoIndex = videos.findIndex(v => v.id === id);
+    if (videoIndex === -1 || !videos[videoIndex].uploadId) {
+      console.error('No se puede verificar estado: video no encontrado o sin uploadId', id);
+      return;
+    }
+    
+    const uploadId = videos[videoIndex].uploadId;
+    checkVideoUploadStatusWithId(id, uploadId);
   };
 
   // Funciones para gestionar ejercicios PDF
