@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Course from '@/models/Course';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+type Props = {
+  params: {
+    id: string;
+  };
+};
+
+export async function GET(request: NextRequest, { params }: Props) {
   try {
     await connectDB();
     
-    const courseId = context.params.id;
+    const courseId = params.id;
     
     // Buscar el curso
     const course = await Course.findById(courseId);

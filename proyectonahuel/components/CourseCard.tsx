@@ -84,7 +84,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
               // Si hay error al cargar la imagen, mostrar un placeholder
               const target = e.target as HTMLImageElement;
               target.onerror = null; // Prevenir bucle infinito
-              target.src = '/images/placeholder.svg'; // Imagen SVG de respaldo
+              target.src = '/images/placeholder.png'; // Usar la imagen PNG de respaldo
             }}
           />
         )}
