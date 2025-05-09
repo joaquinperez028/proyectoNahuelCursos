@@ -50,6 +50,14 @@ const Header = () => {
                   )}
                   <span className="text-sm font-medium text-gray-700">{session.user.name}</span>
                 </div>
+                {session?.user.role === 'admin' && (
+                  <Link 
+                    href="/admin/cursos/nuevo" 
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+                  >
+                    Crear Curso
+                  </Link>
+                )}
                 <button
                   onClick={() => signOut()}
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -112,6 +120,14 @@ const Header = () => {
                   )}
                   <div className="text-sm font-medium text-gray-700">{session.user.name}</div>
                 </div>
+                {session?.user.role === 'admin' && (
+                  <Link
+                    href="/admin/cursos/nuevo"
+                    className="block w-full text-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                  >
+                    Crear Curso
+                  </Link>
+                )}
                 <button
                   onClick={() => signOut()}
                   className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
