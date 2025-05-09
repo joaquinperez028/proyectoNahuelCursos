@@ -38,7 +38,7 @@ const Header = () => {
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {session ? (
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
+                <Link href="/perfil" className="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
                   {session.user.image && (
                     <Image
                       src={session.user.image}
@@ -48,8 +48,8 @@ const Header = () => {
                       className="rounded-full"
                     />
                   )}
-                  <span className="text-sm font-medium text-gray-700">{session.user.name}</span>
-                </div>
+                  <span className="text-sm font-medium">{session.user.name}</span>
+                </Link>
                 {session && (
                   <Link 
                     href="/admin/cursos/nuevo" 
@@ -102,6 +102,11 @@ const Header = () => {
             {session?.user.role === 'admin' && (
               <Link href="/admin/cursos" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
                 Administrar cursos
+              </Link>
+            )}
+            {session && (
+              <Link href="/perfil" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
+                Mi Perfil
               </Link>
             )}
           </div>
