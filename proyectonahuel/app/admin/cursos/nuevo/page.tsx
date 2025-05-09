@@ -123,6 +123,8 @@ export default function NewCoursePage() {
     const video = videos.find(v => v.id === id);
     if (!video || !video.videoFile) return;
     
+    console.log(`Iniciando carga del video ${id}:`, video.title);
+    
     updateVideo(id, { 
       isUploading: true, 
       uploadProgress: 0,
@@ -131,40 +133,78 @@ export default function NewCoursePage() {
     
     try {
       // 1. Solicitar una URL de carga directa
+      console.log('Solicitando URL de carga directa a MUX...');
       const directUploadResponse = await fetch('/api/mux-direct-upload', {
         method: 'POST',
       });
       
+      console.log('Respuesta de la API de carga directa:', directUploadResponse.status);
+      
       if (!directUploadResponse.ok) {
         const errorData = await directUploadResponse.json();
+        console.error('Error en respuesta de MUX direct upload:', errorData);
         throw new Error(errorData.error || 'Error al obtener URL de carga');
       }
       
       const directUploadData = await directUploadResponse.json();
+      console.log('URL de carga obtenida:', directUploadData.uploadUrl);
+      
       updateVideo(id, { 
         uploadId: directUploadData.uploadId,
         uploadProgress: 10
       });
       
-      // 2. Subir el archivo directamente a MUX
-      const uploadResponse = await fetch(directUploadData.uploadUrl, {
-        method: 'PUT',
-        body: video.videoFile,
-        headers: {
-          'Content-Type': video.videoFile.type,
-        },
-      });
+      // 2. Subir el archivo directamente a MUX usando XMLHttpRequest para mejor seguimiento
+      console.log('Subiendo archivo a MUX usando XMLHttpRequest...', directUploadData.uploadUrl);
       
-      if (!uploadResponse.ok) {
-        throw new Error('Error al subir el archivo a MUX');
-      }
-      
-      updateVideo(id, { 
-        uploadProgress: 30,
-        uploadStatus: 'waiting'
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Configurar eventos de seguimiento
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            // Calcular el progreso (10-70%)
+            const progress = 10 + Math.round((event.loaded / event.total) * 60);
+            updateVideo(id, { uploadProgress: progress });
+          }
+        };
+        
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            console.log('Archivo subido exitosamente a MUX');
+            updateVideo(id, { 
+              uploadProgress: 70,
+              uploadStatus: 'waiting'
+            });
+            resolve();
+          } else {
+            console.error('Error al subir a MUX:', xhr.status, xhr.statusText);
+            reject(new Error(`Error al subir archivo: ${xhr.status} ${xhr.statusText}`));
+          }
+        };
+        
+        xhr.onerror = () => {
+          console.error('Error de red al subir archivo a MUX');
+          reject(new Error('Error de red al intentar subir el archivo'));
+        };
+        
+        xhr.onabort = () => {
+          console.warn('Carga abortada');
+          reject(new Error('Carga abortada'));
+        };
+        
+        // Iniciar la solicitud
+        xhr.open('PUT', directUploadData.uploadUrl, true);
+        if (video.videoFile) {
+          xhr.setRequestHeader('Content-Type', video.videoFile.type);
+          xhr.send(video.videoFile);
+        } else {
+          reject(new Error('No se encontró el archivo de video'));
+        }
       });
       
       // 3. Iniciar verificación de estado
+      console.log('Iniciando verificación de estado para el video:', id);
       checkVideoUploadStatus(id);
       
     } catch (error) {
@@ -185,24 +225,41 @@ export default function NewCoursePage() {
 
   const checkVideoUploadStatus = async (id: string) => {
     const video = videos.find(v => v.id === id);
-    if (!video || !video.uploadId) return;
+    if (!video || !video.uploadId) {
+      console.error('No se puede verificar estado: video no encontrado o sin uploadId', id);
+      return;
+    }
+    
+    console.log(`Verificando estado para video ${id} con uploadId ${video.uploadId}`);
+    
+    // Contador de intentos
+    let attempts = 0;
+    const maxAttempts = 40; // 2 minutos (3s * 40)
     
     const checkStatus = async () => {
       try {
+        attempts++;
+        console.log(`Intento ${attempts}/${maxAttempts}: verificando estado de ${video.uploadId}`);
+        
         const response = await fetch(`/api/mux-asset-status?uploadId=${video.uploadId}`);
         
         if (!response.ok) {
+          console.error('Error en respuesta de verificación:', response.status, response.statusText);
           throw new Error('Error al verificar el estado de la carga');
         }
         
         const data = await response.json();
+        console.log('Estado de la carga:', data);
+        
         let updates: Partial<VideoItem> = { uploadStatus: data.status };
         
         if (data.assetId) {
+          console.log('Asset ID recibido:', data.assetId);
           updates.videoId = data.assetId;
         }
         
         if (data.playbackId) {
+          console.log('Playback ID recibido:', data.playbackId);
           updates.playbackId = data.playbackId;
           updates.uploadProgress = 100;
           updates.isUploading = false;
@@ -211,38 +268,78 @@ export default function NewCoursePage() {
         } else if (data.status === 'asset_created') {
           updates.uploadProgress = 90;
         } else if (data.status === 'preparing') {
-          updates.uploadProgress = 60;
+          updates.uploadProgress = 80;
         } else if (data.status === 'ready') {
-          updates.uploadProgress = 30;
+          updates.uploadProgress = 70;
         }
         
         updateVideo(id, updates);
+        
+        // Si ya intentamos demasiadas veces, detener
+        if (attempts >= maxAttempts) {
+          console.warn(`Máximo de intentos (${maxAttempts}) alcanzado para el video ${id}`);
+          updateVideo(id, {
+            error: 'Tiempo de espera agotado para la creación del asset',
+            isUploading: false
+          });
+          return true;
+        }
+        
         return false; // Carga no completada
       } catch (error) {
-        console.error(`Error al verificar estado del video ${id}:`, error);
+        console.error(`Error al verificar estado del video ${id} (intento ${attempts}):`, error);
+        
+        // Si ya intentamos demasiadas veces, detener
+        if (attempts >= maxAttempts) {
+          updateVideo(id, {
+            error: 'Demasiados errores al verificar el estado',
+            isUploading: false
+          });
+          return true;
+        }
+        
         return false;
       }
     };
     
-    // Verificar cada 3 segundos hasta que se complete o haya un error
-    const interval = setInterval(async () => {
-      const completed = await checkStatus();
-      if (completed) {
+    // Función que maneja el intervalo de verificación
+    const startStatusCheck = () => {
+      console.log(`Iniciando verificación periódica para video ${id}`);
+      
+      const intervalCheck = async () => {
+        const completed = await checkStatus();
+        
+        if (completed) {
+          console.log(`Verificación completada para video ${id}, deteniendo intervalo`);
+          clearInterval(interval);
+        }
+      };
+      
+      // Verificar inmediatamente la primera vez
+      intervalCheck();
+      
+      // Luego, verificar cada 3 segundos
+      const interval = setInterval(intervalCheck, 3000);
+      
+      // Configurar un timeout global como respaldo
+      setTimeout(() => {
+        console.log(`Timeout global alcanzado para video ${id}`);
         clearInterval(interval);
-      }
-    }, 3000);
+        
+        // Verificar si el video ya tiene playbackId
+        const currentVideo = videos.find(v => v.id === id);
+        if (currentVideo && !currentVideo.playbackId && currentVideo.isUploading) {
+          console.warn(`El video ${id} no completó el proceso en el tiempo máximo`);
+          updateVideo(id, { 
+            error: 'Tiempo de espera agotado para la creación del asset',
+            isUploading: false
+          });
+        }
+      }, 120000); // 2 minutos
+    };
     
-    // Timeout después de 2 minutos
-    setTimeout(() => {
-      clearInterval(interval);
-      const currentVideo = videos.find(v => v.id === id);
-      if (currentVideo && !currentVideo.playbackId) {
-        updateVideo(id, { 
-          error: 'Tiempo de espera agotado para la creación del asset',
-          isUploading: false
-        });
-      }
-    }, 120000);
+    // Iniciar la verificación
+    startStatusCheck();
   };
 
   // Funciones para gestionar ejercicios PDF
@@ -1092,12 +1189,14 @@ export default function NewCoursePage() {
                               ></div>
                             </div>
                             <p className="mt-1 text-sm text-gray-600">
-                              {video.uploadStatus === 'waiting' ? 'Subiendo archivo...' : 
-                               video.uploadStatus === 'asset_created' ? 'Procesando video...' :
-                               video.uploadStatus === 'ready' ? 'Finalizando...' :
-                               video.uploadStatus === 'preparing' ? 'Preparando video...' :
-                               video.uploadStatus === 'error' ? 'Error en la carga' :
-                               `Estado: ${video.uploadStatus || 'preparando'}`} {video.uploadProgress}%
+                              {video.uploadProgress < 70 ? (
+                                `Subiendo archivo... ${video.uploadProgress}%`
+                               ) : video.uploadStatus === 'waiting' ? 'Esperando procesamiento...' :
+                                 video.uploadStatus === 'asset_created' ? 'Procesando video...' :
+                                 video.uploadStatus === 'ready' ? 'Finalizando...' :
+                                 video.uploadStatus === 'preparing' ? 'Preparando video...' :
+                                 video.uploadStatus === 'error' ? 'Error en la carga' :
+                                 `Estado: ${video.uploadStatus || 'procesando'}`}
                             </p>
                           </div>
                         )}
