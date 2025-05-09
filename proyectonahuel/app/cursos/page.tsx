@@ -1,4 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
+import mongoose from 'mongoose';
+import User from "@/models/User";
 import Course from "@/models/Course";
 import CourseCard from "@/components/CourseCard";
 
@@ -24,6 +26,7 @@ interface CourseType {
 async function getCourses(): Promise<CourseType[]> {
   try {
     await connectDB();
+    console.log('Modelos registrados:', Object.keys(mongoose.models).join(', '));
     const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
     
     return courses.map((course: any) => ({

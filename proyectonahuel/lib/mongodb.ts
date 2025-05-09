@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+// Importar todos los modelos para asegurar que se registren antes de usarlos
+import '../models/User';
+import '../models/Course';
+
 let isConnected = false;
 
 export const connectDB = async () => {
