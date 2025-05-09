@@ -5,6 +5,33 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+// Interfaces para videos y ejercicios
+interface VideoItem {
+  id: string;
+  title: string;
+  description: string;
+  videoFile: File | null;
+  videoId: string | null;
+  playbackId: string | null;
+  uploadId: string | null;
+  uploadStatus: string | null;
+  uploadProgress: number;
+  isUploading: boolean;
+  error: string | null;
+  order: number;
+}
+
+interface ExerciseItem {
+  id: string;
+  title: string;
+  description: string;
+  pdfFile: File | null;
+  fileData: any | null;
+  isUploading: boolean;
+  error: string | null;
+  order: number;
+}
+
 export default function NewCoursePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -43,6 +70,261 @@ export default function NewCoursePage() {
   const [introAssetId, setIntroAssetId] = useState<string | null>(null);
   const [introPlaybackId, setIntroPlaybackId] = useState<string | null>(null);
   const [introUploadStatus, setIntroUploadStatus] = useState<string | null>(null);
+  
+  // Estados para videos adicionales
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [activeVideoTab, setActiveVideoTab] = useState<string | null>(null);
+  
+  // Estados para ejercicios PDF
+  const [exercises, setExercises] = useState<ExerciseItem[]>([]);
+  const [activeExerciseTab, setActiveExerciseTab] = useState<string | null>(null);
+  
+  // Funciones para gestionar videos adicionales
+  const addVideo = () => {
+    const newId = `video-${Date.now()}`;
+    const newVideo: VideoItem = {
+      id: newId,
+      title: '',
+      description: '',
+      videoFile: null,
+      videoId: null,
+      playbackId: null,
+      uploadId: null,
+      uploadStatus: null,
+      uploadProgress: 0,
+      isUploading: false,
+      error: null,
+      order: videos.length
+    };
+    setVideos([...videos, newVideo]);
+    setActiveVideoTab(newId);
+  };
+
+  const updateVideo = (id: string, updates: Partial<VideoItem>) => {
+    setVideos(videos.map(video => 
+      video.id === id ? { ...video, ...updates } : video
+    ));
+  };
+
+  const removeVideo = (id: string) => {
+    setVideos(videos.filter(video => video.id !== id));
+    if (activeVideoTab === id) {
+      setActiveVideoTab(videos.length > 1 ? videos[0].id : null);
+    }
+  };
+
+  const handleVideoFileChange = (id: string, file: File | null) => {
+    if (file) {
+      updateVideo(id, { videoFile: file });
+    }
+  };
+
+  const uploadVideoFile = async (id: string) => {
+    const video = videos.find(v => v.id === id);
+    if (!video || !video.videoFile) return;
+    
+    updateVideo(id, { 
+      isUploading: true, 
+      uploadProgress: 0,
+      error: null
+    });
+    
+    try {
+      // 1. Solicitar una URL de carga directa
+      const directUploadResponse = await fetch('/api/mux-direct-upload', {
+        method: 'POST',
+      });
+      
+      if (!directUploadResponse.ok) {
+        const errorData = await directUploadResponse.json();
+        throw new Error(errorData.error || 'Error al obtener URL de carga');
+      }
+      
+      const directUploadData = await directUploadResponse.json();
+      updateVideo(id, { 
+        uploadId: directUploadData.uploadId,
+        uploadProgress: 10
+      });
+      
+      // 2. Subir el archivo directamente a MUX
+      const uploadResponse = await fetch(directUploadData.uploadUrl, {
+        method: 'PUT',
+        body: video.videoFile,
+        headers: {
+          'Content-Type': video.videoFile.type,
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Error al subir el archivo a MUX');
+      }
+      
+      updateVideo(id, { 
+        uploadProgress: 30,
+        uploadStatus: 'waiting'
+      });
+      
+      // 3. Iniciar verificación de estado
+      checkVideoUploadStatus(id);
+      
+    } catch (error) {
+      console.error(`Error al subir video ${id}:`, error);
+      if (error instanceof Error) {
+        updateVideo(id, { 
+          error: error.message,
+          isUploading: false
+        });
+      } else {
+        updateVideo(id, { 
+          error: 'Error al subir el video',
+          isUploading: false
+        });
+      }
+    }
+  };
+
+  const checkVideoUploadStatus = async (id: string) => {
+    const video = videos.find(v => v.id === id);
+    if (!video || !video.uploadId) return;
+    
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`/api/mux-asset-status?uploadId=${video.uploadId}`);
+        
+        if (!response.ok) {
+          throw new Error('Error al verificar el estado de la carga');
+        }
+        
+        const data = await response.json();
+        let updates: Partial<VideoItem> = { uploadStatus: data.status };
+        
+        if (data.assetId) {
+          updates.videoId = data.assetId;
+        }
+        
+        if (data.playbackId) {
+          updates.playbackId = data.playbackId;
+          updates.uploadProgress = 100;
+          updates.isUploading = false;
+          updateVideo(id, updates);
+          return true; // Carga completa
+        } else if (data.status === 'asset_created') {
+          updates.uploadProgress = 90;
+        } else if (data.status === 'preparing') {
+          updates.uploadProgress = 60;
+        } else if (data.status === 'ready') {
+          updates.uploadProgress = 30;
+        }
+        
+        updateVideo(id, updates);
+        return false; // Carga no completada
+      } catch (error) {
+        console.error(`Error al verificar estado del video ${id}:`, error);
+        return false;
+      }
+    };
+    
+    // Verificar cada 3 segundos hasta que se complete o haya un error
+    const interval = setInterval(async () => {
+      const completed = await checkStatus();
+      if (completed) {
+        clearInterval(interval);
+      }
+    }, 3000);
+    
+    // Timeout después de 2 minutos
+    setTimeout(() => {
+      clearInterval(interval);
+      const currentVideo = videos.find(v => v.id === id);
+      if (currentVideo && !currentVideo.playbackId) {
+        updateVideo(id, { 
+          error: 'Tiempo de espera agotado para la creación del asset',
+          isUploading: false
+        });
+      }
+    }, 120000);
+  };
+
+  // Funciones para gestionar ejercicios PDF
+  const addExercise = () => {
+    const newId = `exercise-${Date.now()}`;
+    const newExercise: ExerciseItem = {
+      id: newId,
+      title: '',
+      description: '',
+      pdfFile: null,
+      fileData: null,
+      isUploading: false,
+      error: null,
+      order: exercises.length
+    };
+    setExercises([...exercises, newExercise]);
+    setActiveExerciseTab(newId);
+  };
+
+  const updateExercise = (id: string, updates: Partial<ExerciseItem>) => {
+    setExercises(exercises.map(exercise => 
+      exercise.id === id ? { ...exercise, ...updates } : exercise
+    ));
+  };
+
+  const removeExercise = (id: string) => {
+    setExercises(exercises.filter(exercise => exercise.id !== id));
+    if (activeExerciseTab === id) {
+      setActiveExerciseTab(exercises.length > 1 ? exercises[0].id : null);
+    }
+  };
+
+  const handlePdfFileChange = (id: string, file: File | null) => {
+    if (file) {
+      updateExercise(id, { pdfFile: file });
+    }
+  };
+
+  const uploadPdfFile = async (id: string) => {
+    const exercise = exercises.find(e => e.id === id);
+    if (!exercise || !exercise.pdfFile) return;
+    
+    updateExercise(id, { 
+      isUploading: true,
+      error: null
+    });
+    
+    try {
+      const formData = new FormData();
+      formData.append('pdf', exercise.pdfFile);
+      
+      const response = await fetch('/api/upload-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al subir el PDF');
+      }
+      
+      const data = await response.json();
+      updateExercise(id, { 
+        fileData: data.fileData,
+        isUploading: false
+      });
+      
+    } catch (error) {
+      console.error(`Error al subir PDF ${id}:`, error);
+      if (error instanceof Error) {
+        updateExercise(id, { 
+          error: error.message,
+          isUploading: false
+        });
+      } else {
+        updateExercise(id, { 
+          error: 'Error al subir el PDF',
+          isUploading: false
+        });
+      }
+    }
+  };
   
   // Verificar el estado de la carga del video principal
   useEffect(() => {
@@ -383,6 +665,36 @@ export default function NewCoursePage() {
       return;
     }
     
+    // Validar videos adicionales
+    for (const video of videos) {
+      if (!video.title.trim()) {
+        setError(`El título del video "${video.id}" es obligatorio`);
+        setActiveVideoTab(video.id);
+        return;
+      }
+      
+      if (!video.playbackId) {
+        setError(`Debe subir el archivo de video para "${video.title}"`);
+        setActiveVideoTab(video.id);
+        return;
+      }
+    }
+    
+    // Validar ejercicios
+    for (const exercise of exercises) {
+      if (!exercise.title.trim()) {
+        setError(`El título del ejercicio "${exercise.id}" es obligatorio`);
+        setActiveExerciseTab(exercise.id);
+        return;
+      }
+      
+      if (!exercise.fileData) {
+        setError(`Debe subir el archivo PDF para "${exercise.title}"`);
+        setActiveExerciseTab(exercise.id);
+        return;
+      }
+    }
+    
     setIsSubmitting(true);
     setError('');
     
@@ -438,6 +750,23 @@ export default function NewCoursePage() {
         }
       }
       
+      // Preparar datos de videos adicionales
+      const videosData = videos.map(video => ({
+        title: video.title,
+        description: video.description,
+        videoId: video.videoId,
+        playbackId: video.playbackId,
+        order: video.order
+      }));
+      
+      // Preparar datos de ejercicios
+      const exercisesData = exercises.map(exercise => ({
+        title: exercise.title,
+        description: exercise.description,
+        fileData: exercise.fileData,
+        order: exercise.order
+      }));
+      
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
@@ -449,7 +778,9 @@ export default function NewCoursePage() {
           price: Number(price),
           videoUrl: finalVideoUrl,
           ...introVideoData,
-          ...thumbnailData
+          ...thumbnailData,
+          videos: videosData,
+          exercises: exercisesData
         }),
       });
       
@@ -622,6 +953,329 @@ export default function NewCoursePage() {
                 <p className="text-sm text-green-700">
                   <span className="font-medium">✓ Imagen lista</span> - Procesada correctamente.
                 </p>
+              </div>
+            )}
+          </div>
+          
+          {/* Sección de videos adicionales */}
+          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Videos del curso</h3>
+              <button
+                type="button"
+                onClick={addVideo}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Añadir video
+              </button>
+            </div>
+            
+            {videos.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
+                <p className="text-gray-500">
+                  No hay videos añadidos. Haz clic en "Añadir video" para comenzar.
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Pestañas de videos */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                    {videos.map((video, index) => (
+                      <button
+                        key={video.id}
+                        onClick={() => setActiveVideoTab(video.id)}
+                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
+                          activeVideoTab === video.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                        type="button"
+                      >
+                        {video.title ? video.title : `Video ${index + 1}`}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+                
+                {/* Contenido de video activo */}
+                {videos.map(video => (
+                  <div
+                    key={video.id}
+                    className={`pt-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}
+                  >
+                    <div className="flex justify-between mb-4">
+                      <h4 className="text-md font-medium text-gray-900">
+                        {video.title ? video.title : 'Nuevo video'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(video.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Título del video */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Título del video*
+                        </label>
+                        <input
+                          type="text"
+                          value={video.title}
+                          onChange={(e) => updateVideo(video.id, { title: e.target.value })}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Título del video"
+                        />
+                      </div>
+                      
+                      {/* Descripción del video */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descripción
+                        </label>
+                        <textarea
+                          value={video.description}
+                          onChange={(e) => updateVideo(video.id, { description: e.target.value })}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Describe de qué trata este video"
+                        />
+                      </div>
+                      
+                      {/* Upload de video */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Archivo de video*
+                        </label>
+                        <div className="mt-1 flex items-center">
+                          <input
+                            type="file"
+                            id={`video-file-${video.id}`}
+                            onChange={(e) => handleVideoFileChange(video.id, e.target.files?.[0] || null)}
+                            accept="video/*"
+                            className="sr-only"
+                            disabled={video.isUploading || !!video.playbackId}
+                          />
+                          <label
+                            htmlFor={`video-file-${video.id}`}
+                            className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                              video.isUploading || !!video.playbackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                          >
+                            <span>{video.playbackId ? 'Video listo' : 'Seleccionar archivo'}</span>
+                          </label>
+                          <span className="ml-3 text-sm text-gray-500">
+                            {video.videoFile ? video.videoFile.name : video.playbackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
+                          </span>
+                          
+                          {!video.isUploading && !video.playbackId && video.videoFile && (
+                            <button
+                              type="button"
+                              onClick={() => uploadVideoFile(video.id)}
+                              className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                            >
+                              Subir ahora
+                            </button>
+                          )}
+                        </div>
+                        
+                        {video.isUploading && (
+                          <div className="mt-2">
+                            <div className="bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                                style={{ width: `${video.uploadProgress}%` }}
+                              ></div>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {video.uploadStatus === 'waiting' ? 'Subiendo archivo...' : 
+                               video.uploadStatus === 'asset_created' ? 'Procesando video...' :
+                               video.uploadStatus === 'ready' ? 'Finalizando...' :
+                               video.uploadStatus === 'preparing' ? 'Preparando video...' :
+                               video.uploadStatus === 'error' ? 'Error en la carga' :
+                               `Estado: ${video.uploadStatus || 'preparando'}`} {video.uploadProgress}%
+                            </p>
+                          </div>
+                        )}
+                        
+                        {video.error && (
+                          <p className="mt-2 text-sm text-red-600">{video.error}</p>
+                        )}
+                        
+                        {video.playbackId && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm text-green-700">
+                              <span className="font-medium">✓ Video listo</span> - Procesado correctamente.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Sección de ejercicios */}
+          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Ejercicios del curso</h3>
+              <button
+                type="button"
+                onClick={addExercise}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Añadir ejercicio
+              </button>
+            </div>
+            
+            {exercises.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
+                <p className="text-gray-500">
+                  No hay ejercicios añadidos. Haz clic en "Añadir ejercicio" para comenzar.
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Pestañas de ejercicios */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                    {exercises.map((exercise, index) => (
+                      <button
+                        key={exercise.id}
+                        onClick={() => setActiveExerciseTab(exercise.id)}
+                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
+                          activeExerciseTab === exercise.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                        type="button"
+                      >
+                        {exercise.title ? exercise.title : `Ejercicio ${index + 1}`}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+                
+                {/* Contenido de ejercicio activo */}
+                {exercises.map(exercise => (
+                  <div
+                    key={exercise.id}
+                    className={`pt-4 ${activeExerciseTab === exercise.id ? 'block' : 'hidden'}`}
+                  >
+                    <div className="flex justify-between mb-4">
+                      <h4 className="text-md font-medium text-gray-900">
+                        {exercise.title ? exercise.title : 'Nuevo ejercicio'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(exercise.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Título del ejercicio */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Título del ejercicio*
+                        </label>
+                        <input
+                          type="text"
+                          value={exercise.title}
+                          onChange={(e) => updateExercise(exercise.id, { title: e.target.value })}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Título del ejercicio"
+                        />
+                      </div>
+                      
+                      {/* Descripción del ejercicio */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descripción
+                        </label>
+                        <textarea
+                          value={exercise.description}
+                          onChange={(e) => updateExercise(exercise.id, { description: e.target.value })}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Describe de qué trata este ejercicio"
+                        />
+                      </div>
+                      
+                      {/* Upload de PDF */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Archivo PDF*
+                        </label>
+                        <div className="mt-1 flex items-center">
+                          <input
+                            type="file"
+                            id={`pdf-file-${exercise.id}`}
+                            onChange={(e) => handlePdfFileChange(exercise.id, e.target.files?.[0] || null)}
+                            accept="application/pdf"
+                            className="sr-only"
+                            disabled={exercise.isUploading || !!exercise.fileData}
+                          />
+                          <label
+                            htmlFor={`pdf-file-${exercise.id}`}
+                            className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                              exercise.isUploading || !!exercise.fileData ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                          >
+                            <span>{exercise.fileData ? 'PDF listo' : 'Seleccionar archivo'}</span>
+                          </label>
+                          <span className="ml-3 text-sm text-gray-500">
+                            {exercise.pdfFile ? exercise.pdfFile.name : exercise.fileData ? 'PDF procesado correctamente' : 'Ningún archivo seleccionado'}
+                          </span>
+                          
+                          {!exercise.isUploading && !exercise.fileData && exercise.pdfFile && (
+                            <button
+                              type="button"
+                              onClick={() => uploadPdfFile(exercise.id)}
+                              className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                            >
+                              Subir ahora
+                            </button>
+                          )}
+                        </div>
+                        
+                        {exercise.isUploading && (
+                          <div className="mt-2">
+                            <div className="bg-gray-200 rounded-full h-2.5">
+                              <div 
+                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                                style={{ width: '100%' }}
+                              ></div>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">
+                              Procesando PDF...
+                            </p>
+                          </div>
+                        )}
+                        
+                        {exercise.error && (
+                          <p className="mt-2 text-sm text-red-600">{exercise.error}</p>
+                        )}
+                        
+                        {exercise.fileData && (
+                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm text-green-700">
+                              <span className="font-medium">✓ PDF listo</span> - {exercise.fileData.name || 'Procesado correctamente'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

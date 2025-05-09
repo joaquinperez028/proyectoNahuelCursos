@@ -1,5 +1,48 @@
 import mongoose, { Schema, models } from 'mongoose';
 
+const VideoSchema = new Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String
+  },
+  videoId: {
+    type: String,
+    required: true
+  },
+  playbackId: {
+    type: String,
+    required: true
+  },
+  duration: {
+    type: Number
+  },
+  order: {
+    type: Number,
+    default: 0
+  }
+});
+
+const ExerciseSchema = new Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String
+  },
+  fileData: {
+    data: Buffer,
+    contentType: String
+  },
+  order: {
+    type: Number,
+    default: 0
+  }
+});
+
 const CourseSchema = new Schema({
   title: {
     type: String,
@@ -34,6 +77,8 @@ const CourseSchema = new Schema({
     data: Buffer,
     contentType: String,
   },
+  videos: [VideoSchema],
+  exercises: [ExerciseSchema],
   duration: {
     type: Number,
   },

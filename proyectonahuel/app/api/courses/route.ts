@@ -105,6 +105,43 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Agregar videos adicionales si existen
+    if (data.videos && Array.isArray(data.videos) && data.videos.length > 0) {
+      courseData.videos = data.videos.map((video: any) => ({
+        title: video.title,
+        description: video.description || '',
+        videoId: video.videoId,
+        playbackId: video.playbackId,
+        order: video.order || 0
+      }));
+    } else {
+      courseData.videos = [];
+    }
+    
+    // Agregar ejercicios si existen
+    if (data.exercises && Array.isArray(data.exercises) && data.exercises.length > 0) {
+      courseData.exercises = data.exercises.map((exercise: any) => {
+        // Crear objeto de ejercicio
+        const exerciseData: any = {
+          title: exercise.title,
+          description: exercise.description || '',
+          order: exercise.order || 0
+        };
+        
+        // Agregar datos del archivo PDF si existen
+        if (exercise.fileData) {
+          exerciseData.fileData = {
+            data: Buffer.from(exercise.fileData.data, 'base64'),
+            contentType: exercise.fileData.contentType
+          };
+        }
+        
+        return exerciseData;
+      });
+    } else {
+      courseData.exercises = [];
+    }
+    
     // Crear el curso en la base de datos
     const newCourse = await Course.create(courseData);
     
