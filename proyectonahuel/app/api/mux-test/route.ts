@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 
-// Importamos MuxClient de la manera correcta
-const Mux = require('@mux/mux-node');
+// Importamos Mux de la manera correcta para v7.3.1
+import Mux from '@mux/mux-node';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest) {
     console.log('MUX_TOKEN_ID:', process.env.MUX_TOKEN_ID);
     console.log('MUX_TOKEN_SECRET está definido:', !!process.env.MUX_TOKEN_SECRET);
 
-    // Inicializar cliente de MUX según la documentación oficial
-    const muxClient = new Mux.Video(
-      process.env.MUX_TOKEN_ID, 
-      process.env.MUX_TOKEN_SECRET
+    // Inicializar cliente MUX para v7.3.1
+    const muxClient = new Mux(
+      process.env.MUX_TOKEN_ID || '',
+      process.env.MUX_TOKEN_SECRET || ''
     );
     
     // Probar la conexión listando los primeros 5 assets
-    const assets = await muxClient.Assets.list({ limit: 5 });
+    const assets = await muxClient.Video.Assets.list({ limit: 5 });
     
     return NextResponse.json({ 
       success: true,

@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import * as crypto from "crypto";
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 
-// Importamos MuxClient de la manera correcta
-const Mux = require('@mux/mux-node');
+// Importamos Mux de la manera correcta para v7.3.1
+import Mux from '@mux/mux-node';
 
 export async function POST(request: NextRequest) {
+  // Creamos un archivo temporal para guardar el video
+  let tempFilePath: string | null = null;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -18,10 +24,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Inicializar cliente de MUX según la documentación oficial
-    const muxClient = new Mux.Video(
-      process.env.MUX_TOKEN_ID,
-      process.env.MUX_TOKEN_SECRET
+    // Inicializar cliente MUX para v7.3.1
+    const muxClient = new Mux(
+      process.env.MUX_TOKEN_ID || '',
+      process.env.MUX_TOKEN_SECRET || ''
     );
 
     // Procesar la solicitud como formData
@@ -43,15 +49,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear un asset directo en MUX
-    const asset = await muxClient.Assets.create({
-      input: [{
-        type: 'file',
-        contents: Buffer.from(await file.arrayBuffer()),
-      }],
+    console.log("Iniciando subida de archivo a MUX...");
+    
+    // Guardar el archivo temporalmente
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const tempDir = os.tmpdir();
+    const uniqueId = crypto.randomUUID();
+    const fileExt = file.name.split('.').pop() || 'mp4';
+    tempFilePath = path.join(tempDir, `${uniqueId}.${fileExt}`);
+    
+    await fs.writeFile(tempFilePath, buffer);
+    console.log(`Archivo guardado temporalmente en: ${tempFilePath}`);
+    
+    // Crear un asset en MUX usando una URL directa
+    const asset = await muxClient.Video.Assets.create({
+      input: tempFilePath,
       playback_policy: ['public'],
     });
 
+    console.log("Asset creado en MUX:", asset);
+    
     // Devolver el ID del asset de MUX
     return NextResponse.json({ 
       success: true, 
@@ -64,5 +81,15 @@ export async function POST(request: NextRequest) {
       { error: "Error al procesar el archivo en MUX" },
       { status: 500 }
     );
+  } finally {
+    // Limpieza: eliminar el archivo temporal si existe
+    if (tempFilePath) {
+      try {
+        await fs.unlink(tempFilePath);
+        console.log(`Archivo temporal eliminado: ${tempFilePath}`);
+      } catch (err) {
+        console.error("Error al eliminar archivo temporal:", err);
+      }
+    }
   }
 } 
