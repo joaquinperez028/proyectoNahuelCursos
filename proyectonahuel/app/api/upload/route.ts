@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import { join } from "path";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import * as crypto from "crypto";
 
-// Directorio donde se guardarán los archivos temporalmente
-const uploadDir = join(process.cwd(), "public", "uploads");
+// Importación correcta del SDK de MUX
+const Mux = require('@mux/mux-node');
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +17,12 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Inicializar cliente de MUX con las credenciales de entorno
+    const { Video } = new Mux(
+      process.env.MUX_TOKEN_ID,
+      process.env.MUX_TOKEN_SECRET
+    );
 
     // Procesar la solicitud como formData
     const formData = await request.formData();
@@ -39,27 +43,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear un nombre de archivo único para evitar colisiones
-    const fileExtension = file.name.split(".").pop();
-    const uniqueId = crypto.randomUUID();
-    const fileName = `${uniqueId}.${fileExtension}`;
-    const filePath = join(uploadDir, fileName);
+    // Crear un asset directo en MUX
+    const asset = await Video.Assets.create({
+      input: [{
+        type: 'file',
+        contents: Buffer.from(await file.arrayBuffer()),
+      }],
+      playback_policy: ['public'],
+    });
 
-    // Convertir el archivo a ArrayBuffer y luego a Buffer para guardarlo
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, fileBuffer);
-
-    // Devolver la URL del archivo subido
-    const fileUrl = `/uploads/${fileName}`;
-
+    // Devolver el ID del asset de MUX
     return NextResponse.json({ 
       success: true, 
-      fileUrl 
+      muxAssetId: asset.id,
+      playbackId: asset.playback_ids?.[0]?.id
     });
   } catch (error) {
-    console.error("Error al subir archivo:", error);
+    console.error("Error al subir archivo a MUX:", error);
     return NextResponse.json(
-      { error: "Error al procesar el archivo" },
+      { error: "Error al procesar el archivo en MUX" },
       { status: 500 }
     );
   }

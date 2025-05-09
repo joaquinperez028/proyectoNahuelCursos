@@ -1,88 +1,120 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import MakeAdminButton from "@/components/MakeAdminButton";
-import Image from "next/image";
+'use client';
 
-export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 
-  // Redirigir a inicio de sesión si no hay sesión
-  if (!session) {
-    redirect('/login');
+export default function PerfilPage() {
+  const { data: session, status } = useSession();
+  const [muxStatus, setMuxStatus] = useState<{
+    loading: boolean;
+    result: any | null;
+    error: string | null;
+  }>({
+    loading: false,
+    result: null,
+    error: null
+  });
+
+  const verificarMux = async () => {
+    setMuxStatus({
+      loading: true,
+      result: null,
+      error: null
+    });
+
+    try {
+      const response = await fetch('/api/mux-test');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al verificar MUX');
+      }
+      
+      setMuxStatus({
+        loading: false,
+        result: data,
+        error: null
+      });
+    } catch (error) {
+      setMuxStatus({
+        loading: false,
+        result: null,
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      });
+    }
+  };
+
+  if (status === 'loading') {
+    return <div className="min-h-screen flex justify-center items-center">Cargando...</div>;
+  }
+
+  if (status === 'unauthenticated') {
+    return <div>Debes iniciar sesión para ver tu perfil.</div>;
   }
 
   return (
     <div className="py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Mi Perfil</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Perfil de Usuario</h1>
         
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* Header del perfil */}
-          <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center space-x-4">
-              {session.user.image ? (
-                <Image
-                  src={session.user.image}
-                  alt={session.user.name || "Usuario"}
-                  width={64}
-                  height={64}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl font-semibold">
-                  {session.user.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-              )}
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{session.user.name}</h2>
-                <p className="text-gray-600">{session.user.email}</p>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    session.user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {session.user.role === 'admin' ? 'Administrador' : 'Usuario'}
-                  </span>
-                </div>
-              </div>
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Información Personal</h2>
+            <div className="border-t border-gray-200 pt-3">
+              <p className="mb-2"><span className="font-medium">Nombre:</span> {session?.user?.name || 'No disponible'}</p>
+              <p className="mb-2"><span className="font-medium">Email:</span> {session?.user?.email || 'No disponible'}</p>
+              <p className="mb-2">
+                <span className="font-medium">Rol:</span> 
+                <span className={session?.user?.role === 'admin' ? 'text-green-600 font-semibold' : ''}> 
+                  {session?.user?.role === 'admin' ? 'Administrador' : 'Usuario'}
+                </span>
+              </p>
             </div>
           </div>
           
-          {/* Contenido del perfil */}
-          <div className="px-6 py-5 sm:px-8 sm:py-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Información de la cuenta</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Información básica sobre tu cuenta y preferencias.
-                </p>
-              </div>
+          {session?.user?.role === 'admin' && (
+            <div className="mb-6 border-t border-gray-200 pt-4">
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">Herramientas de Administrador</h2>
               
-              <div className="border-t border-gray-200 pt-5">
-                <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                  <div className="sm:col-span-1">
-                    <dt className="text-sm font-medium text-gray-500">Nombre completo</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{session.user.name}</dd>
+              <div className="mt-4">
+                <button
+                  onClick={verificarMux}
+                  disabled={muxStatus.loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+                >
+                  {muxStatus.loading ? 'Verificando...' : 'Verificar conexión con MUX'}
+                </button>
+                
+                {muxStatus.error && (
+                  <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500">
+                    <p className="text-red-700">Error: {muxStatus.error}</p>
                   </div>
-                  <div className="sm:col-span-1">
-                    <dt className="text-sm font-medium text-gray-500">Correo electrónico</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{session.user.email}</dd>
+                )}
+                
+                {muxStatus.result && (
+                  <div className="mt-4 p-4 bg-green-50 border-l-4 border-green-500">
+                    <h3 className="font-semibold text-green-800 mb-2">¡Conexión exitosa!</h3>
+                    <p className="mb-2">Total de assets en MUX: {muxStatus.result.totalAssets}</p>
+                    
+                    {muxStatus.result.assets.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-green-800 mt-3 mb-2">Assets recientes:</h4>
+                        <ul className="pl-5 list-disc">
+                          {muxStatus.result.assets.map((asset: any) => (
+                            <li key={asset.id} className="mb-1">
+                              <span className="font-medium">ID:</span> {asset.id}{' '}
+                              <span className="font-medium ml-2">Estado:</span> {asset.status}{' '}
+                              <span className="font-medium ml-2">Creado:</span> {new Date(asset.createdAt).toLocaleString()}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
-                  <div className="sm:col-span-1">
-                    <dt className="text-sm font-medium text-gray-500">Rol</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{session.user.role === 'admin' ? 'Administrador' : 'Usuario'}</dd>
-                  </div>
-                  <div className="sm:col-span-1">
-                    <dt className="text-sm font-medium text-gray-500">ID de usuario</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{session.user.id || 'No disponible'}</dd>
-                  </div>
-                </dl>
+                )}
               </div>
-              
-              {/* Botón para convertirse en administrador */}
-              <MakeAdminButton />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

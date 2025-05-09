@@ -59,7 +59,14 @@ export default function NewCoursePage() {
       
       const data = await response.json();
       setUploadProgress(100);
-      return data.fileUrl;
+      
+      // Ahora MUX devuelve el muxAssetId y playbackId
+      // Construimos la URL de MUX para reproducción
+      if (data.playbackId) {
+        return `https://stream.mux.com/${data.playbackId}.m3u8`;
+      } else {
+        throw new Error('No se pudo obtener el ID de reproducción de MUX');
+      }
     } catch (error) {
       console.error('Error al subir archivo:', error);
       if (error instanceof Error) {
@@ -106,16 +113,16 @@ export default function NewCoursePage() {
     setError('');
     
     try {
-      // Si el método es por archivo, subir primero el archivo
+      // Si el método es por archivo, subir primero el archivo a MUX
       let finalVideoUrl = videoUrl;
       
       if (uploadMethod === 'file') {
         const uploadedFileUrl = await uploadFile();
         if (!uploadedFileUrl) {
-          throw new Error('Error al subir el archivo de video');
+          throw new Error('Error al subir el archivo de video a MUX');
         }
-        // Usar la URL del archivo subido
-        finalVideoUrl = `${window.location.origin}${uploadedFileUrl}`;
+        // Usar la URL del archivo subido en MUX
+        finalVideoUrl = uploadedFileUrl;
       }
       
       const response = await fetch('/api/courses', {
@@ -246,10 +253,10 @@ export default function NewCoursePage() {
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://storage.example.com/video.mp4"
+                  placeholder="https://example.com/video.mp4"
                 />
                 <p className="mt-1 text-sm text-gray-500">
-                  URL pública del video del curso. El sistema creará el asset en MUX automáticamente.
+                  Ingresa una URL pública accesible del video. Se procesará a través de MUX para streaming adaptativo.
                 </p>
               </div>
             ) : (
@@ -284,11 +291,14 @@ export default function NewCoursePage() {
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">Subiendo: {uploadProgress}%</p>
+                    <p className="mt-1 text-sm text-gray-600">Subiendo a MUX: {uploadProgress}%</p>
                   </div>
                 )}
                 <p className="mt-1 text-sm text-gray-500">
-                  Sube un archivo de video. Formatos admitidos: MP4, MOV, AVI, etc.
+                  Sube un archivo de video. Se procesará a través de MUX para streaming adaptativo.
+                </p>
+                <p className="mt-1 text-xs text-blue-600">
+                  Importante: El procesamiento del video en MUX puede tomar algunos minutos después de la carga.
                 </p>
               </div>
             )}
