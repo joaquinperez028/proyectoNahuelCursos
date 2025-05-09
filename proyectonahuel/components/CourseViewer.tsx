@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
+import FallbackVideoPlayer from './FallbackVideoPlayer';
 
 interface CourseViewerProps {
   playbackId: string;
@@ -11,17 +12,43 @@ interface CourseViewerProps {
 const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [useToken, setUseToken] = useState(true);
+  const [useToken, setUseToken] = useState(!!token);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState(0);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    // Limpiar error al cambiar el playbackId
+    setError(null);
+    setAttempts(0);
+    setUseFallback(false);
+  }, [playbackId]);
+
+  // Reintentar automáticamente una vez si hay error
+  useEffect(() => {
+    if (error && attempts < 1) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setAttempts(prev => prev + 1);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [error, attempts]);
 
   if (!isClient) {
     return (
       <div className="aspect-video bg-gray-200 w-full flex items-center justify-center">
         <p className="text-gray-500">Cargando reproductor...</p>
+      </div>
+    );
+  }
+
+  // Verificar si el playbackId es válido
+  if (!playbackId) {
+    return (
+      <div className="aspect-video bg-gray-200 w-full flex items-center justify-center">
+        <p className="text-red-500">Error: No se proporcionó un ID de reproducción válido</p>
       </div>
     );
   }
@@ -40,8 +67,19 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
     setError(null);
   };
   
+  // Cambiar al reproductor de respaldo
+  const switchToFallback = () => {
+    setUseFallback(true);
+    setError(null);
+  };
+  
   // URL directa para pruebas
   const directUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+
+  // Si estamos en modo fallback, usar el reproductor alternativo
+  if (useFallback) {
+    return <FallbackVideoPlayer src={directUrl} />;
+  }
 
   return (
     <div className="w-full">
@@ -55,7 +93,7 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
               </code>
             )}
             
-            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            <div className="flex flex-wrap justify-center gap-2 mt-4">
               <button 
                 onClick={() => setError(null)} 
                 className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
@@ -68,6 +106,13 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
                 className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
               >
                 Intentar {useToken ? 'sin token' : 'con token'}
+              </button>
+              
+              <button 
+                onClick={switchToFallback} 
+                className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
+              >
+                Usar reproductor alternativo
               </button>
               
               <a 
@@ -97,6 +142,8 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
           muted={false}
           onError={handleError}
           debug={true}
+          defaultHiddenCaptions={true}
+          playbackRates={[0.5, 1, 1.5, 2]}
         />
       )}
     </div>
