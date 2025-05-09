@@ -7,6 +7,8 @@ import CourseViewer from "@/components/CourseViewer";
 import ReviewSection from "@/components/ReviewSection";
 import EnrollSection from "@/components/EnrollSection";
 import { getServerSession } from "next-auth";
+import { Types } from "mongoose";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +20,41 @@ type PageProps = {
   params: Promise<CourseParams>;
 };
 
-async function getUserHasCourse(courseId: string) {
+// Definir interfaces para los datos
+interface CourseType {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  thumbnailUrl?: string;
+  playbackId?: string;
+  videoId?: string;
+  createdBy: {
+    _id: string;
+    name: string;
+  };
+  reviews: ReviewType[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ReviewType {
+  _id: string;
+  rating: number;
+  comment: string;
+  userId: {
+    _id: string;
+    name: string;
+    image?: string;
+  };
+  courseId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+async function getUserHasCourse(courseId: string): Promise<boolean> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return false;
@@ -28,54 +62,70 @@ async function getUserHasCourse(courseId: string) {
     
     await connectDB();
     
-    const user = await User.findOne({ email: session.user.email }).lean();
+    // Usar findOne en lugar de lean para obtener el documento completo
+    const userDoc = await User.findOne({ email: session.user.email });
     
-    if (!user) {
+    if (!userDoc || !userDoc.courses) {
       return false;
     }
     
-    return user.courses.some((id: any) => id.toString() === courseId);
+    // Convertir el array de ObjectId a strings para comparar
+    return userDoc.courses.some((id: any) => 
+      id && typeof id.toString === 'function' && id.toString() === courseId
+    );
   } catch (error) {
     console.error('Error al verificar si el usuario tiene el curso:', error);
     return false;
   }
 }
 
-async function getCourse(id: string) {
+async function getCourse(id: string): Promise<CourseType | null> {
   try {
     await connectDB();
-    const course = await Course.findById(id).populate('createdBy', 'name').lean();
     
-    if (!course) {
+    // Obtener el curso como documento completo
+    const courseDoc = await Course.findById(id).populate('createdBy', 'name');
+    
+    if (!courseDoc) {
       return null;
     }
     
-    const reviews = await Review.find({ courseId: id })
+    // Obtener reseñas
+    const reviewDocs = await Review.find({ courseId: id })
       .populate('userId', 'name image')
-      .sort({ createdAt: -1 })
-      .lean();
+      .sort({ createdAt: -1 });
     
-    return {
-      ...course,
-      _id: course._id.toString(),
+    // Crear objeto con propiedades seguras
+    const course = {
+      _id: courseDoc._id.toString(),
+      title: courseDoc.title || '',
+      description: courseDoc.description || '',
+      price: courseDoc.price || 0,
+      thumbnailUrl: courseDoc.thumbnailUrl || '',
+      playbackId: courseDoc.playbackId || '',
+      videoId: courseDoc.videoId || '',
       createdBy: {
-        ...course.createdBy,
-        _id: course.createdBy._id.toString(),
+        _id: courseDoc.createdBy?._id ? courseDoc.createdBy._id.toString() : '',
+        name: courseDoc.createdBy?.name || ''
       },
-      createdAt: course.createdAt.toISOString(),
-      updatedAt: course.updatedAt.toISOString(),
-      reviews: reviews.map((review: any) => ({
-        ...review,
+      createdAt: courseDoc.createdAt ? new Date(courseDoc.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: courseDoc.updatedAt ? new Date(courseDoc.updatedAt).toISOString() : new Date().toISOString(),
+      reviews: reviewDocs.map(review => ({
         _id: review._id.toString(),
+        rating: review.rating || 0,
+        comment: review.comment || '',
         userId: {
-          ...review.userId,
-          _id: review.userId._id.toString(),
+          _id: review.userId?._id ? review.userId._id.toString() : '',
+          name: review.userId?.name || '',
+          image: review.userId?.image || ''
         },
         courseId: review.courseId.toString(),
-        createdAt: review.createdAt.toISOString(),
-        updatedAt: review.updatedAt.toISOString(),
-      })),
+        createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: review.updatedAt ? new Date(review.updatedAt).toISOString() : new Date().toISOString()
+      }))
     };
+    
+    return course;
   } catch (error) {
     console.error('Error al obtener el curso:', error);
     return null;
@@ -100,7 +150,7 @@ export default async function CoursePage({ params }: PageProps) {
   }
   
   // Generar token para reproducción segura si el usuario ha comprado el curso
-  const token = userHasCourse ? createMuxPlaybackToken(course.playbackId) : null;
+  const token = userHasCourse && course.playbackId ? createMuxPlaybackToken(course.playbackId as string) : null;
   
   return (
     <div className="py-10">
@@ -118,8 +168,8 @@ export default async function CoursePage({ params }: PageProps) {
             
             {/* Vista previa o reproductor completo según si el usuario ha comprado */}
             <div className="mb-8 overflow-hidden rounded-lg shadow-lg">
-              {userHasCourse ? (
-                <CourseViewer playbackId={course.playbackId} token={token as string} />
+              {userHasCourse && course.playbackId && token ? (
+                <CourseViewer playbackId={course.playbackId} token={token} />
               ) : (
                 <div className="relative">
                   <div className="aspect-video w-full bg-black">

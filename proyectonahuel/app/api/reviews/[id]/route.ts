@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth";
 import { connectDB } from "@/lib/mongodb";
 import Review from "@/models/Review";
 import User from "@/models/User";
+import { authOptions } from "../../auth/[...nextauth]/options";
 
 // PUT /api/reviews/[id] - Actualizar una reseña
 export async function PUT(request: NextRequest) {
   const id = request.nextUrl.pathname.split('/').pop();
   
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
@@ -87,7 +88,7 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.pathname.split('/').pop();
   
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado
     if (!session?.user?.email) {

@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongodb";
 import { createMuxAsset } from "@/lib/mux";
 import Course from "@/models/Course";
 import User from "@/models/User";
+import { authOptions } from "../auth/[...nextauth]/options";
 
 // GET /api/courses - Obtener todos los cursos
 export async function GET() {
@@ -28,7 +29,7 @@ export async function GET() {
 // POST /api/courses - Crear un nuevo curso
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado y es admin
     if (!session?.user?.email) {

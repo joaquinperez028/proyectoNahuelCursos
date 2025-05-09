@@ -3,11 +3,13 @@ import { getServerSession } from "next-auth";
 import { connectDB } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import User from "@/models/User";
+import { Types } from "mongoose";
+import { authOptions } from "../auth/[...nextauth]/options";
 
 // POST /api/enroll - Inscribir a un usuario en un curso
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar si el usuario ya está inscrito en el curso
     const alreadyEnrolled = user.courses.some(
-      courseId => courseId.toString() === data.courseId
+      (courseId: Types.ObjectId) => courseId.toString() === data.courseId
     );
     
     if (alreadyEnrolled) {

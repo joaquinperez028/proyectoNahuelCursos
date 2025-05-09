@@ -5,6 +5,7 @@ import { deleteMuxAsset } from "@/lib/mux";
 import Course from "@/models/Course";
 import User from "@/models/User";
 import Review from "@/models/Review";
+import { authOptions } from "../../auth/[...nextauth]/options";
 
 // GET /api/courses/[id] - Obtener un curso específico
 export async function GET(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function PUT(request: NextRequest) {
   const id = request.nextUrl.pathname.split('/').pop();
   
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado y es admin
     if (!session?.user?.email) {
@@ -105,7 +106,7 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.pathname.split('/').pop();
   
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado y es admin
     if (!session?.user?.email) {

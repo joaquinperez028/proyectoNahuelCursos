@@ -4,6 +4,7 @@ import Course from "@/models/Course";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import CourseCard from "@/components/CourseCard";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ interface CourseType {
 
 async function getUserCourses(): Promise<CourseType[] | null> {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return null;
@@ -34,18 +35,19 @@ async function getUserCourses(): Promise<CourseType[] | null> {
     
     await connectDB();
     
-    const user = await User.findOne({ email: session.user.email }).lean();
+    const userDoc = await User.findOne({ email: session.user.email });
     
-    if (!user) {
+    if (!userDoc) {
       return null;
     }
     
+    const courseIds = userDoc.courses || [];
+    
     const courses = await Course.find({
-      _id: { $in: user.courses }
+      _id: { $in: courseIds }
     }).populate('createdBy', 'name').lean();
     
     return courses.map((course: any) => ({
-      ...course,
       _id: course._id ? course._id.toString() : '',
       title: course.title || '',
       description: course.description || '',
@@ -54,7 +56,6 @@ async function getUserCourses(): Promise<CourseType[] | null> {
       playbackId: course.playbackId || '',
       videoId: course.videoId || '',
       createdBy: {
-        ...course.createdBy,
         _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
         name: course.createdBy?.name || ''
       },

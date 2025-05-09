@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
 
 interface CourseViewerProps {
@@ -10,7 +10,6 @@ interface CourseViewerProps {
 
 const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
   const [isClient, setIsClient] = useState(false);
-  const playerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -27,7 +26,6 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
   return (
     <div className="w-full">
       <MuxPlayer
-        ref={playerRef}
         playbackId={playbackId}
         tokens={{ playback: token }}
         metadata={{

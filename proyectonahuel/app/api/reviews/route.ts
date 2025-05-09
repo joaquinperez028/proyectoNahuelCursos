@@ -4,11 +4,13 @@ import { connectDB } from "@/lib/mongodb";
 import Review from "@/models/Review";
 import Course from "@/models/Course";
 import User from "@/models/User";
+import { Types } from "mongoose";
+import { authOptions } from "../auth/[...nextauth]/options";
 
 // POST /api/reviews - Crear una nueva reseña
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar si el usuario ha comprado el curso
     const userHasCourse = user.courses.some(
-      courseId => courseId.toString() === data.courseId
+      (courseId: Types.ObjectId) => courseId.toString() === data.courseId
     );
     
     if (!userHasCourse && user.role !== 'admin') {
