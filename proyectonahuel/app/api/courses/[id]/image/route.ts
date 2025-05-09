@@ -2,20 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import Course from '@/models/Course';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
 export async function GET(
   request: NextRequest,
-  { params }: RouteParams
+  context: { params: { id: string } }
 ) {
   try {
     await connectDB();
     
-    const courseId = params.id;
+    const courseId = context.params.id;
     
     // Buscar el curso
     const course = await Course.findById(courseId);
