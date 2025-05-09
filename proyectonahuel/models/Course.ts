@@ -21,6 +21,12 @@ const CourseSchema = new Schema({
     type: String,
     required: true,
   },
+  introVideoId: {
+    type: String,
+  },
+  introPlaybackId: {
+    type: String,
+  },
   thumbnailUrl: {
     type: String,
   },

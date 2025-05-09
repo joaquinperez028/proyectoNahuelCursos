@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Crear el curso en la base de datos
-    const newCourse = await Course.create({
+    // Preparar datos del curso
+    const courseData: any = {
       title: data.title,
       description: data.description,
       price: data.price,
@@ -80,7 +80,21 @@ export async function POST(request: NextRequest) {
       thumbnailUrl: `https://image.mux.com/${playbackId}/thumbnail.jpg`,
       createdBy: user._id,
       reviews: [],
-    });
+    };
+    
+    // Agregar datos del video de introducción si están disponibles
+    if (data.introPlaybackId) {
+      courseData.introVideoId = data.introVideoId || '';
+      courseData.introPlaybackId = data.introPlaybackId;
+      
+      // Si no hay una miniatura específica, usar un fotograma del video de introducción
+      if (!courseData.thumbnailUrl) {
+        courseData.thumbnailUrl = `https://image.mux.com/${data.introPlaybackId}/thumbnail.jpg`;
+      }
+    }
+    
+    // Crear el curso en la base de datos
+    const newCourse = await Course.create(courseData);
     
     await newCourse.populate('createdBy', 'name');
     

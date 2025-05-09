@@ -1,8 +1,10 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
+import MuxPlayer from '@/app/components/MuxPlayer';
 
 interface CourseCardProps {
   course: {
@@ -12,6 +14,7 @@ interface CourseCardProps {
     price: number;
     thumbnailUrl: string;
     playbackId: string;
+    introPlaybackId?: string;
     createdBy: {
       _id: string;
       name: string;
@@ -23,16 +26,51 @@ interface CourseCardProps {
 const CourseCard = ({ course }: CourseCardProps) => {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === 'admin';
+  const [isHovered, setIsHovered] = useState(false);
+  const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Calcular la puntuación media si hay reseñas
   const averageRating = course.reviews && course.reviews.length > 0
     ? course.reviews.reduce((acc, review: any) => acc + review.rating, 0) / course.reviews.length
     : 0;
 
+  // Gestionar reproducción del video con delay al hacer hover
+  useEffect(() => {
+    if (isHovered) {
+      timerRef.current = setTimeout(() => {
+        setShouldPlayVideo(true);
+      }, 800); // Retrasar 800ms para evitar reproducciones accidentales
+    } else {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      setShouldPlayVideo(false);
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [isHovered]);
+
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-full">
-      <div className="relative aspect-video w-full">
-        {course.thumbnailUrl ? (
+      <div 
+        className="relative aspect-video w-full"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Mostrar el video de introducción si existe y está en hover */}
+        {course.introPlaybackId && shouldPlayVideo ? (
+          <div className="w-full h-full">
+            <MuxPlayer 
+              playbackId={course.introPlaybackId} 
+              title={course.title}
+            />
+          </div>
+        ) : course.thumbnailUrl ? (
           <Image
             src={course.thumbnailUrl}
             alt={course.title}
@@ -42,6 +80,17 @@ const CourseCard = ({ course }: CourseCardProps) => {
         ) : (
           <div className="bg-gray-200 w-full h-full flex items-center justify-center">
             <span className="text-gray-500">Sin imagen</span>
+          </div>
+        )}
+        
+        {/* Botón de reproducción */}
+        {course.introPlaybackId && !shouldPlayVideo && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-blue-600 bg-opacity-80 rounded-full p-3 hover:bg-opacity-90 transition-opacity">
+              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M4 4l12 6-12 6z" />
+              </svg>
+            </div>
           </div>
         )}
       </div>

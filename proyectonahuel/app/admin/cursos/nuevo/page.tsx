@@ -8,6 +8,7 @@ export default function NewCoursePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const introFileInputRef = useRef<HTMLInputElement>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,13 +21,22 @@ export default function NewCoursePage() {
   const [error, setError] = useState('');
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   
-  // Nuevos estados para la carga directa
+  // Estados para la carga directa del video principal
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [assetId, setAssetId] = useState<string | null>(null);
   const [playbackId, setPlaybackId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   
-  // Verificar el estado de la carga
+  // Estados para el video de introducción
+  const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
+  const [introUploadProgress, setIntroUploadProgress] = useState(0);
+  const [isIntroUploading, setIsIntroUploading] = useState(false);
+  const [introUploadId, setIntroUploadId] = useState<string | null>(null);
+  const [introAssetId, setIntroAssetId] = useState<string | null>(null);
+  const [introPlaybackId, setIntroPlaybackId] = useState<string | null>(null);
+  const [introUploadStatus, setIntroUploadStatus] = useState<string | null>(null);
+  
+  // Verificar el estado de la carga del video principal
   useEffect(() => {
     if (uploadId && uploadStatus !== 'ready' && !isSubmitting) {
       const checkUploadStatus = async () => {
@@ -68,6 +78,48 @@ export default function NewCoursePage() {
     }
   }, [uploadId, uploadStatus, isSubmitting]);
   
+  // Verificar el estado de la carga del video de introducción
+  useEffect(() => {
+    if (introUploadId && introUploadStatus !== 'ready' && !isSubmitting) {
+      const checkIntroUploadStatus = async () => {
+        try {
+          const response = await fetch(`/api/mux-asset-status?uploadId=${introUploadId}`);
+          
+          if (!response.ok) {
+            throw new Error('Error al verificar el estado de la carga de introducción');
+          }
+          
+          const data = await response.json();
+          setIntroUploadStatus(data.status);
+          
+          if (data.assetId) {
+            setIntroAssetId(data.assetId);
+          }
+          
+          if (data.playbackId) {
+            setIntroPlaybackId(data.playbackId);
+            // Si tenemos el playbackId, la carga está lista
+            setIntroUploadProgress(100);
+            setIsIntroUploading(false);
+          } else if (data.status === 'asset_created') {
+            setIntroUploadProgress(90);
+          } else if (data.status === 'preparing') {
+            setIntroUploadProgress(60);
+          } else if (data.status === 'ready') {
+            setIntroUploadProgress(30);
+          }
+        } catch (error) {
+          console.error('Error al verificar estado de intro:', error);
+        }
+      };
+      
+      // Verificar cada 3 segundos
+      const interval = setInterval(checkIntroUploadStatus, 3000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [introUploadId, introUploadStatus, isSubmitting]);
+  
   // Redireccionar si no es administrador o no está autenticado
   if (status === 'loading') {
     return <div className="min-h-screen flex justify-center items-center">Cargando...</div>;
@@ -82,6 +134,13 @@ export default function NewCoursePage() {
     const file = e.target.files?.[0];
     if (file) {
       setVideoFile(file);
+    }
+  };
+
+  const handleIntroFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIntroVideoFile(file);
     }
   };
 
@@ -162,6 +221,80 @@ export default function NewCoursePage() {
     }
   };
   
+  const uploadIntroFile = async () => {
+    if (!introVideoFile) return null;
+    
+    setIsIntroUploading(true);
+    setIntroUploadProgress(0);
+    setIntroUploadStatus(null);
+    setIntroUploadId(null);
+    setIntroAssetId(null);
+    setIntroPlaybackId(null);
+    
+    try {
+      // 1. Solicitar una URL de carga directa
+      const directUploadResponse = await fetch('/api/mux-direct-upload', {
+        method: 'POST',
+      });
+      
+      if (!directUploadResponse.ok) {
+        const errorData = await directUploadResponse.json();
+        throw new Error(errorData.error || 'Error al obtener URL de carga para el video de introducción');
+      }
+      
+      const directUploadData = await directUploadResponse.json();
+      setIntroUploadId(directUploadData.uploadId);
+      setIntroUploadProgress(10);
+      
+      // 2. Subir el archivo directamente a MUX
+      const uploadResponse = await fetch(directUploadData.uploadUrl, {
+        method: 'PUT',
+        body: introVideoFile,
+        headers: {
+          'Content-Type': introVideoFile.type,
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Error al subir el video de introducción a MUX');
+      }
+      
+      setIntroUploadProgress(30);
+      setIntroUploadStatus('waiting');
+      
+      // 3. Esperar a que el archivo se procese (esto ocurre en el useEffect)
+      
+      // 4. Devolver el playbackId cuando esté disponible
+      return new Promise<string>((resolve, reject) => {
+        const checkForPlaybackId = setInterval(async () => {
+          if (introPlaybackId) {
+            clearInterval(checkForPlaybackId);
+            resolve(introPlaybackId);
+          }
+        }, 1000);
+        
+        // Timeout después de 2 minutos
+        setTimeout(() => {
+          clearInterval(checkForPlaybackId);
+          if (introPlaybackId) {
+            resolve(introPlaybackId);
+          } else {
+            reject(new Error('Tiempo de espera agotado para la creación del video de introducción'));
+          }
+        }, 120000);
+      });
+    } catch (error) {
+      console.error('Error al subir video de introducción:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al subir el video de introducción');
+      }
+      setIsIntroUploading(false);
+      return null;
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -210,6 +343,25 @@ export default function NewCoursePage() {
         }
       }
       
+      // Subir el video de introducción si existe
+      let introVideoData = {};
+      if (introVideoFile || introPlaybackId) {
+        if (introPlaybackId) {
+          introVideoData = {
+            introVideoId: introAssetId || '',
+            introPlaybackId
+          };
+        } else if (introVideoFile) {
+          const introId = await uploadIntroFile();
+          if (introId) {
+            introVideoData = {
+              introVideoId: introAssetId || '',
+              introPlaybackId: introId
+            };
+          }
+        }
+      }
+      
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
@@ -220,6 +372,7 @@ export default function NewCoursePage() {
           description,
           price: Number(price),
           videoUrl: finalVideoUrl,
+          ...introVideoData
         }),
       });
       
@@ -249,6 +402,15 @@ export default function NewCoursePage() {
     if (uploadStatus === 'preparing') return 'Preparando video...';
     if (uploadStatus === 'error') return 'Error en la carga';
     return `Estado: ${uploadStatus}`;
+  };
+  
+  const getIntroUploadStatusText = () => {
+    if (!introUploadStatus || introUploadStatus === 'waiting') return 'Subiendo video de introducción...';
+    if (introUploadStatus === 'asset_created') return 'Procesando video de introducción...';
+    if (introUploadStatus === 'ready') return 'Finalizando...';
+    if (introUploadStatus === 'preparing') return 'Preparando video de introducción...';
+    if (introUploadStatus === 'error') return 'Error en la carga';
+    return `Estado: ${introUploadStatus}`;
   };
   
   return (
@@ -307,7 +469,73 @@ export default function NewCoursePage() {
             />
           </div>
           
+          {/* Video de introducción */}
           <div className="mb-8">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Video de introducción</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Este video será visible para todos los usuarios como vista previa del curso
+            </p>
+            
+            <div className="mt-1 flex items-center">
+              <input
+                type="file"
+                id="introVideo"
+                ref={introFileInputRef}
+                onChange={handleIntroFileChange}
+                accept="video/*"
+                className="sr-only"
+                disabled={isIntroUploading || !!introPlaybackId}
+              />
+              <label
+                htmlFor="introVideo"
+                className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
+                  isIntroUploading || !!introPlaybackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+              >
+                <span>{introPlaybackId ? 'Video listo' : 'Seleccionar video de introducción'}</span>
+              </label>
+              <span className="ml-3 text-sm text-gray-500">
+                {introVideoFile ? introVideoFile.name : introPlaybackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
+              </span>
+              
+              {!isIntroUploading && !introPlaybackId && introVideoFile && (
+                <button
+                  type="button"
+                  onClick={uploadIntroFile}
+                  className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                >
+                  Subir ahora
+                </button>
+              )}
+            </div>
+            
+            {isIntroUploading && (
+              <div className="mt-2">
+                <div className="bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    style={{ width: `${introUploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="mt-1 text-sm text-gray-600">
+                  {getIntroUploadStatusText()} {introUploadProgress}%
+                </p>
+              </div>
+            )}
+            
+            {introPlaybackId && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                <p className="text-sm text-green-700">
+                  <span className="font-medium">✓ Video de introducción listo</span> - Procesado correctamente en MUX.
+                </p>
+              </div>
+            )}
+          </div>
+          
+          {/* Video principal del curso */}
+          <div className="mb-8">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Video principal del curso</h3>
+            
             <div className="flex space-x-4 mb-4">
               <div className="flex items-center">
                 <input
@@ -434,7 +662,7 @@ export default function NewCoursePage() {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || isUploading || isIntroUploading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
             >
               {isSubmitting ? 'Creando...' : 'Crear curso'}
