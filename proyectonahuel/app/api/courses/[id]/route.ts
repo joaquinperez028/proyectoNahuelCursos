@@ -7,14 +7,13 @@ import User from "@/models/User";
 import Review from "@/models/Review";
 
 // GET /api/courses/[id] - Obtener un curso específico
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
+  const id = request.nextUrl.pathname.split('/').pop();
+  
   try {
     await connectDB();
     
-    const course = await Course.findById(params.id)
+    const course = await Course.findById(id)
       .populate('createdBy', 'name')
       .lean();
     
@@ -26,7 +25,7 @@ export async function GET(
     }
     
     // Obtener reseñas
-    const reviews = await Review.find({ courseId: params.id })
+    const reviews = await Review.find({ courseId: id })
       .populate('userId', 'name image')
       .sort({ createdAt: -1 })
       .lean();
@@ -45,10 +44,9 @@ export async function GET(
 }
 
 // PUT /api/courses/[id] - Actualizar un curso
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest) {
+  const id = request.nextUrl.pathname.split('/').pop();
+  
   try {
     const session = await getServerSession();
     
@@ -71,7 +69,7 @@ export async function PUT(
       );
     }
     
-    const course = await Course.findById(params.id);
+    const course = await Course.findById(id);
     
     if (!course) {
       return NextResponse.json(
@@ -103,10 +101,9 @@ export async function PUT(
 }
 
 // DELETE /api/courses/[id] - Eliminar un curso
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest) {
+  const id = request.nextUrl.pathname.split('/').pop();
+  
   try {
     const session = await getServerSession();
     
@@ -129,7 +126,7 @@ export async function DELETE(
       );
     }
     
-    const course = await Course.findById(params.id);
+    const course = await Course.findById(id);
     
     if (!course) {
       return NextResponse.json(
@@ -144,10 +141,10 @@ export async function DELETE(
     }
     
     // Eliminar reseñas del curso
-    await Review.deleteMany({ courseId: params.id });
+    await Review.deleteMany({ courseId: id });
     
     // Eliminar el curso
-    await Course.findByIdAndDelete(params.id);
+    await Course.findByIdAndDelete(id);
     
     return NextResponse.json(
       { message: 'Curso eliminado correctamente' }
