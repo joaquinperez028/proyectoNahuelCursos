@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 
 export default function PerfilPage() {
   const { data: session, status } = useSession();
@@ -76,7 +77,14 @@ export default function PerfilPage() {
             <div className="mb-6 border-t border-gray-200 pt-4">
               <h2 className="text-xl font-semibold text-gray-800 mb-2">Herramientas de Administrador</h2>
               
-              <div className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <Link 
+                  href="/admin/actualizar-playback" 
+                  className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Actualizar ID Videos de Cursos
+                </Link>
+                
                 <button
                   onClick={verificarMux}
                   disabled={muxStatus.loading}
@@ -84,35 +92,35 @@ export default function PerfilPage() {
                 >
                   {muxStatus.loading ? 'Verificando...' : 'Verificar conexión con MUX'}
                 </button>
-                
-                {muxStatus.error && (
-                  <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500">
-                    <p className="text-red-700">Error: {muxStatus.error}</p>
-                  </div>
-                )}
-                
-                {muxStatus.result && (
-                  <div className="mt-4 p-4 bg-green-50 border-l-4 border-green-500">
-                    <h3 className="font-semibold text-green-800 mb-2">¡Conexión exitosa!</h3>
-                    <p className="mb-2">Total de assets en MUX: {muxStatus.result.totalAssets}</p>
-                    
-                    {muxStatus.result.assets.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-green-800 mt-3 mb-2">Assets recientes:</h4>
-                        <ul className="pl-5 list-disc">
-                          {muxStatus.result.assets.map((asset: any) => (
-                            <li key={asset.id} className="mb-1">
-                              <span className="font-medium">ID:</span> {asset.id}{' '}
-                              <span className="font-medium ml-2">Estado:</span> {asset.status}{' '}
-                              <span className="font-medium ml-2">Creado:</span> {new Date(asset.createdAt).toLocaleString()}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
+                
+              {muxStatus.error && (
+                <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500">
+                  <p className="text-red-700">Error: {muxStatus.error}</p>
+                </div>
+              )}
+              
+              {muxStatus.result && (
+                <div className="mt-4 p-4 bg-green-50 border-l-4 border-green-500">
+                  <h3 className="font-semibold text-green-800 mb-2">¡Conexión exitosa!</h3>
+                  <p className="mb-2">Total de assets en MUX: {muxStatus.result.totalAssets}</p>
+                  
+                  {muxStatus.result.assets.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-green-800 mt-3 mb-2">Assets recientes:</h4>
+                      <ul className="pl-5 list-disc">
+                        {muxStatus.result.assets.map((asset: any) => (
+                          <li key={asset.id} className="mb-1">
+                            <span className="font-medium">ID:</span> {asset.id}{' '}
+                            <span className="font-medium ml-2">Estado:</span> {asset.status}{' '}
+                            <span className="font-medium ml-2">Creado:</span> {new Date(asset.createdAt).toLocaleString()}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

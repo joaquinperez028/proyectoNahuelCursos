@@ -100,9 +100,14 @@ const Header = () => {
               </Link>
             )}
             {session?.user.role === 'admin' && (
-              <Link href="/admin/cursos" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
-                Administrar cursos
-              </Link>
+              <>
+                <Link href="/admin/cursos" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
+                  Administrar cursos
+                </Link>
+                <Link href="/admin/actualizar-playback" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
+                  Actualizar ID Videos
+                </Link>
+              </>
             )}
             {session && (
               <Link href="/perfil" className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-blue-300 hover:text-gray-800">
