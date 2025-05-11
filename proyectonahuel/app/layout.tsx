@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Plataforma de Cursos Online",
-  description: "Aprende con nuestros cursos en línea",
+  description: "Aprende con nuestros cursos en línea.",
 };
 
 export default function RootLayout({
