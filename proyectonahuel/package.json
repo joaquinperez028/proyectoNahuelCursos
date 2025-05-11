@@ -13,6 +13,7 @@
     "@mux/mux-player-react": "^3.4.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.6.1",
+    "dotenv": "^16.5.0",
     "mongodb": "^6.16.0",
     "mongoose": "^8.14.2",
     "next": "15.3.2",
