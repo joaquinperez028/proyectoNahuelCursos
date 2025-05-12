@@ -3,7 +3,10 @@ import Progress from '@/models/Progress';
 import Course from '@/models/Course';
 import User from '@/models/User';
 import { notFound } from 'next/navigation';
-import PrintButton from './PrintButton';
+import dynamic from 'next/dynamic';
+
+// Importar el botón de impresión de forma dinámica con client-side rendering
+const PrintButton = dynamic(() => import('./PrintButton'), { ssr: false });
 
 interface PageProps<T = {}> {
   params: Promise<T>;
@@ -56,13 +59,16 @@ export default async function CertificatePage({ params }: PageProps<CertificateP
   // Fecha de emisión
   const issueDate = progress.completedAt || progress.updatedAt;
   
+  // URL real de verificación
+  const verificationUrl = "https://proyecto-nahuel-cursos-tn5c.vercel.app/certificados/verificar";
+  
   return (
     <div className="flex flex-col items-center py-12 px-4">
       {/* ID del certificado y url de verificación */}
       <div className="text-center mb-8 text-gray-400 max-w-3xl w-full">
         <p className="text-sm mb-1">ID del certificado: {certificateId}</p>
         <p className="text-xs">
-          Verifica la autenticidad de este certificado en: proyectonahuel.vercel.app/certificados/verificar
+          Verifica la autenticidad de este certificado en: {verificationUrl}
         </p>
       </div>
       
