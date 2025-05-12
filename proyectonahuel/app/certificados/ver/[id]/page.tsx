@@ -3,10 +3,7 @@ import Progress from '@/models/Progress';
 import Course from '@/models/Course';
 import User from '@/models/User';
 import { notFound } from 'next/navigation';
-import dynamic from 'next/dynamic';
-
-// Importar el botón de impresión de forma dinámica con client-side rendering
-const PrintButton = dynamic(() => import('./PrintButton'), { ssr: false });
+import CertificateClientWrapper from './CertificateClientWrapper';
 
 interface PageProps<T = {}> {
   params: Promise<T>;
@@ -72,10 +69,8 @@ export default async function CertificatePage({ params }: PageProps<CertificateP
         </p>
       </div>
       
-      {/* Botón para imprimir */}
-      <div className="mb-8 flex justify-center">
-        <PrintButton />
-      </div>
+      {/* Botón para imprimir (ahora dentro del wrapper cliente) */}
+      <CertificateClientWrapper />
       
       {/* Certificado */}
       <div className="w-full max-w-3xl aspect-[4/3] bg-[#111827] text-white relative shadow-xl print:shadow-none rounded-lg overflow-hidden">
