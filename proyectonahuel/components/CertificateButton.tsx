@@ -17,7 +17,15 @@ const CertificateButton = ({ courseId }: CertificateButtonProps) => {
   useEffect(() => {
     const checkProgress = async () => {
       try {
+        if (!courseId) return;
+        
         const response = await fetch(`/api/progress/check?courseId=${courseId}`);
+        
+        if (!response.ok) {
+          console.error('Error al verificar progreso:', response.statusText);
+          return;
+        }
+        
         const data = await response.json();
         
         if (data.success) {
@@ -51,6 +59,11 @@ const CertificateButton = ({ courseId }: CertificateButtonProps) => {
   
   // Generar certificado
   const generateCertificate = async () => {
+    if (!courseId) {
+      setError('ID de curso no válido');
+      return;
+    }
+    
     setIsGenerating(true);
     setError(null);
     
@@ -63,16 +76,21 @@ const CertificateButton = ({ courseId }: CertificateButtonProps) => {
         body: JSON.stringify({ courseId })
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
-      if (response.ok && data.success) {
+      if (data.success) {
         setCertificateUrl(data.certificateUrl);
       } else {
         setError(data.error || 'Error al generar el certificado');
       }
     } catch (error) {
       console.error('Error al generar certificado:', error);
-      setError('Error al generar el certificado. Inténtalo de nuevo más tarde.');
+      setError(error instanceof Error ? error.message : 'Error al generar el certificado. Inténtalo de nuevo más tarde.');
     } finally {
       setIsGenerating(false);
     }
@@ -103,7 +121,7 @@ const CertificateButton = ({ courseId }: CertificateButtonProps) => {
           
           {/* Error */}
           {error && (
-            <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+            <div className="mt-2 text-sm text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
               {error}
             </div>
           )}

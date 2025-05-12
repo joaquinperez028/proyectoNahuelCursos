@@ -26,6 +26,64 @@ function generateCertificateId(): string {
   return randomBytes(12).toString('hex').toUpperCase();
 }
 
+// Función para crear la plantilla de certificado si no existe
+async function ensureCertificateTemplateExists(): Promise<string> {
+  const templatePath = path.join(process.cwd(), 'public', 'images', 'certificate-template.png');
+  
+  // Si la plantilla ya existe, devolver su ruta
+  if (fs.existsSync(templatePath)) {
+    return templatePath;
+  }
+  
+  // Si no existe, crearla
+  const width = 1754;
+  const height = 1240;
+  
+  // Crear el canvas
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  
+  // Fondo
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  
+  // Borde decorativo
+  ctx.strokeStyle = '#3b82f6'; // Color azul
+  ctx.lineWidth = 15;
+  ctx.strokeRect(40, 40, width - 80, height - 80);
+  
+  // Título
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 80px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('CERTIFICADO', width / 2, 200);
+  
+  // Subtítulo
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 40px Arial';
+  ctx.fillText('DE FINALIZACIÓN', width / 2, 260);
+  
+  // Línea decorativa
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(width / 2 - 200, 300);
+  ctx.lineTo(width / 2 + 200, 300);
+  ctx.stroke();
+  
+  // Asegurarse de que el directorio existe
+  const dirPath = path.join(process.cwd(), 'public', 'images');
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+  
+  // Guardar el canvas como imagen PNG
+  const buffer = canvas.toBuffer('image/png');
+  fs.writeFileSync(templatePath, buffer);
+  
+  return templatePath;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -114,17 +172,8 @@ export async function POST(request: NextRequest) {
     // Generar ID único para el certificado
     const certificateId = generateCertificateId();
     
-    // Crear el certificado como imagen usando canvas
-    // Ruta a la plantilla del certificado (debe existir en public/images)
-    const templatePath = path.join(process.cwd(), 'public', 'images', 'certificate-template.png');
-    
-    // Verificar si la plantilla existe
-    if (!fs.existsSync(templatePath)) {
-      return NextResponse.json(
-        { error: 'Plantilla de certificado no encontrada' },
-        { status: 500 }
-      );
-    }
+    // Asegurar que la plantilla del certificado existe
+    const templatePath = await ensureCertificateTemplateExists();
     
     // Crear el canvas
     const canvas = createCanvas(1754, 1240); // Tamaño de la plantilla

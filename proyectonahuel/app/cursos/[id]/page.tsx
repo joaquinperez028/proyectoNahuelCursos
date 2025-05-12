@@ -328,10 +328,10 @@ export default async function CoursePage({ params }: PageProps) {
           <div className="lg:col-span-2 space-y-10">
             {/* Reproductor de video o vista previa */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl">
-              {userHasCourse && course.playbackId && mainToken ? (
+              {userHasCourse && course.playbackId ? (
                 <CourseViewer 
                   playbackId={course.playbackId}
-                  videoId={course.videoId}
+                  videoId={course.videoId || ''}
                   courseId={course._id}
                   token={mainToken} 
                 />
@@ -420,10 +420,10 @@ export default async function CoursePage({ params }: PageProps) {
                       
                       <div className="mt-4">
                         <CourseViewer 
-                          playbackId={video.playbackId} 
-                          videoId={video.videoId}
+                          playbackId={video.playbackId || ''} 
+                          videoId={video.videoId || ''}
                           courseId={course._id}
-                          token={videoTokens[video.playbackId]} 
+                          token={videoTokens[video.playbackId] || ''} 
                         />
                       </div>
                     </div>

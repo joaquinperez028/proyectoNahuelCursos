@@ -6,8 +6,8 @@ import FallbackVideoPlayer from './FallbackVideoPlayer';
 
 interface CourseViewerProps {
   playbackId: string;
-  videoId: string;
-  courseId: string;
+  videoId: string; // Obligatorio pero puede ser string vacía
+  courseId: string; // Obligatorio pero puede ser string vacía
   token?: string;
 }
 
@@ -123,7 +123,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   // Reportar progreso al servidor
   const reportVideoProgress = async () => {
     try {
-      if (!courseId || !videoId) return;
+      if (!courseId || !videoId || courseId === '' || videoId === '') return;
       
       await fetch('/api/progress/update', {
         method: 'POST',
@@ -146,7 +146,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   // Reportar finalización de video
   const reportVideoCompletion = async (completed: boolean) => {
     try {
-      if (!courseId || !videoId) return;
+      if (!courseId || !videoId || courseId === '' || videoId === '') return;
       
       const response = await fetch('/api/progress/update', {
         method: 'POST',
