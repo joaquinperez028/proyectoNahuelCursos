@@ -10,7 +10,9 @@ export default function CertificateLayout({
       <style jsx global>{`
         @media print {
           body {
-            background: white;
+            background: #111827 !important;
+            margin: 0;
+            padding: 0;
           }
           
           body * {
@@ -28,6 +30,14 @@ export default function CertificateLayout({
             width: 100%;
             height: 100%;
             padding: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          @page {
+            size: landscape;
             margin: 0;
           }
         }

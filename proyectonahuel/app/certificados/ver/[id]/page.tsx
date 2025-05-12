@@ -58,46 +58,65 @@ export default async function CertificatePage({ params }: PageProps<CertificateP
   
   return (
     <div className="flex flex-col items-center py-12 px-4">
+      {/* ID del certificado y url de verificación */}
+      <div className="text-center mb-8 text-gray-400 max-w-3xl w-full">
+        <p className="text-sm mb-1">ID del certificado: {certificateId}</p>
+        <p className="text-xs">
+          Verifica la autenticidad de este certificado en: proyectonahuel.vercel.app/certificados/verificar
+        </p>
+      </div>
+      
       {/* Botón para imprimir */}
       <div className="mb-8 flex justify-center">
         <PrintButton />
       </div>
       
       {/* Certificado */}
-      <div className="w-full max-w-5xl aspect-[1.4/1] bg-white text-black relative border-8 border-blue-500 shadow-xl print:shadow-none">
-        <div className="border-2 border-green-500 m-3 h-[calc(100%-24px)] flex flex-col items-center justify-between p-16">
+      <div className="w-full max-w-3xl aspect-[4/3] bg-[#111827] text-white relative shadow-xl print:shadow-none rounded-lg overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-gradient-radial from-teal-500/30 to-transparent" />
+        
+        <div className="h-full flex flex-col items-center justify-between p-10 md:p-16 relative z-10">
           {/* Encabezado */}
-          <div className="text-center pt-10">
-            <h1 className="text-5xl font-bold text-gray-800">CERTIFICADO</h1>
-            <h2 className="text-2xl font-semibold text-gray-700 mt-2">DE FINALIZACIÓN</h2>
-            <div className="w-40 h-1 bg-blue-500 mx-auto mt-4"></div>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-[#3CBFAE] tracking-wider">
+              CERTIFICADO DE
+            </h1>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#3CBFAE] tracking-wider mt-2">
+              FINALIZACIÓN
+            </h2>
           </div>
           
           {/* Contenido */}
-          <div className="text-center space-y-10 flex-grow flex flex-col justify-center">
+          <div className="text-center space-y-12 flex-grow flex flex-col justify-center w-full">
             <div>
-              <p className="text-xl text-gray-700">Este certificado se otorga a:</p>
-              <h2 className="text-4xl font-bold text-gray-900 mt-3">{user.name}</h2>
+              <p className="text-xl text-gray-400 uppercase tracking-wider mb-4">OTORGADO A</p>
+              <div className="w-full border-b border-gray-500 py-2">
+                <h2 className="text-3xl font-bold text-white">{user.name}</h2>
+              </div>
             </div>
             
             <div>
-              <p className="text-xl text-gray-700">Por haber completado con éxito el curso:</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-3">{course.title}</h3>
+              <p className="text-lg text-gray-300 italic">¡Por completar con éxito el curso!</p>
+              <div className="w-full border-b border-gray-500 py-2 mt-4">
+                <h3 className="text-xl font-semibold text-gray-100">{course.title}</h3>
+              </div>
             </div>
           </div>
           
-          {/* Pie de página */}
-          <div className="text-center space-y-4 pb-10">
-            <p className="text-lg text-gray-700">
+          {/* Firma y fecha */}
+          <div className="flex items-center justify-between w-full mt-10">
+            <div className="text-sm text-gray-400">
               Emitido el {formatDate(issueDate)}
-            </p>
-            <p className="text-sm text-gray-600">
-              ID del certificado: {certificateId}
-            </p>
-            <p className="text-xs text-gray-500">
-              Verifica la autenticidad de este certificado en: 
-              proyectonahuel.vercel.app/certificados/verificar
-            </p>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-12 h-12 rounded-full border-2 border-[#3CBFAE] flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <p className="text-lg italic font-signature">Nahuel Cursos</p>
+            </div>
           </div>
         </div>
       </div>
