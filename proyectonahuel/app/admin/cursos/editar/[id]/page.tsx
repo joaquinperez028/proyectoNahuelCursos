@@ -1,9 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+
+// Interfaces para videos y ejercicios
+interface VideoItem {
+  id: string;
+  title: string;
+  description: string;
+  videoFile: File | null;
+  videoId: string | null;
+  playbackId: string | null;
+  uploadId: string | null;
+  uploadStatus: string | null;
+  uploadProgress: number;
+  isUploading: boolean;
+  error: string | null;
+  order: number;
+  _id?: string; // ID de MongoDB opcional
+}
+
+interface ExerciseItem {
+  id: string;
+  title: string;
+  description: string;
+  pdfFile: File | null;
+  fileData: any | null;
+  isUploading: boolean;
+  error: string | null;
+  order: number;
+  _id?: string; // ID de MongoDB opcional
+}
 
 interface PageProps<T = {}> {
   params: Promise<T>;
@@ -22,6 +51,14 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
+  
+  // Estado para el manejo de videos
+  const [videos, setVideos] = useState<VideoItem[]>([]);
+  const [activeVideoTab, setActiveVideoTab] = useState<string | null>(null);
+  
+  // Estado para el manejo de ejercicios
+  const [exercises, setExercises] = useState<ExerciseItem[]>([]);
+  const [activeExerciseTab, setActiveExerciseTab] = useState<string | null>(null);
   
   // Estado para el manejo de la UI
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -67,10 +104,54 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         
         const course = await response.json();
         
-        // Cargar datos en el formulario
+        // Cargar datos básicos en el formulario
         setTitle(course.title || '');
         setDescription(course.description || '');
         setPrice(course.price || 0);
+        
+        // Cargar videos existentes
+        if (course.videos && Array.isArray(course.videos)) {
+          const loadedVideos = course.videos.map((video: any, index: number) => ({
+            id: `existing-video-${video._id || index}`,
+            title: video.title || '',
+            description: video.description || '',
+            videoFile: null,
+            videoId: video.videoId || null,
+            playbackId: video.playbackId || null,
+            uploadId: null,
+            uploadStatus: 'ready',
+            uploadProgress: 100,
+            isUploading: false,
+            error: null,
+            order: video.order || index,
+            _id: video._id // Guardar el ID original
+          }));
+          
+          setVideos(loadedVideos);
+          if (loadedVideos.length > 0) {
+            setActiveVideoTab(loadedVideos[0].id);
+          }
+        }
+        
+        // Cargar ejercicios existentes
+        if (course.exercises && Array.isArray(course.exercises)) {
+          const loadedExercises = course.exercises.map((exercise: any, index: number) => ({
+            id: `existing-exercise-${exercise._id || index}`,
+            title: exercise.title || '',
+            description: exercise.description || '',
+            pdfFile: null,
+            fileData: exercise.fileData || null,
+            isUploading: false,
+            error: null,
+            order: exercise.order || index,
+            _id: exercise._id // Guardar el ID original
+          }));
+          
+          setExercises(loadedExercises);
+          if (loadedExercises.length > 0) {
+            setActiveExerciseTab(loadedExercises[0].id);
+          }
+        }
         
       } catch (error) {
         setError('Error al cargar el curso');
@@ -82,6 +163,70 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
     
     fetchCourse();
   }, [id]);
+
+  // Funciones para gestionar videos
+  const addVideo = () => {
+    const newId = `video-${Date.now()}`;
+    const newVideo: VideoItem = {
+      id: newId,
+      title: '',
+      description: '',
+      videoFile: null,
+      videoId: null,
+      playbackId: null,
+      uploadId: null,
+      uploadStatus: null,
+      uploadProgress: 0,
+      isUploading: false,
+      error: null,
+      order: videos.length
+    };
+    setVideos([...videos, newVideo]);
+    setActiveVideoTab(newId);
+  };
+
+  const updateVideo = (id: string, updates: Partial<VideoItem>) => {
+    setVideos(videos.map(video => 
+      video.id === id ? { ...video, ...updates } : video
+    ));
+  };
+
+  const removeVideo = (id: string) => {
+    setVideos(videos.filter(video => video.id !== id));
+    if (activeVideoTab === id) {
+      setActiveVideoTab(videos.length > 1 ? videos[0].id : null);
+    }
+  };
+
+  // Funciones para gestionar ejercicios
+  const addExercise = () => {
+    const newId = `exercise-${Date.now()}`;
+    const newExercise: ExerciseItem = {
+      id: newId,
+      title: '',
+      description: '',
+      pdfFile: null,
+      fileData: null,
+      isUploading: false,
+      error: null,
+      order: exercises.length
+    };
+    setExercises([...exercises, newExercise]);
+    setActiveExerciseTab(newId);
+  };
+
+  const updateExercise = (id: string, updates: Partial<ExerciseItem>) => {
+    setExercises(exercises.map(exercise => 
+      exercise.id === id ? { ...exercise, ...updates } : exercise
+    ));
+  };
+
+  const removeExercise = (id: string) => {
+    setExercises(exercises.filter(exercise => exercise.id !== id));
+    if (activeExerciseTab === id) {
+      setActiveExerciseTab(exercises.length > 1 ? exercises[0].id : null);
+    }
+  };
 
   // Manejar envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,10 +244,31 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
       setIsSubmitting(true);
       setError(null);
       
+      // Preparar datos de videos
+      const videosData = videos.map(video => ({
+        title: video.title,
+        description: video.description,
+        videoId: video.videoId,
+        playbackId: video.playbackId,
+        order: video.order,
+        _id: video._id // Incluir el ID original si existe
+      }));
+      
+      // Preparar datos de ejercicios
+      const exercisesData = exercises.map(exercise => ({
+        title: exercise.title,
+        description: exercise.description,
+        fileData: exercise.fileData,
+        order: exercise.order,
+        _id: exercise._id // Incluir el ID original si existe
+      }));
+      
       const courseData = {
         title,
         description,
-        price
+        price,
+        videos: videosData,
+        exercises: exercisesData
       };
       
       const response = await fetch(`/api/courses/${id}`, {
@@ -205,6 +371,214 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               placeholder="Precio del curso"
             />
             <p className="mt-1 text-sm text-gray-500">Establecer a 0 para cursos gratuitos</p>
+          </div>
+          
+          {/* Sección de videos */}
+          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Videos del curso</h3>
+              <button
+                type="button"
+                onClick={addVideo}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Añadir video
+              </button>
+            </div>
+            
+            {videos.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
+                <p className="text-gray-500">
+                  No hay videos añadidos. Haz clic en "Añadir video" para comenzar.
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Pestañas de videos */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                    {videos.map((video, index) => (
+                      <button
+                        key={video.id}
+                        onClick={() => setActiveVideoTab(video.id)}
+                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
+                          activeVideoTab === video.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                        type="button"
+                      >
+                        {video.title ? video.title : `Video ${index + 1}`}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+                
+                {/* Contenido de video activo */}
+                {videos.map(video => (
+                  <div
+                    key={video.id}
+                    className={`pt-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}
+                  >
+                    <div className="flex justify-between mb-4">
+                      <h4 className="text-md font-medium text-gray-900">
+                        {video.title ? video.title : 'Nuevo video'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(video.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Título del video */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Título del video*
+                        </label>
+                        <input
+                          type="text"
+                          value={video.title}
+                          onChange={(e) => updateVideo(video.id, { title: e.target.value })}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Título del video"
+                        />
+                      </div>
+                      
+                      {/* Descripción del video */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descripción
+                        </label>
+                        <textarea
+                          value={video.description}
+                          onChange={(e) => updateVideo(video.id, { description: e.target.value })}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Describe de qué trata este video"
+                        />
+                      </div>
+                      
+                      {/* Estado del video */}
+                      {video.playbackId && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                          <p className="text-sm text-green-700">
+                            <span className="font-medium">✓ Video existente</span> - Ya está subido y listo para reproducirse.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Sección de ejercicios */}
+          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Ejercicios del curso</h3>
+              <button
+                type="button"
+                onClick={addExercise}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Añadir ejercicio
+              </button>
+            </div>
+            
+            {exercises.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
+                <p className="text-gray-500">
+                  No hay ejercicios añadidos. Haz clic en "Añadir ejercicio" para comenzar.
+                </p>
+              </div>
+            ) : (
+              <div>
+                {/* Pestañas de ejercicios */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                    {exercises.map((exercise, index) => (
+                      <button
+                        key={exercise.id}
+                        onClick={() => setActiveExerciseTab(exercise.id)}
+                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
+                          activeExerciseTab === exercise.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                        type="button"
+                      >
+                        {exercise.title ? exercise.title : `Ejercicio ${index + 1}`}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+                
+                {/* Contenido de ejercicio activo */}
+                {exercises.map(exercise => (
+                  <div
+                    key={exercise.id}
+                    className={`pt-4 ${activeExerciseTab === exercise.id ? 'block' : 'hidden'}`}
+                  >
+                    <div className="flex justify-between mb-4">
+                      <h4 className="text-md font-medium text-gray-900">
+                        {exercise.title ? exercise.title : 'Nuevo ejercicio'}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(exercise.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Título del ejercicio */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Título del ejercicio*
+                        </label>
+                        <input
+                          type="text"
+                          value={exercise.title}
+                          onChange={(e) => updateExercise(exercise.id, { title: e.target.value })}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Título del ejercicio"
+                        />
+                      </div>
+                      
+                      {/* Descripción del ejercicio */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descripción
+                        </label>
+                        <textarea
+                          value={exercise.description}
+                          onChange={(e) => updateExercise(exercise.id, { description: e.target.value })}
+                          rows={3}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Describe de qué trata este ejercicio"
+                        />
+                      </div>
+                      
+                      {/* Estado del PDF */}
+                      {exercise.fileData && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                          <p className="text-sm text-green-700">
+                            <span className="font-medium">✓ PDF existente</span> - Ya está subido y listo para descargar.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="flex justify-end space-x-3">

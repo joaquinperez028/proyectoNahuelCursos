@@ -81,12 +81,33 @@ export async function PUT(request: NextRequest) {
     
     const data = await request.json();
     
-    // Actualizar el curso
+    // Actualizar los campos básicos del curso
     Object.assign(course, {
       title: data.title || course.title,
       description: data.description || course.description,
-      price: data.price || course.price,
+      price: data.price ?? course.price,
     });
+    
+    // Actualizar videos si se proporcionan
+    if (data.videos && Array.isArray(data.videos)) {
+      course.videos = data.videos.map((video: any) => ({
+        title: video.title,
+        description: video.description || '',
+        videoId: video.videoId,
+        playbackId: video.playbackId,
+        order: video.order
+      }));
+    }
+    
+    // Actualizar ejercicios si se proporcionan
+    if (data.exercises && Array.isArray(data.exercises)) {
+      course.exercises = data.exercises.map((exercise: any) => ({
+        title: exercise.title,
+        description: exercise.description || '',
+        fileData: exercise.fileData,
+        order: exercise.order
+      }));
+    }
     
     await course.save();
     await course.populate('createdBy', 'name');
