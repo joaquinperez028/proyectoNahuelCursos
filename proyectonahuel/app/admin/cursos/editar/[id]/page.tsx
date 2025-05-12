@@ -51,6 +51,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
+  const [featured, setFeatured] = useState<boolean>(false);
   
   // Estado para el manejo de videos
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -108,6 +109,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         setTitle(course.title || '');
         setDescription(course.description || '');
         setPrice(course.price || 0);
+        setFeatured(course.featured || false);
         
         // Cargar videos existentes
         if (course.videos && Array.isArray(course.videos)) {
@@ -267,6 +269,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         title,
         description,
         price,
+        featured,
         videos: videosData,
         exercises: exercisesData
       };
@@ -371,6 +374,24 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               placeholder="Precio del curso"
             />
             <p className="mt-1 text-sm text-gray-500">Establecer a 0 para cursos gratuitos</p>
+          </div>
+          
+          <div className="mb-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="featured"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="featured" className="ml-2 block text-sm font-medium text-gray-700">
+                Destacar curso en la página principal
+              </label>
+            </div>
+            <p className="mt-1 text-sm text-gray-500 ml-6">
+              Los cursos destacados aparecerán en secciones especiales para mayor visibilidad
+            </p>
           </div>
           
           {/* Sección de videos */}

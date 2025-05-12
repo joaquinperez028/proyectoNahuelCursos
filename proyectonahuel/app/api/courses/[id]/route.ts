@@ -86,6 +86,7 @@ export async function PUT(request: NextRequest) {
       title: data.title || course.title,
       description: data.description || course.description,
       price: data.price ?? course.price,
+      featured: typeof data.featured === 'boolean' ? data.featured : course.featured,
     });
     
     // Actualizar videos si se proporcionan
