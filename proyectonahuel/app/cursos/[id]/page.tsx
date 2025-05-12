@@ -379,13 +379,16 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                     <MuxPlayer
                       playbackId={course.introPlaybackId}
                       title={`Introducción a ${course.title}`}
+                      autoPlay={false}
                     />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent pointer-events-none">
                       <div className="flex justify-between items-center">
-                        <div className="text-white">
+                        <div className="text-white pointer-events-none">
                           <p className="font-medium">Video de introducción</p>
                         </div>
-                        <ScrollToEnrollButton className="py-2 px-4 text-sm" />
+                        <div className="pointer-events-auto">
+                          <ScrollToEnrollButton className="py-2 px-4 text-sm" />
+                        </div>
                       </div>
                     </div>
                   </div>
