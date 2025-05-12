@@ -18,8 +18,8 @@ type CourseParams = {
   id: string;
 };
 
-type PageProps = {
-  params: Promise<CourseParams>;
+type PageProps<T = {}> = {
+  params: Promise<T>;
 };
 
 // Definir interfaces para los datos
@@ -187,7 +187,7 @@ async function getCourse(id: string): Promise<CourseType | null> {
   }
 }
 
-export default async function CoursePage({ params }: PageProps) {
+export default async function CoursePage({ params }: PageProps<CourseParams>) {
   const resolvedParams = await params;
   const courseId = resolvedParams.id;
   const course = await getCourse(courseId);

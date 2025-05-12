@@ -5,10 +5,12 @@ import User from '@/models/User';
 import { notFound } from 'next/navigation';
 import PrintButton from './PrintButton';
 
-interface CertificatePageProps {
-  params: {
-    id: string;
-  };
+interface PageProps<T = {}> {
+  params: Promise<T>;
+}
+
+interface CertificateParams {
+  id: string;
 }
 
 function formatDate(date: Date): string {
@@ -20,8 +22,9 @@ function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString('es-ES', options);
 }
 
-export default async function CertificatePage({ params }: CertificatePageProps) {
-  const certificateId = params.id;
+export default async function CertificatePage({ params }: PageProps<CertificateParams>) {
+  const resolvedParams = await params;
+  const certificateId = resolvedParams.id;
   
   if (!certificateId) {
     notFound();
