@@ -6,6 +6,7 @@ import { createMuxPlaybackToken } from "@/lib/mux";
 import CourseViewer from "@/components/CourseViewer";
 import ReviewSection from "@/components/ReviewSection";
 import EnrollSection from "@/components/EnrollSection";
+import CertificateButton from "@/components/CertificateButton";
 import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
@@ -328,7 +329,12 @@ export default async function CoursePage({ params }: PageProps) {
             {/* Reproductor de video o vista previa */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl">
               {userHasCourse && course.playbackId && mainToken ? (
-                <CourseViewer playbackId={course.playbackId} token={mainToken} />
+                <CourseViewer 
+                  playbackId={course.playbackId}
+                  videoId={course.videoId}
+                  courseId={course._id}
+                  token={mainToken} 
+                />
               ) : (
                 <div className="relative">
                   <div className="aspect-video w-full bg-[var(--neutral-900)]">
@@ -368,6 +374,11 @@ export default async function CoursePage({ params }: PageProps) {
               )}
             </div>
             
+            {/* Certificado de finalización (solo para usuarios inscritos) */}
+            {userHasCourse && (
+              <CertificateButton courseId={course._id} />
+            )}
+            
             {/* Descripción completa del curso */}
             <div>
               <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-6 flex items-center">
@@ -382,46 +393,39 @@ export default async function CoursePage({ params }: PageProps) {
             </div>
             
             {/* Listado de videos adicionales */}
-            {course.videos.length > 0 && (
+            {userHasCourse && course.videos && course.videos.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-6 flex items-center">
                   <svg className="w-6 h-6 mr-2 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
-                  Videos del curso
+                  Lecciones adicionales
                 </h2>
                 <div className="space-y-4">
                   {course.videos.map((video, index) => (
-                    <div key={video._id} className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--card)] transition-all duration-300 hover:border-[var(--accent)] hover:shadow-lg">
-                      <div className="p-4 flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-[var(--primary-dark)] text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-[var(--neutral-100)]">{video.title}</h3>
-                          {video.description && (
-                            <p className="text-[var(--neutral-400)] mt-1 text-sm">{video.description}</p>
-                          )}
+                    <div key={video._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-start">
+                          <div className="w-8 h-8 rounded-full bg-[var(--primary-dark)] text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-[var(--neutral-100)]">{video.title}</h3>
+                            {video.description && (
+                              <p className="text-[var(--neutral-400)] mt-1 text-sm">{video.description}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                       
-                      {userHasCourse && video.playbackId && videoTokens[video.playbackId] ? (
-                        <div className="border-t border-[var(--border)]">
-                          <CourseViewer 
-                            playbackId={video.playbackId} 
-                            token={videoTokens[video.playbackId]} 
-                          />
-                        </div>
-                      ) : (
-                        <div className="border-t border-[var(--border)] p-4 bg-[var(--neutral-800)] flex items-center">
-                          <svg className="h-5 w-5 text-[var(--accent)] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          <p className="text-[var(--neutral-400)] text-sm">
-                            Este video estará disponible cuando compres el curso
-                          </p>
-                        </div>
-                      )}
+                      <div className="mt-4">
+                        <CourseViewer 
+                          playbackId={video.playbackId} 
+                          videoId={video.videoId}
+                          courseId={course._id}
+                          token={videoTokens[video.playbackId]} 
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

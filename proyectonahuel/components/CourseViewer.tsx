@@ -1,21 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import MuxPlayer from '@mux/mux-player-react';
 import FallbackVideoPlayer from './FallbackVideoPlayer';
 
 interface CourseViewerProps {
   playbackId: string;
+  videoId: string;
+  courseId: string;
   token?: string;
 }
 
-const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
+const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProps) => {
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useToken, setUseToken] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [useFallback, setUseFallback] = useState(false);
+  const [videoCompleted, setVideoCompleted] = useState(false);
+  const [showCompletionNotification, setShowCompletionNotification] = useState(false);
+  
+  // Referencias para control de progreso
+  const playerRef = useRef<any>(null);
+  const progressTrackerRef = useRef({
+    lastPosition: 0,
+    watchedSeconds: 0,
+    duration: 0,
+    progressReported: false,
+    completionThreshold: 0.95, // 95% de visualización para considerar completado
+    trackingInterval: null as NodeJS.Timeout | null,
+    progressUpdateInterval: 15000, // Actualizar cada 15 segundos
+  });
 
   useEffect(() => {
     setIsClient(true);
@@ -23,6 +39,13 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
     setError(null);
     setAttempts(0);
     setUseFallback(false);
+    
+    // Limpiar intervalos de seguimiento al desmontar el componente
+    return () => {
+      if (progressTrackerRef.current.trackingInterval) {
+        clearInterval(progressTrackerRef.current.trackingInterval);
+      }
+    };
   }, [playbackId]);
 
   // Reintentar automáticamente una vez si hay error
@@ -35,6 +58,142 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
       return () => clearTimeout(timer);
     }
   }, [error, attempts]);
+  
+  // Configurar seguimiento de progreso cuando el video está listo
+  const setupProgressTracking = () => {
+    if (!playerRef.current) return;
+    
+    try {
+      // Obtener la duración del video
+      const duration = playerRef.current.duration || 0;
+      progressTrackerRef.current.duration = duration;
+      
+      // Iniciar intervalo de seguimiento
+      if (progressTrackerRef.current.trackingInterval) {
+        clearInterval(progressTrackerRef.current.trackingInterval);
+      }
+      
+      progressTrackerRef.current.trackingInterval = setInterval(() => {
+        if (playerRef.current) {
+          // Obtener posición actual
+          const currentPosition = playerRef.current.currentTime || 0;
+          
+          // Calcular segundos vistos
+          if (currentPosition > progressTrackerRef.current.lastPosition) {
+            const increment = currentPosition - progressTrackerRef.current.lastPosition;
+            // Solo contar si el incremento es razonable (evitar saltos)
+            if (increment < 5) {
+              progressTrackerRef.current.watchedSeconds += increment;
+            }
+          }
+          
+          progressTrackerRef.current.lastPosition = currentPosition;
+          
+          // Verificar si el video se ha completado
+          if (duration > 0 && progressTrackerRef.current.watchedSeconds >= (duration * progressTrackerRef.current.completionThreshold)) {
+            if (!videoCompleted) {
+              setVideoCompleted(true);
+              setShowCompletionNotification(true);
+              reportVideoCompletion(true);
+              
+              // Ocultar notificación después de 5 segundos
+              setTimeout(() => {
+                setShowCompletionNotification(false);
+              }, 5000);
+            }
+          } else {
+            // Actualizar progreso regularmente
+            if (!progressTrackerRef.current.progressReported) {
+              reportVideoProgress();
+              progressTrackerRef.current.progressReported = true;
+              
+              // Resetear el flag después del intervalo
+              setTimeout(() => {
+                progressTrackerRef.current.progressReported = false;
+              }, progressTrackerRef.current.progressUpdateInterval);
+            }
+          }
+        }
+      }, 1000);
+    } catch (e) {
+      console.error('Error al configurar seguimiento de progreso:', e);
+    }
+  };
+  
+  // Reportar progreso al servidor
+  const reportVideoProgress = async () => {
+    try {
+      if (!courseId || !videoId) return;
+      
+      await fetch('/api/progress/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          courseId,
+          videoId,
+          position: progressTrackerRef.current.lastPosition,
+          watchedSeconds: progressTrackerRef.current.watchedSeconds,
+          completed: videoCompleted
+        }),
+      });
+    } catch (e) {
+      console.error('Error al reportar progreso:', e);
+    }
+  };
+  
+  // Reportar finalización de video
+  const reportVideoCompletion = async (completed: boolean) => {
+    try {
+      if (!courseId || !videoId) return;
+      
+      const response = await fetch('/api/progress/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          courseId,
+          videoId,
+          position: progressTrackerRef.current.lastPosition,
+          watchedSeconds: progressTrackerRef.current.watchedSeconds,
+          completed
+        }),
+      });
+      
+      const data = await response.json();
+      
+      // Si el curso está completado, mostrar botón para generar certificado
+      if (data.progress?.isCompleted) {
+        // La lógica para notificar la finalización del curso está en el componente padre
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('courseCompleted', { 
+            detail: { 
+              courseId, 
+              isCompleted: true 
+            } 
+          }));
+        }
+      }
+    } catch (e) {
+      console.error('Error al reportar finalización de video:', e);
+    }
+  };
+
+  // Manejar eventos de video
+  const handleVideoReady = () => {
+    setupProgressTracking();
+  };
+  
+  const handleVideoEnded = () => {
+    setVideoCompleted(true);
+    reportVideoCompletion(true);
+  };
+  
+  const handleVideoTimeUpdate = () => {
+    // El seguimiento principal se hace en el intervalo
+  };
 
   if (!isClient) {
     return (
@@ -88,7 +247,7 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       {error ? (
         <div className="aspect-video bg-[var(--neutral-900)] w-full flex flex-col items-center justify-center p-6">
           <div className="text-center mb-4 max-w-md">
@@ -141,31 +300,49 @@ const CourseViewer = ({ playbackId, token }: CourseViewerProps) => {
           </div>
         </div>
       ) : (
-        <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden shadow-lg">
-          <MuxPlayer
-            playbackId={playbackId}
-            tokens={undefined}
-            metadata={{
-              video_title: 'Video del curso',
-              viewer_user_id: 'usuario',
-            }}
-            streamType="on-demand"
-            style={{ height: '100%', width: '100%' }}
-            className="aspect-video"
-            thumbnailTime={0}
-            autoPlay={false}
-            muted={false}
-            onError={handleError}
-            debug={true}
-            defaultHiddenCaptions={true}
-            playbackRates={[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]}
-            themeProps={{
-              keyColorInactive: "var(--accent)",
-              keyColorActive: "var(--accent)",
-              colorsDark: true
-            }}
-          />
-        </div>
+        <>
+          <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden shadow-lg">
+            <MuxPlayer
+              ref={playerRef}
+              playbackId={playbackId}
+              tokens={undefined}
+              metadata={{
+                video_title: 'Video del curso',
+                viewer_user_id: 'usuario',
+                video_id: videoId,
+                course_id: courseId
+              }}
+              streamType="on-demand"
+              style={{ height: '100%', width: '100%' }}
+              className="aspect-video"
+              thumbnailTime={0}
+              autoPlay={false}
+              muted={false}
+              onError={handleError}
+              onLoadedMetadata={handleVideoReady}
+              onEnded={handleVideoEnded}
+              onTimeUpdate={handleVideoTimeUpdate}
+              debug={true}
+              defaultHiddenCaptions={true}
+              playbackRates={[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]}
+              themeProps={{
+                keyColorInactive: "var(--accent)",
+                keyColorActive: "var(--accent)",
+                colorsDark: true
+              }}
+            />
+          </div>
+          
+          {/* Notificación de video completado */}
+          {showCompletionNotification && (
+            <div className="absolute bottom-4 right-4 bg-green-600 text-white py-2 px-4 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-up">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>¡Video completado!</span>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
