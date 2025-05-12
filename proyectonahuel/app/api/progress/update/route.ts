@@ -7,6 +7,11 @@ import Course from '@/models/Course';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
+// Definir una interfaz para el error de MongoDB con código
+interface MongoError extends Error {
+  code?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar si el video pertenece al curso (video principal o videos adicionales)
     const isMainVideo = course.videoId === data.videoId;
-    const isAdditionalVideo = course.videos.some((video: any) => 
+    const isAdditionalVideo = course.videos && course.videos.some((video: any) => 
       video.videoId === data.videoId
     );
     
@@ -74,68 +79,151 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Buscar o crear registro de progreso para este usuario y curso
-    let progress = await Progress.findOne({
-      userId: user._id,
-      courseId: data.courseId
-    });
-    
-    if (!progress) {
-      progress = new Progress({
-        userId: user._id,
-        courseId: data.courseId,
-        videoProgress: []
-      });
-    }
-    
-    // Actualizar o añadir progreso del video
-    const videoProgressIndex = progress.videoProgress.findIndex(
-      (vp: any) => vp.videoId === data.videoId
-    );
-    
+    // Preparar variables para el progreso del video
     const videoCompleted = data.completed || false;
     const watchedSeconds = data.watchedSeconds || 0;
     const lastPosition = data.position || 0;
     
-    if (videoProgressIndex >= 0) {
-      // Actualizar video existente
-      progress.videoProgress[videoProgressIndex].completed = videoCompleted;
-      progress.videoProgress[videoProgressIndex].watchedSeconds = watchedSeconds;
-      progress.videoProgress[videoProgressIndex].lastPosition = lastPosition;
-      progress.videoProgress[videoProgressIndex].updatedAt = new Date();
-    } else {
-      // Añadir nuevo video al progreso
-      progress.videoProgress.push({
-        videoId: data.videoId,
-        completed: videoCompleted,
-        watchedSeconds: watchedSeconds,
-        lastPosition: lastPosition,
-        updatedAt: new Date()
+    // Usar findOneAndUpdate con upsert para crear o actualizar el documento en una sola operación
+    // y evitar errores de duplicación
+    let result;
+    try {
+      // Busca un documento existente para verificar si ya existe el video
+      let existingProgress = await Progress.findOne({
+        userId: user._id,
+        courseId: data.courseId
       });
+      
+      if (!existingProgress) {
+        // Si no existe progreso, crear un nuevo documento
+        const newProgress = new Progress({
+          userId: user._id,
+          courseId: data.courseId,
+          videoProgress: [{
+            videoId: data.videoId,
+            completed: videoCompleted,
+            watchedSeconds: watchedSeconds,
+            lastPosition: lastPosition,
+            updatedAt: new Date()
+          }],
+          totalProgress: videoCompleted ? Math.round(100 / (1 + (course.videos?.length || 0))) : 0,
+          isCompleted: false
+        });
+        
+        result = await newProgress.save();
+      } else {
+        // Si ya existe progreso, actualizar el documento existente
+        const videoProgressIndex = existingProgress.videoProgress.findIndex(
+          (vp: any) => vp.videoId === data.videoId
+        );
+        
+        if (videoProgressIndex >= 0) {
+          // Actualizar video existente
+          existingProgress.videoProgress[videoProgressIndex].completed = videoCompleted;
+          existingProgress.videoProgress[videoProgressIndex].watchedSeconds = watchedSeconds;
+          existingProgress.videoProgress[videoProgressIndex].lastPosition = lastPosition;
+          existingProgress.videoProgress[videoProgressIndex].updatedAt = new Date();
+        } else {
+          // Añadir nuevo video al progreso
+          existingProgress.videoProgress.push({
+            videoId: data.videoId,
+            completed: videoCompleted,
+            watchedSeconds: watchedSeconds,
+            lastPosition: lastPosition,
+            updatedAt: new Date()
+          });
+        }
+        
+        // Calcular progreso total del curso
+        const totalVideos = 1 + (course.videos?.length || 0); // Video principal + videos adicionales
+        const completedVideos = existingProgress.videoProgress.filter((vp: any) => vp.completed).length;
+        
+        existingProgress.totalProgress = Math.round((completedVideos / totalVideos) * 100);
+        
+        // Verificar si se completó el curso
+        if (existingProgress.totalProgress >= 100 && !existingProgress.isCompleted) {
+          existingProgress.isCompleted = true;
+          existingProgress.completedAt = new Date();
+        }
+        
+        // Usar save() en lugar de findOneAndUpdate para evitar errores de versión
+        result = await existingProgress.save({ new: true });
+      }
+    } catch (error) {
+      // Convertir el error a un tipo más específico
+      const mongoError = error as MongoError;
+      
+      // Si hay un error de clave duplicada, intentar una vez más
+      if (mongoError.code === 11000) {
+        // Esperar un momento para evitar una condición de carrera
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        try {
+          // Obtener el documento y actualizar directamente
+          const existingDoc = await Progress.findOne({
+            userId: user._id,
+            courseId: data.courseId
+          });
+          
+          if (existingDoc) {
+            const videoIndex = existingDoc.videoProgress.findIndex(
+              (vp: any) => vp.videoId === data.videoId
+            );
+            
+            if (videoIndex >= 0) {
+              existingDoc.videoProgress[videoIndex].completed = videoCompleted;
+              existingDoc.videoProgress[videoIndex].watchedSeconds = watchedSeconds;
+              existingDoc.videoProgress[videoIndex].lastPosition = lastPosition;
+              existingDoc.videoProgress[videoIndex].updatedAt = new Date();
+            } else {
+              existingDoc.videoProgress.push({
+                videoId: data.videoId,
+                completed: videoCompleted,
+                watchedSeconds: watchedSeconds,
+                lastPosition: lastPosition,
+                updatedAt: new Date()
+              });
+            }
+            
+            // Calcular progreso total de nuevo
+            const totalVideos = 1 + (course.videos?.length || 0);
+            const completedVideos = existingDoc.videoProgress.filter((vp: any) => vp.completed).length;
+            
+            existingDoc.totalProgress = Math.round((completedVideos / totalVideos) * 100);
+            
+            if (existingDoc.totalProgress >= 100 && !existingDoc.isCompleted) {
+              existingDoc.isCompleted = true;
+              existingDoc.completedAt = new Date();
+            }
+            
+            result = await existingDoc.save({ new: true });
+          } else {
+            throw new Error("No se pudo encontrar el documento de progreso");
+          }
+        } catch (retryError) {
+          console.error('Error en segundo intento de actualización:', retryError);
+          return NextResponse.json(
+            { error: 'Error al procesar la solicitud después de múltiples intentos' },
+            { status: 500 }
+          );
+        }
+      } else {
+        console.error('Error al actualizar progreso:', error);
+        return NextResponse.json(
+          { error: 'Error al procesar la solicitud' },
+          { status: 500 }
+        );
+      }
     }
-    
-    // Calcular progreso total del curso
-    const totalVideos = 1 + (course.videos?.length || 0); // Video principal + videos adicionales
-    const completedVideos = progress.videoProgress.filter((vp: any) => vp.completed).length;
-    
-    progress.totalProgress = Math.round((completedVideos / totalVideos) * 100);
-    
-    // Verificar si se completó el curso
-    if (progress.totalProgress >= 100 && !progress.isCompleted) {
-      progress.isCompleted = true;
-      progress.completedAt = new Date();
-    }
-    
-    await progress.save();
     
     return NextResponse.json({
       success: true,
       progress: {
-        totalProgress: progress.totalProgress,
-        isCompleted: progress.isCompleted,
-        completedAt: progress.completedAt,
-        certificateIssued: progress.certificateIssued,
-        certificateUrl: progress.certificateUrl
+        totalProgress: result.totalProgress,
+        isCompleted: result.isCompleted,
+        completedAt: result.completedAt,
+        certificateIssued: result.certificateIssued,
+        certificateUrl: result.certificateUrl
       }
     });
     
