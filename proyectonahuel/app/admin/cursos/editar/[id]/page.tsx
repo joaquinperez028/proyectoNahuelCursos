@@ -52,6 +52,8 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
   const [featured, setFeatured] = useState<boolean>(false);
+  const [onSale, setOnSale] = useState<boolean>(false);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   
   // Estado para el manejo de videos
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -110,6 +112,8 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         setDescription(course.description || '');
         setPrice(course.price || 0);
         setFeatured(course.featured || false);
+        setOnSale(course.onSale || false);
+        setDiscountPercentage(course.discountPercentage || 0);
         
         // Cargar videos existentes
         if (course.videos && Array.isArray(course.videos)) {
@@ -270,6 +274,8 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         description,
         price,
         featured,
+        onSale,
+        discountPercentage,
         videos: videosData,
         exercises: exercisesData
       };
@@ -392,6 +398,61 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
             <p className="mt-1 text-sm text-gray-500 ml-6">
               Los cursos destacados aparecerán en secciones especiales para mayor visibilidad
             </p>
+          </div>
+          
+          {/* Sección de ofertas */}
+          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración de oferta</h3>
+            
+            <div className="mb-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="onSale"
+                  checked={onSale}
+                  onChange={(e) => setOnSale(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="onSale" className="ml-2 block text-sm font-medium text-gray-700">
+                  Activar oferta para este curso
+                </label>
+              </div>
+              <p className="mt-1 text-sm text-gray-500 ml-6">
+                Los cursos en oferta mostrarán el precio original y el precio con descuento
+              </p>
+            </div>
+            
+            {onSale && (
+              <div className="mt-4">
+                <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700 mb-1">
+                  Porcentaje de descuento
+                </label>
+                <div className="flex items-center">
+                  <select
+                    id="discountPercentage"
+                    value={discountPercentage}
+                    onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                    className="rounded-md border border-gray-300 py-2 pl-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="5">5%</option>
+                    <option value="10">10%</option>
+                    <option value="15">15%</option>
+                    <option value="20">20%</option>
+                  </select>
+                  
+                  {price > 0 && (
+                    <div className="ml-4 p-2 bg-green-50 rounded-md">
+                      <p className="text-sm text-gray-700">
+                        Precio original: <span className="font-medium">${price}</span>
+                      </p>
+                      <p className="text-sm text-green-700">
+                        Precio con descuento: <span className="font-medium">${(price - (price * (discountPercentage / 100))).toFixed(2)}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Sección de videos */}

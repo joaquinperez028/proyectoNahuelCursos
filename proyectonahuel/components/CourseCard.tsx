@@ -20,6 +20,9 @@ interface CourseCardProps {
       name: string;
     };
     reviews: any[];
+    onSale?: boolean;
+    discountPercentage?: number;
+    discountedPrice?: number;
   };
 }
 
@@ -41,6 +44,15 @@ const CourseCard = ({ course }: CourseCardProps) => {
     currency: 'ARS',
     minimumFractionDigits: 0,
   }).format(course.price);
+
+  // Formateamos el precio con descuento si está en oferta
+  const formattedDiscountedPrice = course.onSale && course.discountPercentage && course.discountPercentage > 0
+    ? new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(course.discountedPrice || course.price - (course.price * (course.discountPercentage / 100)))
+    : null;
 
   // Gestionar reproducción del video con delay al hacer hover
   useEffect(() => {
@@ -75,9 +87,25 @@ const CourseCard = ({ course }: CourseCardProps) => {
       >
         {/* Etiqueta de precio */}
         <div className="absolute top-0 right-0 z-10 m-4">
-          <div className="bg-[var(--accent)] text-[var(--neutral-100)] py-1 px-3 rounded-full text-sm font-medium shadow-lg">
-            {formattedPrice}
-          </div>
+          {course.onSale && formattedDiscountedPrice ? (
+            <div className="flex flex-col items-end">
+              <div className="bg-red-500 text-white py-1 px-3 rounded-full text-xs font-medium shadow-lg mb-1">
+                {course.discountPercentage}% OFF
+              </div>
+              <div className="flex items-center">
+                <span className="text-xs line-through text-[var(--neutral-300)] mr-2">
+                  {formattedPrice}
+                </span>
+                <div className="bg-[var(--accent)] text-[var(--neutral-100)] py-1 px-3 rounded-full text-sm font-medium shadow-lg">
+                  {formattedDiscountedPrice}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-[var(--accent)] text-[var(--neutral-100)] py-1 px-3 rounded-full text-sm font-medium shadow-lg">
+              {formattedPrice}
+            </div>
+          )}
         </div>
 
         {/* Siempre mostrar la imagen de fondo */}

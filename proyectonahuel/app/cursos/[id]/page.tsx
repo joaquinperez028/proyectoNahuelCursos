@@ -75,6 +75,9 @@ interface CourseType {
   reviews: ReviewType[];
   createdAt: string;
   updatedAt: string;
+  onSale: boolean;
+  discountPercentage: number;
+  discountedPrice?: number;
 }
 
 async function getUserHasCourse(courseId: string): Promise<boolean> {
@@ -177,7 +180,11 @@ async function getCourse(id: string): Promise<CourseType | null> {
         courseId: review.courseId.toString(),
         createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: review.updatedAt ? new Date(review.updatedAt).toISOString() : new Date().toISOString()
-      }))
+      })),
+      
+      onSale: courseDoc.onSale || false,
+      discountPercentage: courseDoc.discountPercentage || 0,
+      discountedPrice: courseDoc.discountedPrice || 0
     };
     
     return course;
@@ -241,6 +248,15 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
     currency: 'ARS',
     minimumFractionDigits: 0,
   }).format(course.price);
+
+  // Formato de precio con descuento
+  const formattedDiscountedPrice = course.onSale && course.discountPercentage && course.discountPercentage > 0
+    ? new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(course.discountedPrice || course.price - (course.price * (course.discountPercentage / 100)))
+    : null;
   
   return (
     <div className="bg-[var(--background)] text-[var(--foreground)] pb-16">
@@ -313,9 +329,25 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             </div>
             
             <div className="w-full md:w-auto">
-              <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
-                {formattedPrice}
-              </div>
+              {course.onSale && formattedDiscountedPrice ? (
+                <div className="flex flex-col items-end">
+                  <div className="bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-medium mb-2">
+                    {course.discountPercentage}% DESCUENTO
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-[var(--neutral-300)] line-through mr-3 text-lg">
+                      {formattedPrice}
+                    </span>
+                    <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
+                      {formattedDiscountedPrice}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
+                  {formattedPrice}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -504,8 +536,26 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
           <div className="lg:col-span-1">
             <div id="enroll-section" className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl p-6 lg:sticky lg:top-24">
               <div className="flex items-center justify-between mb-6">
-                <div className="text-3xl font-bold text-[var(--accent)]">
-                  {formattedPrice}
+                <div>
+                  {course.onSale && formattedDiscountedPrice ? (
+                    <div>
+                      <div className="text-3xl font-bold text-[var(--accent)]">
+                        {formattedDiscountedPrice}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        <span className="text-[var(--neutral-300)] line-through mr-2">
+                          {formattedPrice}
+                        </span>
+                        <span className="bg-red-500 text-white px-2 py-0.5 rounded text-xs font-medium">
+                          {course.discountPercentage}% OFF
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-3xl font-bold text-[var(--accent)]">
+                      {formattedPrice}
+                    </div>
+                  )}
                 </div>
                 {userHasCourse && (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -521,7 +571,10 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                 <EnrollSection 
                   courseId={course._id} 
                   price={course.price} 
-                  userHasCourse={userHasCourse} 
+                  userHasCourse={userHasCourse}
+                  onSale={course.onSale}
+                  discountPercentage={course.discountPercentage}
+                  discountedPrice={course.discountedPrice}
                 />
               </div>
               

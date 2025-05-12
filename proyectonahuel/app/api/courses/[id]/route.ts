@@ -87,6 +87,8 @@ export async function PUT(request: NextRequest) {
       description: data.description || course.description,
       price: data.price ?? course.price,
       featured: typeof data.featured === 'boolean' ? data.featured : course.featured,
+      onSale: typeof data.onSale === 'boolean' ? data.onSale : course.onSale,
+      discountPercentage: data.discountPercentage != null ? data.discountPercentage : course.discountPercentage,
     });
     
     // Actualizar videos si se proporcionan

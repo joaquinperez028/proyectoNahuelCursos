@@ -20,6 +20,9 @@ interface CourseType {
   };
   createdAt: string;
   updatedAt: string;
+  onSale: boolean;
+  discountPercentage: number;
+  featured: boolean;
 }
 
 async function getAdminStatus() {
@@ -46,6 +49,9 @@ async function getCourses(): Promise<CourseType[]> {
       thumbnailUrl: course.thumbnailUrl || '',
       createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
+      onSale: course.onSale || false,
+      discountPercentage: course.discountPercentage || 0,
+      featured: course.featured || false,
     }));
   } catch (error) {
     console.error('Error al obtener cursos:', error);
@@ -99,10 +105,10 @@ export default async function AdminCoursesPage() {
                     Precio
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Creado por
+                    Instructor
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Estado
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
@@ -140,13 +146,32 @@ export default async function AdminCoursesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">${course.price.toFixed(2)}</div>
+                      {course.onSale && (
+                        <div className="flex items-center mt-1">
+                          <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
+                            {course.discountPercentage}% descuento
+                          </span>
+                          <span className="text-green-600 text-xs ml-2">
+                            ${(course.price - (course.price * (course.discountPercentage / 100))).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{course.createdBy.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {new Date(course.createdAt).toLocaleDateString()}
+                      <div className="flex flex-wrap gap-1">
+                        {course.featured && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Destacado
+                          </span>
+                        )}
+                        {course.onSale && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Oferta
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

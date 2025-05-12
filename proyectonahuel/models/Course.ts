@@ -81,6 +81,16 @@ const CourseSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  onSale: {
+    type: Boolean,
+    default: false,
+  },
+  discountPercentage: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
   videos: [VideoSchema],
   exercises: [ExerciseSchema],
   duration: {
@@ -98,6 +108,18 @@ const CourseSchema = new Schema({
 }, {
   timestamps: true,
 });
+
+// Método virtual para calcular el precio con descuento
+CourseSchema.virtual('discountedPrice').get(function() {
+  if (!this.onSale || this.discountPercentage <= 0) {
+    return this.price;
+  }
+  return this.price - (this.price * (this.discountPercentage / 100));
+});
+
+// Asegurarse de que los virtuals se incluyan cuando se convierte a JSON
+CourseSchema.set('toJSON', { virtuals: true });
+CourseSchema.set('toObject', { virtuals: true });
 
 const Course = models.Course || mongoose.model('Course', CourseSchema);
 
