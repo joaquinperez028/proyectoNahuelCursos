@@ -5,21 +5,38 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
-interface CourseDeleteProps {
-  params: {
-    id: string;
-  }
+interface PageProps<T = {}> {
+  params: Promise<T>;
 }
 
-export default function DeleteCoursePage({ params }: CourseDeleteProps) {
+interface CourseParams {
+  id: string;
+}
+
+export default function DeleteCoursePage({ params }: PageProps<CourseParams>) {
   const router = useRouter();
   const { data: session } = useSession();
-  const { id } = params;
+  const [id, setId] = useState<string>('');
   
   const [course, setCourse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Obtener el ID del curso desde los parámetros (que ahora son una promesa)
+    const loadParams = async () => {
+      try {
+        const resolvedParams = await params;
+        setId(resolvedParams.id);
+      } catch (err) {
+        setError('Error al cargar los parámetros');
+        setIsLoading(false);
+      }
+    };
+    
+    loadParams();
+  }, [params]);
 
   useEffect(() => {
     // Redirige si no hay sesión o el usuario no es admin
@@ -30,6 +47,10 @@ export default function DeleteCoursePage({ params }: CourseDeleteProps) {
     if (session?.user?.role !== 'admin') {
       router.push('/');
       return;
+    }
+    
+    if (!id) {
+      return; // Esperar a que el ID esté disponible
     }
     
     const fetchCourse = async () => {
@@ -54,6 +75,8 @@ export default function DeleteCoursePage({ params }: CourseDeleteProps) {
   }, [id, router, session]);
 
   const handleDelete = async () => {
+    if (!id) return;
+    
     try {
       setIsDeleting(true);
       
