@@ -4,6 +4,7 @@ import Course from '@/models/Course';
 import User from '@/models/User';
 import { notFound } from 'next/navigation';
 import CertificateClientWrapper from './CertificateClientWrapper';
+import Link from 'next/link';
 
 interface PageProps<T = {}> {
   params: Promise<T>;
@@ -61,12 +62,19 @@ export default async function CertificatePage({ params }: PageProps<CertificateP
   
   return (
     <div className="flex flex-col items-center py-12 px-4">
-      {/* ID del certificado y url de verificación */}
-      <div className="text-center mb-8 text-gray-400 max-w-3xl w-full">
-        <p className="text-sm mb-1">ID del certificado: {certificateId}</p>
-        <p className="text-xs">
-          Verifica la autenticidad de este certificado en: {verificationUrl}
-        </p>
+      {/* ID del certificado y botón de verificación */}
+      <div className="text-center mb-8 max-w-3xl w-full flex flex-col sm:flex-row justify-between items-center gap-4">
+        <p className="text-sm text-gray-400">ID del certificado: {certificateId}</p>
+        <Link 
+          href={verificationUrl}
+          target="_blank" 
+          className="px-4 py-2 bg-[#111827] border border-[#3CBFAE] text-[#3CBFAE] rounded-md hover:bg-[#1f2937] transition-colors text-sm flex items-center"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Verifica certificado
+        </Link>
       </div>
       
       {/* Botón para imprimir (ahora dentro del wrapper cliente) */}
