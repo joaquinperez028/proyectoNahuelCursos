@@ -9,21 +9,21 @@ export default function Home() {
       name: "María González",
       role: "Desarrolladora Frontend",
       comment: "Los cursos de programación me ayudaron a conseguir mi primer trabajo como desarrolladora. La calidad del contenido es excepcional.",
-      avatar: "/images/avatars/avatar-1.jpg"
+      avatar: "/images/placeholder.png"
     },
     {
       id: 2,
       name: "Carlos Rodríguez",
       role: "Diseñador UX/UI",
       comment: "Después de completar los cursos de diseño, pude mejorar significativamente mi portafolio y atraer nuevos clientes.",
-      avatar: "/images/avatars/avatar-2.jpg"
+      avatar: "/images/placeholder.png"
     },
     {
       id: 3,
       name: "Laura Martínez",
       role: "Especialista en Marketing Digital",
       comment: "Los conocimientos adquiridos en los cursos de marketing me permitieron implementar estrategias efectivas que aumentaron las ventas de mi negocio.",
-      avatar: "/images/avatars/avatar-3.jpg"
+      avatar: "/images/placeholder.png"
     }
   ];
 
