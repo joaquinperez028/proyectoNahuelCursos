@@ -12,6 +12,7 @@ import { Types } from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import Image from "next/image";
 import ScrollToEnrollButton from '@/components/ScrollToEnrollButton';
+import MuxPlayer from "@/app/components/MuxPlayer";
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,8 @@ interface CourseType {
   hasThumbnailImage: boolean;
   playbackId?: string;
   videoId?: string;
+  introPlaybackId?: string;
+  introVideoId?: string;
   videos: VideoType[];
   exercises: ExerciseType[];
   createdBy: {
@@ -134,6 +137,8 @@ async function getCourse(id: string): Promise<CourseType | null> {
       hasThumbnailImage: !!courseDoc.thumbnailImage?.data,
       playbackId: courseDoc.playbackId || '',
       videoId: courseDoc.videoId || '',
+      introPlaybackId: courseDoc.introPlaybackId || '',
+      introVideoId: courseDoc.introVideoId || '',
       createdBy: {
         _id: courseDoc.createdBy?._id ? courseDoc.createdBy._id.toString() : '',
         name: courseDoc.createdBy?.name || ''
@@ -368,6 +373,23 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                   courseId={course._id}
                   token={mainToken} 
                 />
+              ) : course.introPlaybackId ? (
+                <div className="relative">
+                  <div className="aspect-video w-full bg-[var(--neutral-900)]">
+                    <MuxPlayer
+                      playbackId={course.introPlaybackId}
+                      title={`Introducción a ${course.title}`}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                      <div className="flex justify-between items-center">
+                        <div className="text-white">
+                          <p className="font-medium">Video de introducción</p>
+                        </div>
+                        <ScrollToEnrollButton className="py-2 px-4 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="relative">
                   <div className="aspect-video w-full bg-[var(--neutral-900)]">
