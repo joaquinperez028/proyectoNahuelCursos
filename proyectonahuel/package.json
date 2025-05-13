@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@mux/mux-node": "^7.3.1",
     "@mux/mux-player-react": "^3.4.0",
     "bcrypt": "^5.1.1",
