@@ -39,6 +39,9 @@ export default function UsersTable() {
     direction: 'asc' 
   });
   const [filter, setFilter] = useState<string>('all'); // 'all', 'admin', 'user'
+  const [updatingUser, setUpdatingUser] = useState<string | null>(null);
+  const [roleChangeSuccess, setRoleChangeSuccess] = useState<string | null>(null);
+  const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
   
   const usersPerPage = 10;
   
@@ -138,6 +141,50 @@ export default function UsersTable() {
     });
   };
 
+  // Función para actualizar el rol del usuario
+  const updateUserRole = async (userId: string, newRole: string) => {
+    try {
+      setUpdatingUser(userId);
+      setRoleChangeSuccess(null);
+      setRoleChangeError(null);
+
+      const response = await fetch('/api/users/update-role', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, newRole }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al actualizar el rol');
+      }
+
+      const data = await response.json();
+      
+      // Actualizar el estado local
+      setUsers(prevUsers => prevUsers.map(user => 
+        user.id === userId 
+          ? { ...user, role: newRole } 
+          : user
+      ));
+      
+      setRoleChangeSuccess(`Rol actualizado a ${newRole === 'admin' ? 'Administrador' : 'Alumno'}`);
+      
+      // Ocultar mensaje de éxito después de 3 segundos
+      setTimeout(() => setRoleChangeSuccess(null), 3000);
+    } catch (err) {
+      console.error('Error al actualizar rol:', err);
+      setRoleChangeError(err instanceof Error ? err.message : 'Error desconocido');
+      
+      // Ocultar mensaje de error después de 3 segundos
+      setTimeout(() => setRoleChangeError(null), 3000);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
   return (
     <div className="w-full bg-[var(--neutral-900)] rounded-lg shadow-xl overflow-hidden">
       {/* Cabecera y filtros */}
@@ -225,6 +272,26 @@ export default function UsersTable() {
             </svg>
             Reintentar
           </button>
+        </div>
+      )}
+
+      {/* Mensajes de notificación */}
+      {(roleChangeSuccess || roleChangeError) && (
+        <div className={`fixed bottom-4 right-4 max-w-xs p-4 rounded-lg shadow-lg z-50 ${
+          roleChangeSuccess ? 'bg-green-900/90 text-green-100' : 'bg-red-900/90 text-red-100'
+        }`}>
+          <div className="flex items-center">
+            {roleChangeSuccess ? (
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            ) : (
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            )}
+            <p>{roleChangeSuccess || roleChangeError}</p>
+          </div>
         </div>
       )}
 
@@ -373,6 +440,31 @@ export default function UsersTable() {
                         )}
                         {user.role === 'admin' ? 'Administrador' : 'Alumno'}
                       </span>
+                      
+                      {/* Menú desplegable para cambiar rol */}
+                      <div className="mt-1">
+                        <select
+                          className="mt-1 block text-xs w-28 rounded-md bg-[var(--neutral-800)] border-[var(--neutral-700)] 
+                                    text-[var(--neutral-300)] focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                          value={user.role}
+                          onChange={(e) => updateUserRole(user.id, e.target.value)}
+                          disabled={updatingUser === user.id}
+                        >
+                          <option value="user">Alumno</option>
+                          <option value="admin">Administrador</option>
+                        </select>
+                        
+                        {/* Indicador de carga durante actualización */}
+                        {updatingUser === user.id && (
+                          <div className="mt-1 text-xs text-[var(--primary)] flex items-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Actualizando...
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="relative group">
