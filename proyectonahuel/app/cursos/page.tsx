@@ -7,6 +7,20 @@ import CourseCard from "@/components/CourseCard";
 
 export const dynamic = 'force-dynamic';
 
+interface ReviewType {
+  _id: mongoose.Types.ObjectId;
+  rating: number;
+  comment: string;
+  userId: {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    image?: string;
+  };
+  courseId: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface CourseType {
   _id: string;
   title: string;
@@ -46,12 +60,16 @@ async function getCourses(): Promise<CourseType[]> {
       .lean();
     
     // Agrupar las reseñas por courseId para facilitar el mapeo
-    const reviewsByCoursesId = allReviews.reduce((acc, review) => {
+    const reviewsByCoursesId: Record<string, any[]> = {};
+    
+    // Procesar las reseñas y agruparlas por ID de curso
+    allReviews.forEach(review => {
       const courseId = review.courseId.toString();
-      if (!acc[courseId]) acc[courseId] = [];
-      acc[courseId].push(review);
-      return acc;
-    }, {});
+      if (!reviewsByCoursesId[courseId]) {
+        reviewsByCoursesId[courseId] = [];
+      }
+      reviewsByCoursesId[courseId].push(review);
+    });
     
     return courses.map((course: any) => {
       const courseId = course._id.toString();
