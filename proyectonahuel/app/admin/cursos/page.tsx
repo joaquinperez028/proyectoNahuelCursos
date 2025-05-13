@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ interface CourseType {
 }
 
 async function getAdminStatus() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   return session?.user?.role === 'admin';
 }
 
