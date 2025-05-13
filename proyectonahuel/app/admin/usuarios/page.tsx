@@ -27,7 +27,7 @@ export default async function AdminUsersPage() {
     <div className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-[var(--neutral-100)]">
             Administración de Usuarios
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">

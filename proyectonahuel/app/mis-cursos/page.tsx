@@ -80,20 +80,20 @@ export default async function MisCursosPage() {
     <div className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h1 className="text-3xl font-bold text-[var(--neutral-100)] sm:text-4xl">
             Mis cursos
           </h1>
-          <p className="mt-4 text-xl text-gray-600">
+          <p className="mt-4 text-xl text-[var(--neutral-300)]">
             Accede a los cursos que has comprado
           </p>
         </div>
         
         {userCourses.length === 0 ? (
-          <div className="text-center py-10 bg-gray-50 rounded-lg">
-            <p className="text-gray-600 mb-4">No has comprado ningún curso todavía.</p>
+          <div className="text-center py-10 bg-[var(--card)] rounded-lg">
+            <p className="text-[var(--neutral-300)] mb-4">No has comprado ningún curso todavía.</p>
             <a 
               href="/cursos" 
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              className="inline-block bg-[var(--primary)] text-white px-4 py-2 rounded-md hover:bg-[var(--primary-dark)] transition-colors"
             >
               Explorar cursos disponibles
             </a>

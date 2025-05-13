@@ -71,9 +71,9 @@ export default async function AdminCoursesPage() {
   return (
     <div className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Administrar cursos
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-[var(--neutral-100)]">
+            Administración de Cursos
           </h1>
           <Link
             href="/admin/cursos/nuevo"
@@ -145,7 +145,7 @@ export default async function AdminCoursesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">${course.price.toFixed(2)}</div>
+                      <div className="text-sm text-[var(--neutral-200)]">${course.price.toFixed(2)}</div>
                       {course.onSale && (
                         <div className="flex items-center mt-1">
                           <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
@@ -158,7 +158,7 @@ export default async function AdminCoursesPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{course.createdBy.name}</div>
+                      <div className="text-sm text-[var(--neutral-200)]">{course.createdBy.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">

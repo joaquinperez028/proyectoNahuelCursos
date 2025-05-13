@@ -56,17 +56,17 @@ export default function PerfilPage() {
   return (
     <div className="py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Perfil de Usuario</h1>
+        <h1 className="text-3xl font-bold text-[var(--neutral-100)] mb-6">Perfil de Usuario</h1>
         
-        <div className="bg-white shadow-md rounded-lg p-6">
+        <div className="bg-[var(--card)] shadow-md rounded-lg p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Información Personal</h2>
-            <div className="border-t border-gray-200 pt-3">
-              <p className="mb-2"><span className="font-medium">Nombre:</span> {session?.user?.name || 'No disponible'}</p>
-              <p className="mb-2"><span className="font-medium">Email:</span> {session?.user?.email || 'No disponible'}</p>
-              <p className="mb-2">
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-2">Información Personal</h2>
+            <div className="border-t border-[var(--border)] pt-3">
+              <p className="mb-2 text-[var(--neutral-200)]"><span className="font-medium">Nombre:</span> {session?.user?.name || 'No disponible'}</p>
+              <p className="mb-2 text-[var(--neutral-200)]"><span className="font-medium">Email:</span> {session?.user?.email || 'No disponible'}</p>
+              <p className="mb-2 text-[var(--neutral-200)]">
                 <span className="font-medium">Rol:</span> 
-                <span className={session?.user?.role === 'admin' ? 'text-green-600 font-semibold' : ''}> 
+                <span className={session?.user?.role === 'admin' ? 'text-green-400 font-semibold' : ''}> 
                   {session?.user?.role === 'admin' ? 'Administrador' : 'Usuario'}
                 </span>
               </p>
@@ -74,8 +74,8 @@ export default function PerfilPage() {
           </div>
           
           {session?.user?.role === 'admin' && (
-            <div className="mb-6 border-t border-gray-200 pt-4">
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">Herramientas de Administrador</h2>
+            <div className="mb-6 border-t border-[var(--border)] pt-4">
+              <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-2">Herramientas de Administrador</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <Link 

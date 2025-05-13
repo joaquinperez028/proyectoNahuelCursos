@@ -121,17 +121,17 @@ export default async function CoursesPage() {
     <div className="py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h1 className="text-3xl font-bold text-[var(--neutral-100)] sm:text-4xl">
             Todos los cursos
           </h1>
-          <p className="mt-4 text-xl text-gray-600">
+          <p className="mt-4 text-xl text-[var(--neutral-300)]">
             Explora nuestra selección de cursos de alta calidad
           </p>
         </div>
         
         {courses.length === 0 ? (
           <div className="text-center py-10">
-            <p className="text-lg text-gray-600">No hay cursos disponibles en este momento.</p>
+            <p className="text-lg text-[var(--neutral-300)]">No hay cursos disponibles en este momento.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
