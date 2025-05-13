@@ -92,17 +92,162 @@ export default function PerfilPage() {
   // Cargar datos del perfil
   useEffect(() => {
     if (status === 'authenticated') {
-      // Aquí iría la llamada a la API para cargar los datos reales
-      // Por ahora usamos datos de ejemplo
       fetchProfileData();
     }
   }, [status]);
 
-  // Función para cargar datos del perfil (simulada)
+  // Función para cargar datos del perfil con datos reales
   const fetchProfileData = async () => {
-    // Simular una carga de datos de la API
-    setTimeout(() => {
-      // Datos de ejemplo para la demostración
+    try {
+      // Obtener los cursos del usuario
+      const coursesResponse = await fetch('/api/users/courses');
+      const coursesData = await coursesResponse.json();
+      
+      if (!coursesResponse.ok) {
+        throw new Error(coursesData.error || 'Error al cargar los cursos');
+      }
+      
+      const userCourses = coursesData.courses || [];
+      
+      // Obtener progreso para cada curso
+      const activeCourses: CourseProgress[] = [];
+      const certificates: Certificate[] = [];
+      
+      for (const course of userCourses) {
+        // Obtener el progreso del curso
+        const progressResponse = await fetch(`/api/progress/check?courseId=${course._id}`);
+        const progressData = await progressResponse.json();
+        
+        if (progressResponse.ok) {
+          const progress = progressData.progress;
+          
+          // Añadir a cursos activos
+          activeCourses.push({
+            id: course._id,
+            title: course.title,
+            progress: progress.totalProgress || 0,
+            startDate: course.createdAt,
+            lastUpdate: progress.updatedAt || course.updatedAt,
+            thumbnailUrl: course.thumbnailUrl
+          });
+          
+          // Si tiene certificado, añadirlo a la lista de certificados
+          if (progress.certificateIssued && progress.certificateUrl) {
+            certificates.push({
+              id: course._id,
+              courseTitle: course.title,
+              issueDate: progress.completedAt || course.updatedAt,
+              certificateUrl: progress.certificateUrl
+            });
+          }
+        }
+      }
+      
+      // Obtener estadísticas globales
+      const statsResponse = await fetch('/api/stats');
+      const statsData = await statsResponse.json();
+      
+      // Obtener historial de compras (si existe el endpoint)
+      const purchases: Purchase[] = [];
+      try {
+        const purchasesResponse = await fetch('/api/users/purchases');
+        if (purchasesResponse.ok) {
+          const purchasesData = await purchasesResponse.json();
+          purchasesData.purchases.forEach((purchase: any) => {
+            purchases.push({
+              id: purchase._id || purchase.id,
+              courseTitle: purchase.courseTitle || purchase.course?.title || 'Curso',
+              date: purchase.createdAt,
+              paymentMethod: purchase.paymentMethod || 'No especificado',
+              amount: purchase.amount || purchase.price || 0,
+              invoiceUrl: purchase.invoiceUrl
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error al cargar compras:', error);
+        // Si no hay endpoint de compras, usar los cursos como compras
+        userCourses.forEach((course: any) => {
+          purchases.push({
+            id: course._id,
+            courseTitle: course.title,
+            date: course.createdAt,
+            paymentMethod: 'Compra en plataforma',
+            amount: course.price || 0
+          });
+        });
+      }
+      
+      // Obtener información del usuario (fecha de registro, último acceso)
+      const userInfoResponse = await fetch('/api/users/profile');
+      let registrationDate = '';
+      let lastLogin = '';
+      
+      if (userInfoResponse.ok) {
+        const userInfo = await userInfoResponse.json();
+        registrationDate = userInfo.createdAt || '';
+        lastLogin = userInfo.lastLogin || '';
+      } else {
+        // Usar fechas actuales si no hay información
+        registrationDate = new Date().toISOString();
+        lastLogin = new Date().toISOString();
+      }
+      
+      // Obtener estadísticas de admin (solo para administradores)
+      let adminStats = {
+        totalUsers: 0,
+        totalCourses: 0,
+        totalSales: 0,
+        monthlySales: 0
+      };
+      
+      if (session?.user?.role === 'admin') {
+        try {
+          const adminStatsResponse = await fetch('/api/admin/stats');
+          if (adminStatsResponse.ok) {
+            const adminStatsData = await adminStatsResponse.json();
+            adminStats = {
+              totalUsers: adminStatsData.users || statsData.students || 0,
+              totalCourses: adminStatsData.courses || statsData.courses || 0,
+              totalSales: adminStatsData.totalSales || 0,
+              monthlySales: adminStatsData.monthlySales || 0
+            };
+          }
+        } catch (error) {
+          console.error('Error al cargar estadísticas de admin:', error);
+          // Usar estadísticas globales como fallback
+          adminStats = {
+            totalUsers: statsData.students || 0,
+            totalCourses: statsData.courses || 0,
+            totalSales: 0,
+            monthlySales: 0
+          };
+        }
+      }
+      
+      // Actualizar el estado con todos los datos reales
+      setProfileData({
+        activeCourses,
+        certificates,
+        purchases,
+        stats: {
+          totalCourses: userCourses.length,
+          completedCourses: certificates.length,
+          certificatesEarned: certificates.length,
+          totalHoursLearned: Math.round(activeCourses.reduce(
+            (acc, course) => acc + (course.progress / 100) * 20, 0
+          )) // Estimación de horas basada en progreso (20h por curso)
+        },
+        adminStats,
+        lastLogin,
+        registrationDate
+      });
+      
+    } catch (error) {
+      console.error('Error al cargar datos del perfil:', error);
+      
+      // Cargar datos de respaldo en caso de error
+      // Para demostración, usar datos simulados como fallback
       setProfileData({
         activeCourses: [
           {
@@ -168,22 +313,6 @@ export default function PerfilPage() {
             paymentMethod: 'Transferencia',
             amount: 15999,
           },
-          {
-            id: 'compra4',
-            courseTitle: 'Programación Python',
-            date: '2023-05-10',
-            paymentMethod: 'MercadoPago',
-            amount: 22999,
-            invoiceUrl: '/facturas/factura4.pdf',
-          },
-          {
-            id: 'compra5',
-            courseTitle: 'Desarrollo de Aplicaciones Móviles',
-            date: '2023-03-25',
-            paymentMethod: 'PayPal',
-            amount: 27999,
-            invoiceUrl: '/facturas/factura5.pdf',
-          },
         ],
         stats: {
           totalCourses: 5,
@@ -197,10 +326,10 @@ export default function PerfilPage() {
           totalSales: 2850000,
           monthlySales: 350000,
         },
-        lastLogin: '2023-10-01T15:30:00Z',
+        lastLogin: new Date().toISOString(),
         registrationDate: '2023-01-15T10:20:00Z',
       });
-    }, 1000);
+    }
   };
 
   // Función para verificar la conexión con MUX
@@ -235,25 +364,34 @@ export default function PerfilPage() {
 
   // Función para descargar un certificado
   const handleDownloadCertificate = (certificateId: string) => {
-    // Aquí iría la lógica real para descargar el certificado
-    console.log(`Descargando certificado ${certificateId}`);
-    
-    // Ejemplo de redirección a un PDF
+    // Buscar el certificado por ID
     const certificate = profileData.certificates.find(cert => cert.id === certificateId);
     if (certificate?.certificateUrl) {
-      window.open(certificate.certificateUrl, '_blank');
+      // Si es una URL externa, abrir en nueva pestaña
+      if (certificate.certificateUrl.startsWith('http')) {
+        window.open(certificate.certificateUrl, '_blank');
+      } else {
+        // Si es una ruta interna, redireccionar a la página de certificado
+        window.open(`/certificados/ver/${certificateId}`, '_blank');
+      }
     }
   };
 
   // Función para formatear fechas
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (!dateString) return 'No disponible';
+    
+    try {
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return 'Fecha inválida';
+    }
   };
 
   if (status === 'loading') {
@@ -492,9 +630,9 @@ export default function PerfilPage() {
                 ) : (
                   <div className="text-center py-10">
                     <p className="text-[#B4B4C0]">No tienes cursos activos actualmente.</p>
-                    <button className="mt-4 px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200">
+                    <a href="/cursos" className="mt-4 px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200 inline-block">
                       Explorar Cursos
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
