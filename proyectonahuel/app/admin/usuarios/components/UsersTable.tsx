@@ -43,6 +43,18 @@ export default function UsersTable() {
   const [roleChangeSuccess, setRoleChangeSuccess] = useState<string | null>(null);
   const [roleChangeError, setRoleChangeError] = useState<string | null>(null);
   
+  // Estados para modales
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    role: 'user'
+  });
+  
   const usersPerPage = 10;
   
   // Función para cargar usuarios
@@ -216,6 +228,110 @@ export default function UsersTable() {
       setTimeout(() => setRoleChangeError(null), 3000);
     } finally {
       setUpdatingUser(null);
+    }
+  };
+
+  // Handler para ver detalles del usuario
+  const handleViewDetails = (user: User) => {
+    setSelectedUser(user);
+    setShowDetailsModal(true);
+  };
+
+  // Handler para editar usuario
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+    setShowEditModal(true);
+  };
+
+  // Handler para confirmar eliminación de usuario
+  const handleDeleteConfirm = (user: User) => {
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
+
+  // Función para guardar los cambios de edición
+  const handleSaveEdit = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setUpdatingUser(selectedUser.id);
+      
+      const response = await fetch('/api/users/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          userData: editFormData
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al actualizar el usuario');
+      }
+
+      // Actualizar datos localmente
+      setUsers(prevUsers => prevUsers.map(user => 
+        user.id === selectedUser.id 
+          ? { ...user, name: editFormData.name, email: editFormData.email, role: editFormData.role } 
+          : user
+      ));
+
+      setRoleChangeSuccess('Usuario actualizado correctamente');
+      setShowEditModal(false);
+      
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => setRoleChangeSuccess(null), 3000);
+    } catch (err) {
+      console.error('Error al actualizar usuario:', err);
+      setRoleChangeError(err instanceof Error ? err.message : 'Error desconocido');
+      setTimeout(() => setRoleChangeError(null), 3000);
+    } finally {
+      setUpdatingUser(null);
+    }
+  };
+
+  // Función para eliminar usuario
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setDeleteLoading(true);
+      
+      const response = await fetch(`/api/users/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: selectedUser.id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al eliminar el usuario');
+      }
+
+      // Eliminar usuario de la lista local
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
+      
+      setRoleChangeSuccess('Usuario eliminado correctamente');
+      setShowDeleteModal(false);
+      
+      // Ocultar mensaje después de 3 segundos
+      setTimeout(() => setRoleChangeSuccess(null), 3000);
+    } catch (err) {
+      console.error('Error al eliminar usuario:', err);
+      setRoleChangeError(err instanceof Error ? err.message : 'Error desconocido');
+      setTimeout(() => setRoleChangeError(null), 3000);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -560,6 +676,7 @@ export default function UsersTable() {
                         <button 
                           className="text-[var(--accent)] hover:text-[var(--accent-dark)] transition-colors"
                           title="Ver detalles"
+                          onClick={() => user && handleViewDetails(user)}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -569,6 +686,7 @@ export default function UsersTable() {
                         <button 
                           className="text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"
                           title="Editar usuario"
+                          onClick={() => user && handleEditUser(user)}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -578,6 +696,7 @@ export default function UsersTable() {
                           <button 
                             className="text-red-500 hover:text-red-700 transition-colors"
                             title="Eliminar usuario"
+                            onClick={() => user && handleDeleteConfirm(user)}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -638,6 +757,260 @@ export default function UsersTable() {
           >
             Siguiente
           </button>
+        </div>
+      )}
+
+      {/* Modal de Detalles */}
+      {showDetailsModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[var(--neutral-800)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-[var(--neutral-700)]">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold text-[var(--neutral-100)]">Detalles del Usuario</h3>
+                <button 
+                  className="text-[var(--neutral-400)] hover:text-[var(--neutral-100)]"
+                  onClick={() => setShowDetailsModal(false)}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center mb-6">
+                <div className="mr-4">
+                  {selectedUser.image ? (
+                    <Image 
+                      src={selectedUser.image} 
+                      alt={selectedUser.name}
+                      width={80}
+                      height={80}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="h-20 w-20 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-2xl">
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-xl font-medium text-[var(--neutral-100)]">{selectedUser.name}</h4>
+                  <p className="text-[var(--neutral-400)]">{selectedUser.email}</p>
+                  <div className="mt-1">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      selectedUser.role === 'admin' 
+                        ? 'bg-purple-900/30 text-purple-200' 
+                        : 'bg-blue-900/30 text-blue-200'
+                    }`}>
+                      {selectedUser.role === 'admin' ? 'Administrador' : 'Alumno'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h5 className="text-sm font-medium text-[var(--neutral-400)] mb-2">Fecha de registro</h5>
+                  <p className="text-[var(--neutral-200)]">
+                    {selectedUser.createdAt ? formatDate(selectedUser.createdAt) : 'N/A'}
+                  </p>
+                </div>
+                
+                <div>
+                  <h5 className="text-sm font-medium text-[var(--neutral-400)] mb-2">Cursos adquiridos</h5>
+                  {selectedUser.courses.length === 0 ? (
+                    <p className="text-[var(--neutral-500)]">No ha adquirido cursos todavía</p>
+                  ) : (
+                    <div className="bg-[var(--neutral-900)] rounded-md p-4">
+                      <ul className="space-y-3">
+                        {selectedUser.courses.map((course, index) => (
+                          <li key={index} className="flex items-start justify-between">
+                            <div>
+                              <p className="text-[var(--neutral-200)]">{course.title}</p>
+                              <p className="text-sm text-[var(--neutral-500)]">
+                                Precio: ${course.price.toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <div className="mb-1">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  course.isCompleted 
+                                    ? 'bg-green-900/30 text-green-200' 
+                                    : 'bg-yellow-900/30 text-yellow-200'
+                                }`}>
+                                  {course.isCompleted ? 'Completado' : 'En progreso'}
+                                </span>
+                              </div>
+                              <p className="text-sm text-[var(--neutral-400)]">
+                                Progreso: {course.progress}%
+                              </p>
+                              {course.completedAt && (
+                                <p className="text-xs text-[var(--neutral-500)]">
+                                  Completado: {formatDate(course.completedAt)}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[var(--neutral-700)] flex justify-end">
+              <button
+                className="bg-[var(--neutral-700)] text-[var(--neutral-300)] px-4 py-2 rounded-md hover:bg-[var(--neutral-600)]"
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edición */}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[var(--neutral-800)] rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6 border-b border-[var(--neutral-700)]">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold text-[var(--neutral-100)]">Editar Usuario</h3>
+                <button 
+                  className="text-[var(--neutral-400)] hover:text-[var(--neutral-100)]"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--neutral-400)] mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-[var(--neutral-700)] text-[var(--neutral-200)] px-4 py-2 rounded-md border border-[var(--neutral-600)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--neutral-400)] mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="w-full bg-[var(--neutral-700)] text-[var(--neutral-200)] px-4 py-2 rounded-md border border-[var(--neutral-600)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--neutral-400)] mb-1">
+                  Rol
+                </label>
+                <select
+                  className="w-full bg-[var(--neutral-700)] text-[var(--neutral-200)] px-4 py-2 rounded-md border border-[var(--neutral-600)] focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                  value={editFormData.role}
+                  onChange={(e) => setEditFormData({...editFormData, role: e.target.value})}
+                >
+                  <option value="user">Alumno</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[var(--neutral-700)] flex justify-end space-x-3">
+              <button
+                className="bg-[var(--neutral-700)] text-[var(--neutral-300)] px-4 py-2 rounded-md hover:bg-[var(--neutral-600)]"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="bg-[var(--primary)] text-white px-4 py-2 rounded-md hover:bg-[var(--primary-dark)]"
+                onClick={handleSaveEdit}
+                disabled={updatingUser === selectedUser.id}
+              >
+                {updatingUser === selectedUser.id ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Guardando...
+                  </span>
+                ) : "Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Eliminar */}
+      {showDeleteModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[var(--neutral-800)] rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6 border-b border-[var(--neutral-700)]">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold text-[var(--neutral-100)]">Confirmar eliminación</h3>
+                <button 
+                  className="text-[var(--neutral-400)] hover:text-[var(--neutral-100)]"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex-shrink-0">
+                  <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-lg font-medium text-[var(--neutral-100)]">
+                    ¿Eliminar a {selectedUser.name}?
+                  </h4>
+                  <p className="text-[var(--neutral-400)]">
+                    Esta acción no se puede deshacer. Se eliminarán todos sus datos y accesos a cursos.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[var(--neutral-700)] flex justify-end space-x-3">
+              <button
+                className="bg-[var(--neutral-700)] text-[var(--neutral-300)] px-4 py-2 rounded-md hover:bg-[var(--neutral-600)]"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleteLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                onClick={handleDeleteUser}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Eliminando...
+                  </span>
+                ) : "Sí, eliminar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
