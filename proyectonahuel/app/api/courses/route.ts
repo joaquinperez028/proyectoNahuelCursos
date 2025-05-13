@@ -18,7 +18,7 @@ export async function GET() {
     
     return NextResponse.json(courses);
   } catch (error) {
-    console.error('Error al obtener cursos:', error);
+    console.error('Error al obtener cursoss:', error);
     return NextResponse.json(
       { error: 'Error al obtener los cursos' },
       { status: 500 }

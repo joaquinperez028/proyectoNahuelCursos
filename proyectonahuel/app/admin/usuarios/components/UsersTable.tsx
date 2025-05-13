@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -45,31 +45,61 @@ export default function UsersTable() {
   
   const usersPerPage = 10;
   
-  // Cargar usuarios al montar el componente
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/users');
-        
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
+  // Función para cargar usuarios
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Construir la URL de la API usando variables de entorno si están disponibles
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const url = `${apiBaseUrl}/api/users`;
+      console.log('Solicitando usuarios desde:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include' // Incluir cookies en la solicitud
+      });
+      
+      if (!response.ok) {
+        console.error('Error al cargar usuarios:', response.status, response.statusText);
+        // Intentar obtener más detalles del error
+        let errorDetail = '';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || '';
+        } catch (e) {
+          console.error('No se pudo decodificar respuesta de error:', e);
         }
         
-        const data = await response.json();
-        setUsers(data.users || []);
-        setError(null);
-      } catch (err) {
-        console.error('Error al cargar usuarios:', err);
-        setError(err instanceof Error ? err.message : 'Error desconocido al cargar usuarios');
-        setUsers([]);
-      } finally {
-        setLoading(false);
+        throw new Error(`Error ${response.status}: ${response.statusText}${errorDetail ? `. ${errorDetail}` : ''}`);
       }
-    };
-
-    fetchUsers();
+      
+      const data = await response.json();
+      console.log('Datos de usuarios recibidos:', data);
+      
+      if (!data.users || !Array.isArray(data.users)) {
+        throw new Error('Formato de respuesta inválido. No se encontró el array de usuarios.');
+      }
+      
+      setUsers(data.users || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido al cargar usuarios');
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   // Función para solicitar ordenación
   const requestSort = (key: string) => {
@@ -82,14 +112,18 @@ export default function UsersTable() {
 
   // Filtrar usuarios según término de búsqueda y filtro de rol
   const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = user?.name || '';
+    const email = user?.email || '';
     
+    const matchesSearch = 
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const role = user?.role || 'user';
     const matchesFilter = 
       filter === 'all' || 
-      (filter === 'admin' && user.role === 'admin') || 
-      (filter === 'user' && user.role === 'user');
+      (filter === 'admin' && role === 'admin') || 
+      (filter === 'user' && role === 'user');
     
     return matchesSearch && matchesFilter;
   });
@@ -100,14 +134,14 @@ export default function UsersTable() {
     let bValue: any = null;
     
     if (sortConfig.key === 'courses') {
-      aValue = a.courses.length;
-      bValue = b.courses.length;
+      aValue = a?.courses?.length || 0;
+      bValue = b?.courses?.length || 0;
     } else if (sortConfig.key === 'createdAt') {
-      aValue = new Date(a.createdAt).getTime();
-      bValue = new Date(b.createdAt).getTime();
+      aValue = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      bValue = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
     } else {
-      aValue = a[sortConfig.key as keyof User];
-      bValue = b[sortConfig.key as keyof User];
+      aValue = a?.[sortConfig.key as keyof User] || '';
+      bValue = b?.[sortConfig.key as keyof User] || '';
     }
     
     if (aValue === null || bValue === null) return 0;
@@ -264,7 +298,7 @@ export default function UsersTable() {
           </h3>
           <p className="text-[var(--neutral-400)] mb-4">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => fetchUsers()}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,40 +430,40 @@ export default function UsersTable() {
                 </tr>
               ) : (
                 currentUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-[var(--neutral-800)] transition-colors duration-150">
+                  <tr key={user?.id || Math.random().toString()} className="hover:bg-[var(--neutral-800)] transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 relative">
-                          {user.image ? (
+                          {user?.image ? (
                             <Image 
                               src={user.image} 
-                              alt={user.name}
+                              alt={user?.name || 'Usuario'}
                               width={40}
                               height={40}
                               className="rounded-full"
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white">
-                              {user.name.charAt(0).toUpperCase()}
+                              {(user?.name || 'U').charAt(0).toUpperCase()}
                             </div>
                           )}
                           <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-[var(--neutral-900)] ${
-                            user.isActive ? 'bg-green-500' : 'bg-gray-500'
+                            user?.isActive ? 'bg-green-500' : 'bg-gray-500'
                           }`}></span>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-[var(--neutral-200)]">{user.name}</div>
-                          <div className="text-sm text-[var(--neutral-400)]">{user.email}</div>
+                          <div className="text-sm font-medium text-[var(--neutral-200)]">{user?.name || 'Usuario sin nombre'}</div>
+                          <div className="text-sm text-[var(--neutral-400)]">{user?.email || 'Email no disponible'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.role === 'admin' 
+                        user?.role === 'admin' 
                           ? 'bg-purple-900/30 text-purple-200' 
                           : 'bg-blue-900/30 text-blue-200'
                       }`}>
-                        {user.role === 'admin' ? (
+                        {user?.role === 'admin' ? (
                           <svg className="mr-1.5 h-2 w-2 text-purple-400" fill="currentColor" viewBox="0 0 8 8">
                             <circle cx="4" cy="4" r="3" />
                           </svg>
@@ -438,7 +472,7 @@ export default function UsersTable() {
                             <circle cx="4" cy="4" r="3" />
                           </svg>
                         )}
-                        {user.role === 'admin' ? 'Administrador' : 'Alumno'}
+                        {user?.role === 'admin' ? 'Administrador' : 'Alumno'}
                       </span>
                       
                       {/* Menú desplegable para cambiar rol */}
@@ -446,16 +480,16 @@ export default function UsersTable() {
                         <select
                           className="mt-1 block text-xs w-28 rounded-md bg-[var(--neutral-800)] border-[var(--neutral-700)] 
                                     text-[var(--neutral-300)] focus:ring-[var(--primary)] focus:border-[var(--primary)]"
-                          value={user.role}
-                          onChange={(e) => updateUserRole(user.id, e.target.value)}
-                          disabled={updatingUser === user.id}
+                          value={user?.role || 'user'}
+                          onChange={(e) => user?.id && updateUserRole(user.id, e.target.value)}
+                          disabled={updatingUser === user?.id || !user?.id}
                         >
                           <option value="user">Alumno</option>
                           <option value="admin">Administrador</option>
                         </select>
                         
                         {/* Indicador de carga durante actualización */}
-                        {updatingUser === user.id && (
+                        {updatingUser === user?.id && (
                           <div className="mt-1 text-xs text-[var(--primary)] flex items-center">
                             <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -468,7 +502,7 @@ export default function UsersTable() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="relative group">
-                        {user.courses.length === 0 ? (
+                        {!user?.courses || user.courses.length === 0 ? (
                           <span className="text-sm text-[var(--neutral-500)]">
                             Sin cursos
                           </span>
@@ -479,9 +513,9 @@ export default function UsersTable() {
                                 <div 
                                   key={index}
                                   className="inline-block h-8 w-8 rounded-full bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-xs flex items-center justify-center text-white font-medium ring-2 ring-[var(--neutral-900)]"
-                                  title={course.title}
+                                  title={course?.title || 'Curso'}
                                 >
-                                  {course.title.charAt(0)}
+                                  {(course?.title || 'C').charAt(0)}
                                 </div>
                               ))}
                               {user.courses.length > 3 && (
@@ -501,12 +535,12 @@ export default function UsersTable() {
                                 {user.courses.map((course, index) => (
                                   <li key={index} className="text-xs text-[var(--neutral-400)] flex items-center">
                                     <span className="w-2 h-2 rounded-full bg-[var(--accent)] mr-2"></span>
-                                    <span>{course.title}</span>
+                                    <span>{course?.title || 'Curso sin título'}</span>
                                     <span className="ml-auto text-[var(--neutral-500)]">
-                                      {course.isCompleted ? (
+                                      {course?.isCompleted ? (
                                         <span className="text-green-400">Completado</span>
                                       ) : (
-                                        <span>{course.progress}%</span>
+                                        <span>{course?.progress || 0}%</span>
                                       )}
                                     </span>
                                   </li>
@@ -519,7 +553,7 @@ export default function UsersTable() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--neutral-400)]">
-                      {user.createdAt ? formatDate(user.createdAt) : 'N/A'}
+                      {user?.createdAt ? formatDate(user.createdAt) : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
@@ -540,7 +574,7 @@ export default function UsersTable() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                           </svg>
                         </button>
-                        {user.role !== 'admin' && (
+                        {(user?.role !== 'admin') && (
                           <button 
                             className="text-red-500 hover:text-red-700 transition-colors"
                             title="Eliminar usuario"
