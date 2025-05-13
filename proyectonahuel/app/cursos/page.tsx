@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/mongodb";
 import mongoose from 'mongoose';
 import User from "@/models/User";
 import Course from "@/models/Course";
+import Review from "@/models/Review";
 import CourseCard from "@/components/CourseCard";
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,7 @@ interface CourseType {
   price: number;
   thumbnailUrl: string;
   playbackId: string;
+  introPlaybackId?: string;
   videoId: string;
   createdBy: {
     _id: string;
@@ -21,32 +23,73 @@ interface CourseType {
   reviews: any[];
   createdAt: string;
   updatedAt: string;
+  onSale?: boolean;
+  discountPercentage?: number;
+  discountedPrice?: number;
 }
 
 async function getCourses(): Promise<CourseType[]> {
   try {
     await connectDB();
     console.log('Modelos registrados:', Object.keys(mongoose.models).join(', '));
-    const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
     
-    return courses.map((course: any) => ({
-      ...course,
-      _id: course._id ? course._id.toString() : '',
-      title: course.title || '',
-      description: course.description || '',
-      price: course.price || 0,
-      thumbnailUrl: course.thumbnailUrl || '',
-      playbackId: course.playbackId || '',
-      videoId: course.videoId || '',
-      createdBy: {
-        ...course.createdBy,
-        _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
-        name: course.createdBy?.name || ''
-      },
-      reviews: course.reviews || [],
-      createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
-    }));
+    // Obtener cursos con el creador
+    const courses = await Course.find({})
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'name')
+      .lean();
+    
+    // Obtener todas las reseñas para los cursos encontrados
+    const courseIds = courses.map(course => course._id);
+    const allReviews = await Review.find({ courseId: { $in: courseIds } })
+      .populate('userId', 'name image')
+      .lean();
+    
+    // Agrupar las reseñas por courseId para facilitar el mapeo
+    const reviewsByCoursesId = allReviews.reduce((acc, review) => {
+      const courseId = review.courseId.toString();
+      if (!acc[courseId]) acc[courseId] = [];
+      acc[courseId].push(review);
+      return acc;
+    }, {});
+    
+    return courses.map((course: any) => {
+      const courseId = course._id.toString();
+      const courseReviews = reviewsByCoursesId[courseId] || [];
+      
+      return {
+        ...course,
+        _id: courseId,
+        title: course.title || '',
+        description: course.description || '',
+        price: course.price || 0,
+        thumbnailUrl: course.thumbnailUrl || '',
+        playbackId: course.playbackId || '',
+        introPlaybackId: course.introPlaybackId || '',
+        videoId: course.videoId || '',
+        onSale: course.onSale || false,
+        discountPercentage: course.discountPercentage || 0,
+        discountedPrice: course.discountedPrice || null,
+        createdBy: {
+          ...course.createdBy,
+          _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
+          name: course.createdBy?.name || ''
+        },
+        reviews: courseReviews.map((review: any) => ({
+          _id: review._id.toString(),
+          rating: review.rating || 0,
+          comment: review.comment || '',
+          userId: {
+            _id: review.userId?._id ? review.userId._id.toString() : '',
+            name: review.userId?.name || '',
+            image: review.userId?.image || ''
+          },
+          createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString()
+        })),
+        createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
+      };
+    });
   } catch (error) {
     console.error('Error al obtener cursos:', error);
     return [];
