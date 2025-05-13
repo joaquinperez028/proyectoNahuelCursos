@@ -39,6 +39,15 @@ export default function NewCoursePage() {
   const introFileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   
+  // Verificar si el usuario es administrador
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session || session.user.role !== 'admin') {
+      router.push('/');
+    }
+  }, [session, status, router]);
+  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -591,16 +600,6 @@ export default function NewCoursePage() {
       return () => clearInterval(interval);
     }
   }, [introUploadId, introUploadStatus, isSubmitting]);
-  
-  // Redireccionar si no es administrador o no está autenticado
-  if (status === 'loading') {
-    return <div className="min-h-screen flex justify-center items-center">Cargando...</div>;
-  }
-  
-  if (status === 'unauthenticated' || session?.user.role !== 'admin') {
-    router.push('/');
-    return null;
-  }
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

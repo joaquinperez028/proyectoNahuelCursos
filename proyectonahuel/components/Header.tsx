@@ -84,7 +84,7 @@ const Header = () => {
                   </div>
                   <span className="text-sm font-medium">{session.user.name}</span>
                 </Link>
-                {session && (
+                {session?.user.role === 'admin' && (
                   <Link 
                     href="/admin/cursos/nuevo" 
                     className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors"
@@ -204,7 +204,7 @@ const Header = () => {
                   )}
                   <div className="text-sm font-medium text-[var(--neutral-200)]">{session.user.name}</div>
                 </div>
-                {session && (
+                {session?.user.role === 'admin' && (
                   <Link
                     href="/admin/cursos/nuevo"
                     className="block w-full text-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors"
