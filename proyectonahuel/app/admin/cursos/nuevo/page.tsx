@@ -1005,9 +1005,9 @@ export default function NewCoursePage() {
   return (
     <div className="py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Crear nuevo curso</h1>
+        <h1 className="text-3xl font-bold text-[var(--neutral-100)] mb-6">Crear nuevo curso</h1>
         
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
+        <form onSubmit={handleSubmit} className="bg-[var(--card)] shadow-md rounded-lg p-6">
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
               <p className="text-red-700">{error}</p>
@@ -1015,7 +1015,7 @@ export default function NewCoursePage() {
           )}
           
           <div className="mb-6">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="title" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
               Título del curso
             </label>
             <input
@@ -1023,13 +1023,13 @@ export default function NewCoursePage() {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
               placeholder="Ej: Programación con JavaScript avanzado"
             />
           </div>
           
           <div className="mb-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
               Descripción
             </label>
             <textarea
@@ -1037,13 +1037,13 @@ export default function NewCoursePage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
               placeholder="Describe de qué trata el curso..."
             />
           </div>
           
           <div className="mb-6">
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="price" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
               Precio (USD)
             </label>
             <input
@@ -1053,15 +1053,15 @@ export default function NewCoursePage() {
               onChange={(e) => setPrice(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
               placeholder="Ej: 49.99"
             />
           </div>
           
           {/* Imagen de miniatura */}
           <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Imagen de miniatura</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-medium text-[var(--neutral-100)] mb-3">Imagen de miniatura</h3>
+            <p className="text-sm text-[var(--neutral-300)] mb-4">
               Esta imagen se mostrará como vista previa del curso en la página principal
             </p>
             
@@ -1078,13 +1078,13 @@ export default function NewCoursePage() {
                 />
                 <label
                   htmlFor="thumbnailImage"
-                  className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                    isUploadingImage || !!thumbnailImage ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
-                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                  className={`relative cursor-pointer bg-[var(--neutral-800)] py-2 px-3 border border-[var(--border)] rounded-md shadow-sm text-sm font-medium ${
+                    isUploadingImage || !!thumbnailImage ? 'bg-[var(--neutral-700)] text-[var(--neutral-400)]' : 'text-[var(--neutral-100)] hover:bg-[var(--neutral-700)]'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]`}
                 >
                   <span>{thumbnailImage ? 'Imagen lista' : 'Seleccionar imagen'}</span>
                 </label>
-                <span className="ml-3 text-sm text-gray-500">
+                <span className="ml-3 text-sm text-[var(--neutral-400)]">
                   {thumbnailFile ? thumbnailFile.name : thumbnailImage ? 'Imagen procesada correctamente' : 'Ningún archivo seleccionado'}
                 </span>
                 
@@ -1092,13 +1092,13 @@ export default function NewCoursePage() {
                   <button
                     type="button"
                     onClick={uploadImage}
-                    className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                    className="ml-3 px-3 py-1 bg-[var(--primary)] text-white text-sm rounded-md hover:bg-[var(--primary-dark)]"
                   >
                     Subir ahora
                   </button>
                 )}
                 
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-[var(--neutral-400)]">
                   Formatos aceptados: JPG, PNG, WEBP, GIF. Tamaño máximo: 5MB.
                 </p>
               </div>
@@ -1117,21 +1117,21 @@ export default function NewCoursePage() {
             
             {isUploadingImage && (
               <div className="mt-2">
-                <div className="bg-gray-200 rounded-full h-2.5">
+                <div className="bg-[var(--neutral-600)] rounded-full h-2.5">
                   <div 
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    className="bg-[var(--accent)] h-2.5 rounded-full transition-all duration-300" 
                     style={{ width: '100%' }}
                   ></div>
                 </div>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-[var(--neutral-300)]">
                   Procesando imagen...
                 </p>
               </div>
             )}
             
             {thumbnailImage && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-700">
+              <div className="mt-2 p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-md">
+                <p className="text-sm text-[var(--success)]">
                   <span className="font-medium">✓ Imagen lista</span> - Procesada correctamente.
                 </p>
               </div>
@@ -1139,28 +1139,28 @@ export default function NewCoursePage() {
           </div>
           
           {/* Sección de videos adicionales */}
-          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+          <div className="border rounded-lg p-6 mb-8 bg-[var(--card-hovered)] shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Videos del curso</h3>
+              <h3 className="text-lg font-medium text-[var(--neutral-100)]">Videos del curso</h3>
               <button
                 type="button"
                 onClick={addVideo}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-[var(--primary)] text-white rounded-md hover:bg-[var(--primary-dark)]"
               >
                 Añadir video
               </button>
             </div>
             
             {videos.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
-                <p className="text-gray-500">
+              <div className="text-center py-8 bg-[var(--neutral-800)] border border-dashed border-[var(--border)] rounded-md">
+                <p className="text-[var(--neutral-400)]">
                   No hay videos añadidos. Haz clic en "Añadir video" para comenzar.
                 </p>
               </div>
             ) : (
               <div>
                 {/* Pestañas de videos */}
-                <div className="border-b border-gray-200">
+                <div className="border-b border-[var(--border)]">
                   <nav className="-mb-px flex space-x-2 overflow-x-auto">
                     {videos.map((video, index) => (
                       <button
@@ -1168,8 +1168,8 @@ export default function NewCoursePage() {
                         onClick={() => setActiveVideoTab(video.id)}
                         className={`py-2 px-3 border-b-2 whitespace-nowrap ${
                           activeVideoTab === video.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-[var(--accent)] text-[var(--accent)]'
+                            : 'border-transparent text-[var(--neutral-400)] hover:text-[var(--neutral-200)] hover:border-[var(--neutral-600)]'
                         }`}
                         type="button"
                       >
@@ -1186,13 +1186,13 @@ export default function NewCoursePage() {
                     className={`pt-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}
                   >
                     <div className="flex justify-between mb-4">
-                      <h4 className="text-md font-medium text-gray-900">
+                      <h4 className="text-md font-medium text-[var(--neutral-100)]">
                         {video.title ? video.title : 'Nuevo video'}
                       </h4>
                       <button
                         type="button"
                         onClick={() => removeVideo(video.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-500 hover:text-red-400"
                       >
                         Eliminar
                       </button>
@@ -1200,36 +1200,38 @@ export default function NewCoursePage() {
                     
                     <div className="space-y-4">
                       {/* Título del video */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título del video*
+                      <div className="mb-4">
+                        <label htmlFor={`video-title-${video.id}`} className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
+                          Título del video
                         </label>
                         <input
                           type="text"
+                          id={`video-title-${video.id}`}
                           value={video.title}
                           onChange={(e) => updateVideo(video.id, { title: e.target.value })}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Título del video"
+                          className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
+                          placeholder="Ej: Introducción a JavaScript"
                         />
                       </div>
                       
                       {/* Descripción del video */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="mb-4">
+                        <label htmlFor={`video-desc-${video.id}`} className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                           Descripción
                         </label>
                         <textarea
+                          id={`video-desc-${video.id}`}
                           value={video.description}
                           onChange={(e) => updateVideo(video.id, { description: e.target.value })}
                           rows={3}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Describe de qué trata este video"
+                          className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
+                          placeholder="Descripción breve del contenido del video..."
                         />
                       </div>
                       
                       {/* Upload de video */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                           Archivo de video*
                         </label>
                         <div className="mt-1 flex items-center">
@@ -1243,13 +1245,13 @@ export default function NewCoursePage() {
                           />
                           <label
                             htmlFor={`video-file-${video.id}`}
-                            className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                              video.isUploading || !!video.playbackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
-                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                            className={`relative cursor-pointer bg-[var(--neutral-800)] py-2 px-3 border border-[var(--border)] rounded-md shadow-sm text-sm font-medium ${
+                              video.isUploading || !!video.playbackId ? 'bg-[var(--neutral-700)] text-[var(--neutral-400)]' : 'text-[var(--neutral-100)] hover:bg-[var(--neutral-700)]'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]`}
                           >
                             <span>{video.playbackId ? 'Video listo' : 'Seleccionar archivo'}</span>
                           </label>
-                          <span className="ml-3 text-sm text-gray-500">
+                          <span className="ml-3 text-sm text-[var(--neutral-400)]">
                             {video.videoFile ? video.videoFile.name : video.playbackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
                           </span>
                           
@@ -1257,7 +1259,7 @@ export default function NewCoursePage() {
                             <button
                               type="button"
                               onClick={() => uploadVideoFile(video.id)}
-                              className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                              className="ml-3 px-3 py-1 bg-[var(--primary)] text-white text-sm rounded-md hover:bg-[var(--primary-dark)]"
                             >
                               Subir ahora
                             </button>
@@ -1266,13 +1268,13 @@ export default function NewCoursePage() {
                         
                         {video.isUploading && (
                           <div className="mt-2">
-                            <div className="bg-gray-200 rounded-full h-2.5">
+                            <div className="bg-[var(--neutral-600)] rounded-full h-2.5">
                               <div 
-                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                                className="bg-[var(--accent)] h-2.5 rounded-full transition-all duration-300" 
                                 style={{ width: `${video.uploadProgress}%` }}
                               ></div>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">
+                            <p className="mt-1 text-sm text-[var(--neutral-300)]">
                               {video.uploadProgress < 70 ? (
                                 `Subiendo archivo... ${video.uploadProgress}%`
                                ) : video.uploadStatus === 'waiting' ? 'Esperando procesamiento...' :
@@ -1286,12 +1288,12 @@ export default function NewCoursePage() {
                         )}
                         
                         {video.error && (
-                          <p className="mt-2 text-sm text-red-600">{video.error}</p>
+                          <p className="mt-2 text-sm text-red-500">{video.error}</p>
                         )}
                         
                         {video.playbackId && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                            <p className="text-sm text-green-700">
+                          <div className="mt-2 p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-md">
+                            <p className="text-sm text-[var(--success)]">
                               <span className="font-medium">✓ Video listo</span> - Procesado correctamente.
                             </p>
                           </div>
@@ -1305,28 +1307,28 @@ export default function NewCoursePage() {
           </div>
           
           {/* Sección de ejercicios */}
-          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
+          <div className="border rounded-lg p-6 mb-8 bg-[var(--card-hovered)] shadow-sm">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Ejercicios del curso</h3>
+              <h3 className="text-lg font-medium text-[var(--neutral-100)]">Ejercicios del curso</h3>
               <button
                 type="button"
                 onClick={addExercise}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-[var(--primary)] text-white rounded-md hover:bg-[var(--primary-dark)]"
               >
                 Añadir ejercicio
               </button>
             </div>
             
             {exercises.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
-                <p className="text-gray-500">
+              <div className="text-center py-8 bg-[var(--neutral-800)] border border-dashed border-[var(--border)] rounded-md">
+                <p className="text-[var(--neutral-400)]">
                   No hay ejercicios añadidos. Haz clic en "Añadir ejercicio" para comenzar.
                 </p>
               </div>
             ) : (
               <div>
                 {/* Pestañas de ejercicios */}
-                <div className="border-b border-gray-200">
+                <div className="border-b border-[var(--border)]">
                   <nav className="-mb-px flex space-x-2 overflow-x-auto">
                     {exercises.map((exercise, index) => (
                       <button
@@ -1334,8 +1336,8 @@ export default function NewCoursePage() {
                         onClick={() => setActiveExerciseTab(exercise.id)}
                         className={`py-2 px-3 border-b-2 whitespace-nowrap ${
                           activeExerciseTab === exercise.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ? 'border-[var(--accent)] text-[var(--accent)]'
+                            : 'border-transparent text-[var(--neutral-400)] hover:text-[var(--neutral-200)] hover:border-[var(--neutral-600)]'
                         }`}
                         type="button"
                       >
@@ -1352,13 +1354,13 @@ export default function NewCoursePage() {
                     className={`pt-4 ${activeExerciseTab === exercise.id ? 'block' : 'hidden'}`}
                   >
                     <div className="flex justify-between mb-4">
-                      <h4 className="text-md font-medium text-gray-900">
+                      <h4 className="text-md font-medium text-[var(--neutral-100)]">
                         {exercise.title ? exercise.title : 'Nuevo ejercicio'}
                       </h4>
                       <button
                         type="button"
                         onClick={() => removeExercise(exercise.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-500 hover:text-red-400"
                       >
                         Eliminar
                       </button>
@@ -1366,36 +1368,38 @@ export default function NewCoursePage() {
                     
                     <div className="space-y-4">
                       {/* Título del ejercicio */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título del ejercicio*
+                      <div className="mb-4">
+                        <label htmlFor={`exercise-title-${exercise.id}`} className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
+                          Título del ejercicio
                         </label>
                         <input
                           type="text"
+                          id={`exercise-title-${exercise.id}`}
                           value={exercise.title}
                           onChange={(e) => updateExercise(exercise.id, { title: e.target.value })}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Título del ejercicio"
+                          className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
+                          placeholder="Ej: Ejercicio práctico 1"
                         />
                       </div>
                       
                       {/* Descripción del ejercicio */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <div className="mb-4">
+                        <label htmlFor={`exercise-desc-${exercise.id}`} className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                           Descripción
                         </label>
                         <textarea
+                          id={`exercise-desc-${exercise.id}`}
                           value={exercise.description}
                           onChange={(e) => updateExercise(exercise.id, { description: e.target.value })}
                           rows={3}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Describe de qué trata este ejercicio"
+                          className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
+                          placeholder="Instrucciones para el ejercicio..."
                         />
                       </div>
                       
                       {/* Upload de PDF */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                           Archivo PDF*
                         </label>
                         <div className="mt-1 flex items-center">
@@ -1409,13 +1413,13 @@ export default function NewCoursePage() {
                           />
                           <label
                             htmlFor={`pdf-file-${exercise.id}`}
-                            className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                              exercise.isUploading || !!exercise.fileData ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
-                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                            className={`relative cursor-pointer bg-[var(--neutral-800)] py-2 px-3 border border-[var(--border)] rounded-md shadow-sm text-sm font-medium ${
+                              exercise.isUploading || !!exercise.fileData ? 'bg-[var(--neutral-700)] text-[var(--neutral-400)]' : 'text-[var(--neutral-100)] hover:bg-[var(--neutral-700)]'
+                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]`}
                           >
                             <span>{exercise.fileData ? 'PDF listo' : 'Seleccionar archivo'}</span>
                           </label>
-                          <span className="ml-3 text-sm text-gray-500">
+                          <span className="ml-3 text-sm text-[var(--neutral-400)]">
                             {exercise.pdfFile ? exercise.pdfFile.name : exercise.fileData ? 'PDF procesado correctamente' : 'Ningún archivo seleccionado'}
                           </span>
                           
@@ -1423,7 +1427,7 @@ export default function NewCoursePage() {
                             <button
                               type="button"
                               onClick={() => uploadPdfFile(exercise.id)}
-                              className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                              className="ml-3 px-3 py-1 bg-[var(--primary)] text-white text-sm rounded-md hover:bg-[var(--primary-dark)]"
                             >
                               Subir ahora
                             </button>
@@ -1432,25 +1436,25 @@ export default function NewCoursePage() {
                         
                         {exercise.isUploading && (
                           <div className="mt-2">
-                            <div className="bg-gray-200 rounded-full h-2.5">
+                            <div className="bg-[var(--neutral-600)] rounded-full h-2.5">
                               <div 
-                                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                                className="bg-[var(--accent)] h-2.5 rounded-full transition-all duration-300" 
                                 style={{ width: '100%' }}
                               ></div>
                             </div>
-                            <p className="mt-1 text-sm text-gray-600">
+                            <p className="mt-1 text-sm text-[var(--neutral-300)]">
                               Procesando PDF...
                             </p>
                           </div>
                         )}
                         
                         {exercise.error && (
-                          <p className="mt-2 text-sm text-red-600">{exercise.error}</p>
+                          <p className="mt-2 text-sm text-red-500">{exercise.error}</p>
                         )}
                         
                         {exercise.fileData && (
-                          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                            <p className="text-sm text-green-700">
+                          <div className="mt-2 p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-md">
+                            <p className="text-sm text-[var(--success)]">
                               <span className="font-medium">✓ PDF listo</span> - {exercise.fileData.name || 'Procesado correctamente'}
                             </p>
                           </div>
@@ -1465,8 +1469,8 @@ export default function NewCoursePage() {
           
           {/* Video de introducción */}
           <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Video de introducción</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <h3 className="text-lg font-medium text-[var(--neutral-100)] mb-3">Video de introducción</h3>
+            <p className="text-sm text-[var(--neutral-300)] mb-4">
               Este video será visible para todos los usuarios como vista previa del curso
             </p>
             
@@ -1482,13 +1486,13 @@ export default function NewCoursePage() {
               />
               <label
                 htmlFor="introVideo"
-                className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                  isIntroUploading || !!introPlaybackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                className={`relative cursor-pointer bg-[var(--neutral-800)] py-2 px-3 border border-[var(--border)] rounded-md shadow-sm text-sm font-medium ${
+                  isIntroUploading || !!introPlaybackId ? 'bg-[var(--neutral-700)] text-[var(--neutral-400)]' : 'text-[var(--neutral-100)] hover:bg-[var(--neutral-700)]'
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]`}
               >
                 <span>{introPlaybackId ? 'Video listo' : 'Seleccionar video de introducción'}</span>
               </label>
-              <span className="ml-3 text-sm text-gray-500">
+              <span className="ml-3 text-sm text-[var(--neutral-400)]">
                 {introVideoFile ? introVideoFile.name : introPlaybackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
               </span>
               
@@ -1496,7 +1500,7 @@ export default function NewCoursePage() {
                 <button
                   type="button"
                   onClick={uploadIntroFile}
-                  className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                  className="ml-3 px-3 py-1 bg-[var(--primary)] text-white text-sm rounded-md hover:bg-[var(--primary-dark)]"
                 >
                   Subir ahora
                 </button>
@@ -1505,21 +1509,21 @@ export default function NewCoursePage() {
             
             {isIntroUploading && (
               <div className="mt-2">
-                <div className="bg-gray-200 rounded-full h-2.5">
+                <div className="bg-[var(--neutral-600)] rounded-full h-2.5">
                   <div 
-                    className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                    className="bg-[var(--accent)] h-2.5 rounded-full transition-all duration-300" 
                     style={{ width: `${introUploadProgress}%` }}
                   ></div>
                 </div>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-[var(--neutral-300)]">
                   {getIntroUploadStatusText()} {introUploadProgress}%
                 </p>
               </div>
             )}
             
             {introPlaybackId && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-700">
+              <div className="mt-2 p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-md">
+                <p className="text-sm text-[var(--success)]">
                   <span className="font-medium">✓ Video de introducción listo</span> - Procesado correctamente en MUX.
                 </p>
               </div>
@@ -1528,7 +1532,7 @@ export default function NewCoursePage() {
           
           {/* Video principal del curso */}
           <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Video principal del curso</h3>
+            <h3 className="text-lg font-medium text-[var(--neutral-100)] mb-3">Video principal del curso</h3>
             
             <div className="flex space-x-4 mb-4">
               <div className="flex items-center">
@@ -1538,9 +1542,9 @@ export default function NewCoursePage() {
                   type="radio"
                   checked={uploadMethod === 'url'}
                   onChange={() => setUploadMethod('url')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 text-[var(--accent)] focus:ring-[var(--accent)]"
                 />
-                <label htmlFor="urlOption" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="urlOption" className="ml-2 block text-sm text-[var(--neutral-300)]">
                   URL del video
                 </label>
               </div>
@@ -1551,9 +1555,9 @@ export default function NewCoursePage() {
                   type="radio"
                   checked={uploadMethod === 'file'}
                   onChange={() => setUploadMethod('file')}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 text-[var(--accent)] focus:ring-[var(--accent)]"
                 />
-                <label htmlFor="fileOption" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="fileOption" className="ml-2 block text-sm text-[var(--neutral-300)]">
                   Subir archivo
                 </label>
               </div>
@@ -1561,7 +1565,7 @@ export default function NewCoursePage() {
             
             {uploadMethod === 'url' ? (
               <div>
-                <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="videoUrl" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                   URL del video
                 </label>
                 <input
@@ -1569,16 +1573,16 @@ export default function NewCoursePage() {
                   id="videoUrl"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
                   placeholder="https://example.com/video.mp4"
                 />
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-[var(--neutral-400)]">
                   Ingresa una URL pública accesible del video. Se procesará a través de MUX para streaming adaptativo.
                 </p>
               </div>
             ) : (
               <div>
-                <label htmlFor="videoFile" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="videoFile" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
                   Archivo de video
                 </label>
                 <div className="mt-1 flex items-center">
@@ -1593,13 +1597,13 @@ export default function NewCoursePage() {
                   />
                   <label
                     htmlFor="videoFile"
-                    className={`relative cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-                      isUploading || !!playbackId ? 'bg-gray-100 text-gray-500' : 'text-gray-700 hover:bg-gray-50'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                    className={`relative cursor-pointer bg-[var(--neutral-800)] py-2 px-3 border border-[var(--border)] rounded-md shadow-sm text-sm font-medium ${
+                      isUploading || !!playbackId ? 'bg-[var(--neutral-700)] text-[var(--neutral-400)]' : 'text-[var(--neutral-100)] hover:bg-[var(--neutral-700)]'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent)]`}
                   >
                     <span>{playbackId ? 'Video listo' : 'Seleccionar archivo'}</span>
                   </label>
-                  <span className="ml-3 text-sm text-gray-500">
+                  <span className="ml-3 text-sm text-[var(--neutral-400)]">
                     {videoFile ? videoFile.name : playbackId ? 'Video procesado correctamente' : 'Ningún archivo seleccionado'}
                   </span>
                   
@@ -1607,7 +1611,7 @@ export default function NewCoursePage() {
                     <button
                       type="button"
                       onClick={uploadFile}
-                      className="ml-3 px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
+                      className="ml-3 px-3 py-1 bg-[var(--primary)] text-white text-sm rounded-md hover:bg-[var(--primary-dark)]"
                     >
                       Subir ahora
                     </button>
@@ -1616,30 +1620,30 @@ export default function NewCoursePage() {
                 
                 {isUploading && (
                   <div className="mt-2">
-                    <div className="bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-[var(--neutral-600)] rounded-full h-2.5">
                       <div 
-                        className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                        className="bg-[var(--accent)] h-2.5 rounded-full transition-all duration-300" 
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
                     </div>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-[var(--neutral-300)]">
                       {getUploadStatusText()} {uploadProgress}%
                     </p>
                   </div>
                 )}
                 
                 {playbackId && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                    <p className="text-sm text-green-700">
+                  <div className="mt-2 p-2 bg-[var(--success-bg)] border border-[var(--success-border)] rounded-md">
+                    <p className="text-sm text-[var(--success)]">
                       <span className="font-medium">✓ Video listo</span> - Procesado correctamente en MUX.
                     </p>
                   </div>
                 )}
                 
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[var(--neutral-400)]">
                   Sube un archivo de video. Se cargará directamente a MUX para streaming adaptativo.
                 </p>
-                <p className="mt-1 text-xs text-amber-600">
+                <p className="mt-1 text-xs text-amber-500">
                   El procesamiento del video en MUX puede tomar algunos minutos después de la carga.
                 </p>
               </div>
@@ -1649,17 +1653,18 @@ export default function NewCoursePage() {
           <div className="flex justify-end space-x-3">
             <button
               type="button"
+              className="px-4 py-2 bg-[var(--neutral-700)] text-[var(--neutral-200)] rounded-md hover:bg-[var(--neutral-600)]"
               onClick={() => router.push('/admin/cursos')}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancelar
             </button>
+            
             <button
               type="submit"
-              disabled={isSubmitting || isUploading || isIntroUploading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+              className="px-4 py-2 bg-[var(--primary)] text-white rounded-md hover:bg-[var(--primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || isUploading || isIntroUploading || videos.some(v => v.isUploading)}
             >
-              {isSubmitting ? 'Creando...' : 'Crear curso'}
+              {isSubmitting ? 'Creando curso...' : 'Crear curso'}
             </button>
           </div>
         </form>
