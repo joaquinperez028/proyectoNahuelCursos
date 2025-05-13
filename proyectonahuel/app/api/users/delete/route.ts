@@ -15,7 +15,7 @@ export async function DELETE(request: NextRequest) {
     if (!session?.user?.email) {
       console.log('API: Usuario no autenticado');
       return NextResponse.json(
-        { error: 'No autorizado. Debe iniciar sesión para acceder a estos datos.' },
+        { error: 'No autorizado. Debe iniciar sesión para acceder a estos datos' },
         { status: 401 }
       );
     }
