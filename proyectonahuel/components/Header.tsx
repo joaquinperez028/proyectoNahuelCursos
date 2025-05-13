@@ -60,6 +60,14 @@ const Header = () => {
                   Administrar cursos
                 </Link>
               )}
+              {session?.user.role === 'admin' && (
+                <Link 
+                  href="/admin/usuarios" 
+                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
+                >
+                  Usuarios
+                </Link>
+              )}
             </nav>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
@@ -165,6 +173,13 @@ const Header = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Administrar cursos
+                </Link>
+                <Link 
+                  href="/admin/usuarios" 
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Usuarios
                 </Link>
                 <Link 
                   href="/admin/actualizar-playback" 
