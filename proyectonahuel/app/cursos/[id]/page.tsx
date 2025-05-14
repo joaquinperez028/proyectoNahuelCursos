@@ -13,6 +13,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import Image from "next/image";
 import ScrollToEnrollButton from '@/components/ScrollToEnrollButton';
 import MuxPlayer from "@/app/components/MuxPlayer";
+import BuyButton from '@/app/components/BuyButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -335,25 +336,33 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             </div>
             
             <div className="w-full md:w-auto">
-              {course.onSale && formattedDiscountedPrice ? (
-                <div className="flex flex-col items-end">
-                  <div className="bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-medium mb-2">
-                    {course.discountPercentage}% DESCUENTO
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-[var(--neutral-300)] line-through mr-3 text-lg">
-                      {formattedPrice}
-                    </span>
-                    <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
-                      {formattedDiscountedPrice}
+              <div className="flex flex-col items-end">
+                {course.onSale && formattedDiscountedPrice ? (
+                  <>
+                    <div className="bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-medium mb-2">
+                      {course.discountPercentage}% DESCUENTO
                     </div>
+                    <div className="flex items-center mb-4">
+                      <span className="text-[var(--neutral-300)] line-through mr-3 text-lg">
+                        {formattedPrice}
+                      </span>
+                      <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
+                        {formattedDiscountedPrice}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20 mb-4">
+                    {formattedPrice}
                   </div>
-                </div>
-              ) : (
-                <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
-                  {formattedPrice}
-                </div>
-              )}
+                )}
+                
+                <BuyButton 
+                  courseId={course._id} 
+                  userHasCourse={userHasCourse}
+                  className="w-full md:w-auto"
+                />
+              </div>
             </div>
           </div>
         </div>
