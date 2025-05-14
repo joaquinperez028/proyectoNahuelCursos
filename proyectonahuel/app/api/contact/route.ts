@@ -1,9 +1,84 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { headers } from 'next/headers';
+
+// Cache para almacenar IPs y tiempos para rate limiting
+const ipCache = new Map<string, { count: number, lastRequest: number }>();
+const RATE_LIMIT_REQUESTS = 5; // Número máximo de solicitudes
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // Ventana de tiempo (1 hora)
+
+// Función para sanitizar entrada y prevenir inyección
+const sanitizeInput = (input: string): string => {
+  if (!input) return '';
+  // Elimina etiquetas HTML y caracteres potencialmente peligrosos
+  return input
+    .replace(/<\/?[^>]+(>|$)/g, "")
+    .replace(/[&<>"'`=\/]/g, "");
+};
+
+// Validación de email con expresión regular más rigurosa
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email);
+};
+
+// Implementación de rate limiting por IP
+const checkRateLimit = (ip: string): { allowed: boolean, message?: string } => {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW;
+  
+  // Limpiar entradas antiguas del cache
+  for (const [cachedIp, data] of ipCache.entries()) {
+    if (data.lastRequest < windowStart) {
+      ipCache.delete(cachedIp);
+    }
+  }
+  
+  // Verificar si la IP ha excedido el límite
+  if (!ipCache.has(ip)) {
+    ipCache.set(ip, { count: 1, lastRequest: now });
+    return { allowed: true };
+  }
+  
+  const ipData = ipCache.get(ip)!;
+  
+  // Si la IP está dentro de la ventana de tiempo
+  if (ipData.count >= RATE_LIMIT_REQUESTS) {
+    const resetTime = new Date(ipData.lastRequest + RATE_LIMIT_WINDOW);
+    return { 
+      allowed: false, 
+      message: `Se ha excedido el límite de solicitudes. Por favor, intenta nuevamente después de ${resetTime.toLocaleTimeString()}.` 
+    };
+  }
+  
+  // Actualizar contador para esta IP
+  ipCache.set(ip, { 
+    count: ipData.count + 1, 
+    lastRequest: now 
+  });
+  
+  return { allowed: true };
+};
 
 export async function POST(request: Request) {
   try {
-    const { email, subject, message } = await request.json();
+    // Obtener IP del cliente desde headers
+    const headersList = headers();
+    const forwardedFor = headersList.get('x-forwarded-for') || '';
+    const clientIp = forwardedFor.split(',')[0] || 'unknown';
+    
+    // Verificar rate limit
+    const rateLimitCheck = checkRateLimit(clientIp);
+    if (!rateLimitCheck.allowed) {
+      console.warn(`Rate limit excedido para IP: ${clientIp}`);
+      return NextResponse.json(
+        { error: rateLimitCheck.message },
+        { status: 429 }
+      );
+    }
+
+    const body = await request.json();
+    const { email, subject, message } = body;
 
     // Validación básica
     if (!email || !subject || !message) {
@@ -14,16 +89,41 @@ export async function POST(request: Request) {
     }
 
     // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       return NextResponse.json(
         { error: 'El formato del email no es válido' },
         { status: 400 }
       );
     }
 
+    // Validar longitud de los campos
+    if (email.length > 100) {
+      return NextResponse.json(
+        { error: 'El email no debe exceder los 100 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    if (subject.length < 5 || subject.length > 100) {
+      return NextResponse.json(
+        { error: 'El asunto debe tener entre 5 y 100 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    if (message.length < 10 || message.length > 1000) {
+      return NextResponse.json(
+        { error: 'El mensaje debe tener entre 10 y 1000 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitizar entradas para prevenir inyección
+    const sanitizedSubject = sanitizeInput(subject);
+    const sanitizedMessage = sanitizeInput(message);
+    const sanitizedEmail = email.trim();
+
     // Configuración del transporte de correo con Gmail
-    // Nota: Para Gmail, necesitas habilitar "Acceso de aplicaciones menos seguras" o usar una "Contraseña de aplicación"
     const transporter = nodemailer.createTransport({
       service: 'gmail',  // Usando servicio predefinido de Gmail en lugar de configuración manual
       auth: {
@@ -43,19 +143,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Configuración del correo
+    // Configuración del correo con encabezados de seguridad
     const mailOptions = {
       from: `"Formulario de Contacto" <${process.env.SMTP_USER}>`,
       to: adminEmail,
-      subject: `Formulario de contacto: ${subject}`,
+      subject: `Formulario de contacto: ${sanitizedSubject}`,
       html: `
         <h1>Nuevo mensaje de contacto</h1>
-        <p><strong>De:</strong> ${email}</p>
-        <p><strong>Asunto:</strong> ${subject}</p>
+        <p><strong>De:</strong> ${sanitizedEmail}</p>
+        <p><strong>Asunto:</strong> ${sanitizedSubject}</p>
         <p><strong>Mensaje:</strong></p>
-        <p>${message.replace(/\n/g, '<br>')}</p>
+        <p>${sanitizedMessage.replace(/\n/g, '<br>')}</p>
+        <hr>
+        <p><small>Este mensaje fue enviado desde el formulario de contacto. IP: ${clientIp}</small></p>
       `,
-      replyTo: email,
+      replyTo: sanitizedEmail,
+      // Añadir encabezados de seguridad
+      headers: {
+        'X-Priority': '3',
+        'X-Mailer': 'Contact Form',
+        'X-Contact-Form': 'true',
+        'X-Client-IP': clientIp
+      }
     };
 
     try {

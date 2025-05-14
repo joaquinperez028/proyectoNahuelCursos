@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+// Límite de intentos de envío por sesión
+const MAX_SUBMISSION_ATTEMPTS = 5;
+const SUBMISSION_TIMEOUT = 60000; // 1 minuto
 
 export default function ContactoPage() {
   const router = useRouter();
@@ -10,11 +14,13 @@ export default function ContactoPage() {
     email: '',
     subject: '',
     message: '',
+    honeypot: '', // Campo trampa para bots
   });
   const [errors, setErrors] = useState({
     email: '',
     subject: '',
     message: '',
+    general: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{
@@ -22,13 +28,46 @@ export default function ContactoPage() {
     error?: string;
   }>({});
 
+  // Referencias para control anti-spam
+  const submissionCount = useRef(0);
+  const lastSubmissionTime = useRef(0);
+  
+  // Valida y sanitiza la entrada
+  const sanitizeInput = (input: string): string => {
+    // Elimina etiquetas HTML y caracteres potencialmente peligrosos
+    return input
+      .replace(/<\/?[^>]+(>|$)/g, "")
+      .replace(/[&<>"'`=\/]/g, "");
+  };
+
   const validateForm = () => {
     let isValid = true;
     const newErrors = {
       email: '',
       subject: '',
       message: '',
+      general: '',
     };
+
+    // Control anti-spam: verificación de tiempo entre envíos
+    const now = Date.now();
+    if (now - lastSubmissionTime.current < SUBMISSION_TIMEOUT && lastSubmissionTime.current !== 0) {
+      newErrors.general = `Por favor, espera un momento antes de enviar otro mensaje`;
+      isValid = false;
+    }
+
+    // Control anti-spam: verificación de número de intentos
+    if (submissionCount.current >= MAX_SUBMISSION_ATTEMPTS) {
+      newErrors.general = `Has alcanzado el límite de mensajes enviados`;
+      isValid = false;
+    }
+
+    // Honeypot: Si se completó, probablemente es un bot
+    if (formData.honeypot) {
+      // No mostramos error para no alertar al bot
+      console.log('Intento de spam detectado (honeypot)');
+      return false;
+    }
 
     // Validar email
     if (!formData.email) {
@@ -39,21 +78,29 @@ export default function ContactoPage() {
       isValid = false;
     }
 
-    // Validar asunto
-    if (!formData.subject) {
+    // Validar asunto - sanitizamos y verificamos longitud
+    const sanitizedSubject = sanitizeInput(formData.subject);
+    if (!sanitizedSubject) {
       newErrors.subject = 'El asunto es obligatorio';
       isValid = false;
-    } else if (formData.subject.length < 5) {
+    } else if (sanitizedSubject.length < 5) {
       newErrors.subject = 'El asunto debe tener al menos 5 caracteres';
+      isValid = false;
+    } else if (sanitizedSubject.length > 100) {
+      newErrors.subject = 'El asunto no debe exceder los 100 caracteres';
       isValid = false;
     }
 
-    // Validar mensaje
-    if (!formData.message) {
+    // Validar mensaje - sanitizamos y verificamos longitud
+    const sanitizedMessage = sanitizeInput(formData.message);
+    if (!sanitizedMessage) {
       newErrors.message = 'El mensaje es obligatorio';
       isValid = false;
-    } else if (formData.message.length < 10) {
+    } else if (sanitizedMessage.length < 10) {
       newErrors.message = 'El mensaje debe tener al menos 10 caracteres';
+      isValid = false;
+    } else if (sanitizedMessage.length > 1000) {
+      newErrors.message = 'El mensaje no debe exceder los 1000 caracteres';
       isValid = false;
     }
 
@@ -80,12 +127,23 @@ export default function ContactoPage() {
     setSubmitStatus({});
 
     try {
+      // Actualiza el contador de envíos
+      submissionCount.current += 1;
+      lastSubmissionTime.current = Date.now();
+
+      // Sanitiza los datos antes de enviarlos
+      const sanitizedData = {
+        email: formData.email.trim(),
+        subject: sanitizeInput(formData.subject),
+        message: sanitizeInput(formData.message),
+      };
+
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(sanitizedData),
       });
 
       const data = await response.json();
@@ -100,6 +158,7 @@ export default function ContactoPage() {
         email: '',
         subject: '',
         message: '',
+        honeypot: '',
       });
 
       // Redirigir después de 3 segundos
@@ -113,10 +172,6 @@ export default function ContactoPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Manejar contacto directo por email como alternativa
-  const contactEmail = 'contacto@nahuellozano.com';
-  const mailtoLink = `mailto:${contactEmail}?subject=${encodeURIComponent(formData.subject || 'Contacto desde web')}&body=${encodeURIComponent(formData.message || '')}`;
 
   return (
     <div className="min-h-screen py-24 px-4 bg-[var(--background)]">
@@ -138,19 +193,29 @@ export default function ContactoPage() {
           {submitStatus.error && (
             <div className="bg-[var(--error-light)] border border-[var(--error)] text-[var(--error)] px-4 py-3 rounded-md mb-6">
               <p className="font-medium">{submitStatus.error}</p>
-              <p className="mt-2 text-sm">
-                Si continúas teniendo problemas, puedes contactarnos directamente a través de:
-                <a 
-                  href={mailtoLink}
-                  className="ml-1 text-[var(--primary)] hover:underline"
-                >
-                  {contactEmail}
-                </a>
-              </p>
+            </div>
+          )}
+
+          {errors.general && (
+            <div className="bg-[var(--error-light)] border border-[var(--error)] text-[var(--error)] px-4 py-3 rounded-md mb-6">
+              <p className="font-medium">{errors.general}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Campo honeypot oculto para detectar bots */}
+            <div className="opacity-0 absolute top-0 left-0 h-0">
+              <label className="hidden">No completar este campo</label>
+              <input
+                type="text"
+                name="honeypot"
+                value={formData.honeypot}
+                onChange={handleChange}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[var(--neutral-300)] mb-2">
                 Email <span className="text-[var(--error)]">*</span>
@@ -161,6 +226,7 @@ export default function ContactoPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                maxLength={100}
                 className={`w-full px-4 py-3 bg-[var(--neutral-900)] border ${
                   errors.email ? 'border-[var(--error)]' : 'border-[var(--border)]'
                 } rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--foreground)]`}
@@ -182,6 +248,7 @@ export default function ContactoPage() {
                 name="subject"
                 value={formData.subject}
                 onChange={handleChange}
+                maxLength={100}
                 className={`w-full px-4 py-3 bg-[var(--neutral-900)] border ${
                   errors.subject ? 'border-[var(--error)]' : 'border-[var(--border)]'
                 } rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--foreground)]`}
@@ -203,6 +270,7 @@ export default function ContactoPage() {
                 value={formData.message}
                 onChange={handleChange}
                 rows={6}
+                maxLength={1000}
                 className={`w-full px-4 py-3 bg-[var(--neutral-900)] border ${
                   errors.message ? 'border-[var(--error)]' : 'border-[var(--border)]'
                 } rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--foreground)]`}
@@ -214,25 +282,17 @@ export default function ContactoPage() {
               )}
             </div>
 
-            <div className="pt-4 flex flex-col sm:flex-row gap-4">
+            <div className="pt-4">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex-1 px-6 py-3 bg-[var(--primary)] text-white rounded-md 
+                className={`w-full px-6 py-3 bg-[var(--primary)] text-white rounded-md 
                   hover:bg-[var(--primary-dark)] transition-colors focus:outline-none focus:ring-2 
                   focus:ring-[var(--primary-light)] focus:ring-offset-2 focus:ring-offset-[var(--background)]
                   ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {isSubmitting ? 'Enviando...' : 'Enviar mensaje'}
               </button>
-              
-              <a
-                href={mailtoLink}
-                className="flex-1 px-6 py-3 bg-transparent border border-[var(--border)] text-[var(--neutral-300)] 
-                  rounded-md hover:bg-[var(--card-hover)] transition-colors text-center"
-              >
-                Contactar por email
-              </a>
             </div>
           </form>
           
