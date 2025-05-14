@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Payment as MPPayment } from 'mercadopago';
 import { connectToDB } from '@/lib/database';
 import Course from '@/models/Course';
 import User from '@/models/User';
 import Progress from '@/models/Progress';
+import Payment from '@/models/Payment';
 import { sendEmail } from '@/lib/email';
 
 // Configurar MercadoPago con la clave de acceso
@@ -24,17 +25,62 @@ export async function POST(request: Request) {
       const paymentId = data.data.id;
 
       // Crear instancia del recurso Payment
-      const paymentClient = new Payment(client);
+      const paymentClient = new MPPayment(client);
       
       // Obtener los detalles del pago
-      const payment = await paymentClient.get({ id: paymentId });
+      const mpPayment = await paymentClient.get({ id: paymentId });
       
       // Obtener la referencia externa (que contiene el ID del curso y usuario)
-      const externalReference = payment.external_reference as string;
+      const externalReference = mpPayment.external_reference as string;
+      if (!externalReference) {
+        console.error('Referencia externa no encontrada en el pago:', paymentId);
+        return NextResponse.json({ error: 'Referencia externa no encontrada' }, { status: 400 });
+      }
+
       const [courseId, userId] = externalReference.split('-');
+      if (!courseId || !userId) {
+        console.error('Formato de referencia externa inválido:', externalReference);
+        return NextResponse.json({ error: 'Formato de referencia externa inválido' }, { status: 400 });
+      }
       
       // Obtener el estado del pago
-      const paymentStatus = payment.status as string;
+      const paymentStatus = mpPayment.status as string;
+      
+      // Verificar si ya existe un registro para este pago
+      const existingPayment = await Payment.findOne({ transactionId: paymentId });
+      
+      if (existingPayment) {
+        // Actualizar el estado si ya existe
+        existingPayment.status = paymentStatus;
+        await existingPayment.save();
+      } else {
+        // Obtener información del curso y usuario para los detalles del pago
+        const course = await Course.findById(courseId);
+        const user = await User.findById(userId);
+
+        if (!course || !user) {
+          console.error('Curso o usuario no encontrado:', { courseId, userId });
+          return NextResponse.json({ error: 'Curso o usuario no encontrado' }, { status: 404 });
+        }
+
+        // Crear un nuevo registro de pago
+        await Payment.create({
+          userId,
+          courseId,
+          amount: mpPayment.transaction_amount,
+          paymentMethod: 'MercadoPago',
+          paymentDate: mpPayment.date_approved || mpPayment.date_created,
+          status: paymentStatus,
+          transactionId: paymentId,
+          paymentDetails: {
+            paymentMethodId: mpPayment.payment_method_id,
+            paymentTypeId: mpPayment.payment_type_id,
+            installments: mpPayment.installments
+          },
+          currency: mpPayment.currency_id,
+          installments: mpPayment.installments
+        });
+      }
       
       // Procesar según el estado del pago
       if (paymentStatus === 'approved') {
