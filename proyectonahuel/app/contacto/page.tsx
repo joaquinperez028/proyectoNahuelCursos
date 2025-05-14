@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,15 +10,14 @@ const MAX_SUBMISSION_ATTEMPTS = 5;
 const SUBMISSION_TIMEOUT = 60000; // 1 minuto
 
 export default function ContactoPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [formData, setFormData] = useState({
-    email: '',
     subject: '',
     message: '',
     honeypot: '', // Campo trampa para bots
   });
   const [errors, setErrors] = useState({
-    email: '',
     subject: '',
     message: '',
     general: '',
@@ -32,6 +32,28 @@ export default function ContactoPage() {
   const submissionCount = useRef(0);
   const lastSubmissionTime = useRef(0);
   
+  // Redirigir al login si el usuario no está autenticado
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login?callbackUrl=/contacto');
+    }
+  }, [status, router]);
+
+  // Si está cargando o no está autenticado, mostrar mensaje o nada
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen py-24 px-4 flex items-center justify-center bg-[var(--background)]">
+        <div className="animate-pulse text-[var(--foreground)]">
+          Cargando...
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return null; // No mostrar nada, ya que se redirigirá
+  }
+  
   // Valida y sanitiza la entrada
   const sanitizeInput = (input: string): string => {
     // Elimina etiquetas HTML y caracteres potencialmente peligrosos
@@ -43,7 +65,6 @@ export default function ContactoPage() {
   const validateForm = () => {
     let isValid = true;
     const newErrors = {
-      email: '',
       subject: '',
       message: '',
       general: '',
@@ -67,15 +88,6 @@ export default function ContactoPage() {
       // No mostramos error para no alertar al bot
       console.log('Intento de spam detectado (honeypot)');
       return false;
-    }
-
-    // Validar email
-    if (!formData.email) {
-      newErrors.email = 'El email es obligatorio';
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'El formato del email no es válido';
-      isValid = false;
     }
 
     // Validar asunto - sanitizamos y verificamos longitud
@@ -133,7 +145,7 @@ export default function ContactoPage() {
 
       // Sanitiza los datos antes de enviarlos
       const sanitizedData = {
-        email: formData.email.trim(),
+        email: session?.user?.email,
         subject: sanitizeInput(formData.subject),
         message: sanitizeInput(formData.message),
       };
@@ -155,7 +167,6 @@ export default function ContactoPage() {
       // Éxito
       setSubmitStatus({ success: '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.' });
       setFormData({
-        email: '',
         subject: '',
         message: '',
         honeypot: '',
@@ -183,6 +194,12 @@ export default function ContactoPage() {
           <p className="mb-8 text-[var(--neutral-300)]">
             Completa el formulario a continuación y nos pondremos en contacto contigo lo antes posible.
           </p>
+
+          <div className="mb-6 p-3 bg-[var(--neutral-800)] rounded-md">
+            <p className="text-[var(--neutral-300)] text-sm">
+              <span className="font-medium">Usuario actual:</span> {session?.user?.name} ({session?.user?.email})
+            </p>
+          </div>
 
           {submitStatus.success && (
             <div className="bg-[var(--success-light)] border border-[var(--success)] text-[var(--success)] px-4 py-3 rounded-md mb-6">
@@ -214,28 +231,6 @@ export default function ContactoPage() {
                 tabIndex={-1}
                 autoComplete="off"
               />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[var(--neutral-300)] mb-2">
-                Email <span className="text-[var(--error)]">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                maxLength={100}
-                className={`w-full px-4 py-3 bg-[var(--neutral-900)] border ${
-                  errors.email ? 'border-[var(--error)]' : 'border-[var(--border)]'
-                } rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-[var(--foreground)]`}
-                placeholder="tu-email@ejemplo.com"
-                disabled={isSubmitting}
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-[var(--error)]">{errors.email}</p>
-              )}
             </div>
 
             <div>
