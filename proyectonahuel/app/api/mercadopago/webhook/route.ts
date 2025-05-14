@@ -30,11 +30,11 @@ export async function POST(request: Request) {
       const payment = await paymentClient.get({ id: paymentId });
       
       // Obtener la referencia externa (que contiene el ID del curso y usuario)
-      const externalReference = payment.external_reference;
+      const externalReference = payment.external_reference as string;
       const [courseId, userId] = externalReference.split('-');
       
       // Obtener el estado del pago
-      const paymentStatus = payment.status;
+      const paymentStatus = payment.status as string;
       
       // Procesar según el estado del pago
       if (paymentStatus === 'approved') {
