@@ -22,11 +22,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Configuración del transporte de correo
+    // Configuración del transporte de correo con Gmail
+    // Nota: Para Gmail, necesitas habilitar "Acceso de aplicaciones menos seguras" o usar una "Contraseña de aplicación"
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
+      service: 'gmail',  // Usando servicio predefinido de Gmail en lugar de configuración manual
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
@@ -34,19 +33,19 @@ export async function POST(request: Request) {
     });
 
     // Dirección de correo del administrador
-    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER; // Fallback al mismo email de envío si no hay admin
 
     if (!adminEmail) {
-      console.error('ADMIN_EMAIL no está configurado en las variables de entorno');
+      console.error('Error: No se ha configurado un email para recibir los mensajes');
       return NextResponse.json(
-        { error: 'Error en la configuración del servidor' },
+        { error: 'Error en la configuración del servidor. Por favor, contacta al administrador por otro medio.' },
         { status: 500 }
       );
     }
 
     // Configuración del correo
     const mailOptions = {
-      from: process.env.SMTP_USER,
+      from: `"Formulario de Contacto" <${process.env.SMTP_USER}>`,
       to: adminEmail,
       subject: `Formulario de contacto: ${subject}`,
       html: `
@@ -59,17 +58,38 @@ export async function POST(request: Request) {
       replyTo: email,
     };
 
-    // Enviar correo
-    await transporter.sendMail(mailOptions);
-
-    return NextResponse.json(
-      { message: 'Mensaje enviado correctamente' },
-      { status: 200 }
-    );
+    try {
+      // Enviar correo
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Email enviado correctamente:', info.messageId);
+      
+      return NextResponse.json(
+        { message: 'Mensaje enviado correctamente' },
+        { status: 200 }
+      );
+    } catch (emailError: any) {
+      console.error('Error específico al enviar email:', emailError);
+      
+      // Mensaje de error más descriptivo para el usuario
+      let errorMessage = 'No se pudo enviar el mensaje. ';
+      
+      if (emailError.code === 'EAUTH') {
+        errorMessage += 'Error de autenticación con el servidor de correo.';
+      } else if (emailError.code === 'ESOCKET' || emailError.code === 'ECONNECTION') {
+        errorMessage += 'No se pudo conectar con el servidor de correo.';
+      } else {
+        errorMessage += 'Por favor, intenta nuevamente más tarde o contacta por otro medio.';
+      }
+      
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error al enviar el mensaje:', error);
+    console.error('Error general al procesar la solicitud:', error);
     return NextResponse.json(
-      { error: 'Ocurrió un error al enviar el mensaje' },
+      { error: 'Ocurrió un error al procesar tu solicitud. Por favor, intenta nuevamente.' },
       { status: 500 }
     );
   }
