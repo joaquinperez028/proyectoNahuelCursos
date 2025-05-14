@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '../../auth/[...nextauth]/options';
 import mercadopago from 'mercadopago';
 import Course from '@/models/Course';
 import { connectToDB } from '@/lib/database';
