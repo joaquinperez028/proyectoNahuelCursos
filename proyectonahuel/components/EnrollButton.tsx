@@ -46,7 +46,7 @@ const EnrollButton = ({ courseId, price, userHasCourse = false, label }: EnrollB
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError('Ha ocurrido un error inesperado');
+        setError('Ha ocurrido un error inesperado.');
       }
     } finally {
       setIsEnrolling(false);
