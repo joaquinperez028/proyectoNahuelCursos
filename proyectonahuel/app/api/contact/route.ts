@@ -63,7 +63,7 @@ const checkRateLimit = (ip: string): { allowed: boolean, message?: string } => {
 export async function POST(request: Request) {
   try {
     // Obtener IP del cliente desde headers
-    const headersList = headers();
+    const headersList = await headers();
     const forwardedFor = headersList.get('x-forwarded-for') || '';
     const clientIp = forwardedFor.split(',')[0] || 'unknown';
     
