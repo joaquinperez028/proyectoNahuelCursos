@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 import Course from '@/models/Course';
 import { connectToDB } from '@/lib/database';
 
 // Configurar MercadoPago con la clave de acceso
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN as string
+const client = new MercadoPagoConfig({ 
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN as string 
 });
 
 export async function POST(request: Request) {
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       : course.price;
 
     // Crear la preferencia de pago
-    const preference = {
+    const preferenceData = {
       items: [
         {
           id: courseId,
@@ -79,14 +79,17 @@ export async function POST(request: Request) {
       }
     };
 
+    // Crear instancia del recurso Preference
+    const preference = new Preference(client);
+    
     // Crear la preferencia en MercadoPago
-    const response = await mercadopago.preferences.create(preference);
+    const response = await preference.create({ body: preferenceData });
 
     // Retornar la respuesta con la URL de pago
     return NextResponse.json({
-      id: response.body.id,
-      init_point: response.body.init_point,
-      sandbox_init_point: response.body.sandbox_init_point
+      id: response.id,
+      init_point: response.init_point,
+      sandbox_init_point: response.sandbox_init_point
     });
   } catch (error) {
     console.error('Error al crear preferencia de MercadoPago:', error);

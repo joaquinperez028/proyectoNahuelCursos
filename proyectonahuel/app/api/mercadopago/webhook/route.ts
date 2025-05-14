@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { connectToDB } from '@/lib/database';
 import Course from '@/models/Course';
 import User from '@/models/User';
@@ -7,8 +7,8 @@ import Progress from '@/models/Progress';
 import { sendEmail } from '@/lib/email';
 
 // Configurar MercadoPago con la clave de acceso
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN as string
+const client = new MercadoPagoConfig({ 
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN as string 
 });
 
 export async function POST(request: Request) {
@@ -23,15 +23,18 @@ export async function POST(request: Request) {
     if (data.type === 'payment') {
       const paymentId = data.data.id;
 
+      // Crear instancia del recurso Payment
+      const paymentClient = new Payment(client);
+      
       // Obtener los detalles del pago
-      const payment = await mercadopago.payment.get(paymentId);
+      const payment = await paymentClient.get({ id: paymentId });
       
       // Obtener la referencia externa (que contiene el ID del curso y usuario)
-      const externalReference = payment.body.external_reference;
+      const externalReference = payment.external_reference;
       const [courseId, userId] = externalReference.split('-');
       
       // Obtener el estado del pago
-      const paymentStatus = payment.body.status;
+      const paymentStatus = payment.status;
       
       // Procesar según el estado del pago
       if (paymentStatus === 'approved') {
