@@ -288,57 +288,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
       <div className="max-w-3xl mx-auto text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-extrabold text-[var(--neutral-100)] mb-4 leading-tight">{course.title}</h1>
         <p className="text-lg md:text-xl text-[var(--neutral-300)] mb-6">{course.description.length > 240 ? `${course.description.substring(0, 240)}...` : course.description}</p>
-        <BuyButton courseId={course._id} userHasCourse={userHasCourse} className="mx-auto w-full max-w-xs md:max-w-sm mb-6" size="lg" />
-        <div className="flex flex-wrap justify-center gap-4 mb-6">
-          {course.onSale && course.discountPercentage > 0 && (
-            <div className="px-4 py-1.5 bg-[var(--primary-dark)] text-[var(--neutral-100)] rounded-full text-sm font-medium">
-              {course.discountPercentage}% de descuento
-            </div>
-          )}
-          
-          <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
-            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            {totalDuration > 0 ? `${totalDuration} minutos` : 'Duración variable'}
-          </div>
-          
-          <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
-            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            {new Date(course.createdAt).toLocaleDateString()}
-          </div>
-          
-          <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
-            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-            </svg>
-            {course.reviews?.length || 0} estudiantes
-          </div>
-        </div>
-        <div className="flex items-center justify-center space-x-1 text-amber-400 mb-2">
-          {/* Estrellas de valoración */}
-          {Array.from({ length: 5 }).map((_, index) => (
-            <svg
-              key={index}
-              fill={index < Math.round(averageRating) ? 'currentColor' : 'none'}
-              stroke="currentColor"
-              className="w-5 h-5"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-              ></path>
-            </svg>
-          ))}
-          <span className="text-sm font-medium text-[var(--neutral-200)] ml-2">
-            {averageRating.toFixed(1)}
-          </span>
-        </div>
       </div>
       <hr className="border-[var(--border)] my-8" />
 
@@ -494,8 +443,54 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               </div>
             </section>
           </div>
-          {/* Sidebar: Este curso incluye */}
+          {/* Sidebar: bloque de acción y beneficios */}
           <aside className="lg:col-span-1">
+            {/* Bloque de acción: botón, badges y estrellas */}
+            <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl p-6 mb-8">
+              <BuyButton courseId={course._id} userHasCourse={userHasCourse} className="mx-auto w-full max-w-xs md:max-w-sm mb-6" size="lg" />
+              <div className="flex flex-wrap justify-center gap-4 mb-4">
+                <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  {totalDuration > 0 ? `${totalDuration} minutos` : 'Duración variable'}
+                </div>
+                <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                  {new Date(course.createdAt).toLocaleDateString()}
+                </div>
+                <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                  {course.reviews?.length || 0} estudiantes
+                </div>
+              </div>
+              <div className="flex items-center justify-center space-x-1 text-amber-400 mb-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <svg
+                    key={index}
+                    fill={index < Math.round(averageRating) ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                    ></path>
+                  </svg>
+                ))}
+                <span className="text-sm font-medium text-[var(--neutral-200)] ml-2">
+                  {averageRating.toFixed(1)}
+                </span>
+              </div>
+            </div>
+            {/* Bloque de beneficios */}
             <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl p-6 mb-8">
               <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Este curso incluye</h2>
               <ul className="space-y-3 text-[var(--neutral-300)]">
