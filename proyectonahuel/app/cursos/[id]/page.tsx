@@ -283,6 +283,8 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
   const exercisesDuration = (course.exercises?.length || 0) * 30;
   const totalDuration = mainVideoDuration + additionalVideosDuration + exercisesDuration;
 
+  const studentsCount = await User.countDocuments({ courses: courseId });
+
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
       <div className="max-w-3xl mx-auto text-center mb-8">
@@ -465,7 +467,7 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                   <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                   </svg>
-                  {course.reviews?.length || 0} estudiantes
+                  {studentsCount} {studentsCount === 1 ? 'estudiante' : 'estudiantes'}
                 </div>
               </div>
               <div className="flex items-center justify-center space-x-1 text-amber-400 mb-2">
