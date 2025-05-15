@@ -3,10 +3,11 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import Payment from '@/models/Payment';
 import Course from '@/models/Course';
 import { connectDB } from '@/lib/mongodb';
+import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req) {
+export async function GET(req: NextRequest) {
   await connectDB();
   const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.email) {
