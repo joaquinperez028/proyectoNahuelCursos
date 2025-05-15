@@ -285,21 +285,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
 
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
-      {/* Imagen destacada del curso */}
-      {(course.hasThumbnailImage || course.thumbnailUrl) && (
-        <div className="w-full max-w-4xl mx-auto mb-8 rounded-2xl overflow-hidden shadow-lg">
-          <Image
-            src={course.hasThumbnailImage ? `/api/course-image?id=${course._id}` : (course.thumbnailUrl || '')}
-            alt={course.title}
-            width={1200}
-            height={600}
-            className="w-full h-auto object-cover"
-            priority
-            quality={90}
-          />
-        </div>
-      )}
-
       <div className="max-w-3xl mx-auto text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-extrabold text-[var(--neutral-100)] mb-4 leading-tight">{course.title}</h1>
         <p className="text-lg md:text-xl text-[var(--neutral-300)] mb-6">{course.description.length > 240 ? `${course.description.substring(0, 240)}...` : course.description}</p>
