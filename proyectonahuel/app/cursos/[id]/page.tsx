@@ -42,6 +42,7 @@ interface VideoType {
   videoId: string;
   playbackId: string;
   order: number;
+  duration?: number;
 }
 
 interface ExerciseType {
@@ -276,6 +277,12 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
       }).format(course.discountedPrice || course.price - (course.price * (course.discountPercentage / 100)))
     : null;
   
+  // Calcular duración total del curso
+  const mainVideoDuration = course.duration || 0;
+  const additionalVideosDuration = course.videos.reduce((acc, video) => acc + (video.duration || 0), 0);
+  const exercisesDuration = (course.exercises?.length || 0) * 30;
+  const totalDuration = mainVideoDuration + additionalVideosDuration + exercisesDuration;
+
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
       {/* Imagen destacada del curso */}
@@ -308,7 +315,7 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            {course.duration ? `${Math.ceil(course.duration / 60)} minutos` : 'Duración variable'}
+            {totalDuration > 0 ? `${totalDuration} minutos` : 'Duración variable'}
           </div>
           
           <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
