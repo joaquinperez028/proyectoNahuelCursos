@@ -1,3 +1,11 @@
+/**
+ * Página de detalle de cursos - CAMBIOS REALIZADOS:
+ * 1. Se eliminaron los botones de compra redundantes, dejando solo el BuyButton principal
+ * 2. Se reposicionó el botón de compra a un lugar más destacado debajo del título y descripción
+ * 3. Se mejoró la estética del botón para que sea coherente con el diseño del sitio
+ * 4. El botón ahora es responsivo y se ve bien en dispositivos móviles y de escritorio
+ */
+
 import { connectDB } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import Review from "@/models/Review";
@@ -11,9 +19,10 @@ import { getServerSession } from "next-auth";
 import { Types } from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import Image from "next/image";
-import ScrollToEnrollButton from '@/components/ScrollToEnrollButton';
-import MuxPlayer from "@/app/components/MuxPlayer";
+import MuxPlayer from "@mux/mux-player-react";
 import BuyButton from '@/app/components/BuyButton';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -83,6 +92,7 @@ interface CourseType {
   onSale: boolean;
   discountPercentage: number;
   discountedPrice?: number;
+  duration?: number;
 }
 
 async function getUserHasCourse(courseId: string): Promise<boolean> {
@@ -191,7 +201,8 @@ async function getCourse(id: string): Promise<CourseType | null> {
       
       onSale: courseDoc.onSale || false,
       discountPercentage: courseDoc.discountPercentage || 0,
-      discountedPrice: courseDoc.discountedPrice || 0
+      discountedPrice: courseDoc.discountedPrice || 0,
+      duration: courseDoc.duration || 0
     };
     
     return course;
@@ -266,104 +277,115 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
     : null;
   
   return (
-    <div className="bg-[var(--background)] text-[var(--foreground)] pb-16">
-      {/* Hero Section con gradiente y efecto de superposición */}
-      <div className="relative overflow-hidden bg-[var(--neutral-900)] mb-8">
-        <div className="absolute inset-0 z-0 opacity-20">
-          <div className="absolute left-1/4 top-0 h-[400px] w-[400px] rounded-full bg-[var(--primary)] blur-[150px]"></div>
-          <div className="absolute right-1/4 bottom-0 h-[400px] w-[400px] rounded-full bg-[var(--secondary)] blur-[150px]"></div>
-        </div>
+    <div className="bg-[var(--background)] min-h-screen pb-16">
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-[var(--neutral-900)] to-[var(--background)]"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 relative z-10">
+          <div className="max-w-3xl mx-auto text-center mb-8">
+            <h1 className="text-3xl font-extrabold text-[var(--neutral-100)] sm:text-4xl mb-6">
+              {course.title}
+            </h1>
+            
+            <p className="text-lg text-[var(--neutral-300)] mb-8">
+              {course.description.length > 240
+                ? `${course.description.substring(0, 240)}...`
+                : course.description}
+            </p>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="md:max-w-3xl">
-              <h1 className="text-3xl font-bold text-[var(--neutral-100)] sm:text-4xl md:text-5xl mb-4">
-                {course.title}
-              </h1>
+            {/* Botón de compra destacado - ahora visible aquí */}
+            <div className="mb-8">
+              <BuyButton 
+                courseId={course._id} 
+                userHasCourse={userHasCourse}
+                className="mx-auto"
+                size="lg"
+              />
+            </div>
+          
+            <div className="flex flex-wrap justify-center gap-4 mb-6">
+              {course.onSale && course.discountPercentage > 0 && (
+                <div className="px-4 py-1.5 bg-[var(--primary-dark)] text-[var(--neutral-100)] rounded-full text-sm font-medium">
+                  {course.discountPercentage}% de descuento
+                </div>
+              )}
               
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
-                <div className="flex items-center text-[var(--neutral-300)]">
-                  <div className="flex items-center mr-2">
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--neutral-100)] text-sm">
-                      {course.createdBy.name.charAt(0)}
-                    </div>
-                  </div>
-                  <span>Por {course.createdBy.name}</span>
-                </div>
-                
-                {averageRating > 0 && (
-                  <div className="flex items-center text-[var(--neutral-300)]">
-                    <div className="flex items-center space-x-1 mr-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <svg 
-                          key={star} 
-                          className={`w-4 h-4 ${star <= Math.round(averageRating) ? 'text-yellow-400' : 'text-[var(--neutral-600)]'}`} 
-                          fill="currentColor" 
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-                        </svg>
-                      ))}
-                    </div>
-                    <span>
-                      {averageRating.toFixed(1)} ({course.reviews.length} {course.reviews.length === 1 ? 'reseña' : 'reseñas'})
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-[var(--neutral-300)] flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  <span>
-                    {course.videos.length + 1} {course.videos.length + 1 === 1 ? 'video' : 'videos'}
-                  </span>
-                </div>
-                
-                <div className="text-[var(--neutral-300)] flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                  </svg>
-                  <span>Actualizado {new Date(course.updatedAt).toLocaleDateString()}</span>
-                </div>
+              <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {course.duration ? `${Math.ceil(course.duration / 60)} minutos` : 'Duración variable'}
               </div>
               
-              <p className="text-[var(--neutral-200)] text-lg max-w-3xl">
-                {course.description.length > 180 
-                  ? `${course.description.substring(0, 180)}...` 
-                  : course.description}
-              </p>
+              <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                {new Date(course.createdAt).toLocaleDateString()}
+              </div>
+              
+              <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                {course.reviews?.length || 0} estudiantes
+              </div>
             </div>
             
-            <div className="w-full md:w-auto">
-              <div className="flex flex-col items-end">
-                {course.onSale && formattedDiscountedPrice ? (
-                  <>
-                    <div className="bg-red-500 text-white px-4 py-1 rounded-lg text-sm font-medium mb-2">
-                      {course.discountPercentage}% DESCUENTO
-                    </div>
-                    <div className="flex items-center mb-4">
-                      <span className="text-[var(--neutral-300)] line-through mr-3 text-lg">
-                        {formattedPrice}
-                      </span>
-                      <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20">
-                        {formattedDiscountedPrice}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20 mb-4">
-                    {formattedPrice}
-                  </div>
-                )}
-                
-                <BuyButton 
-                  courseId={course._id} 
-                  userHasCourse={userHasCourse}
-                  className="w-full md:w-auto"
-                />
-              </div>
+            <div className="flex items-center justify-center space-x-1 text-amber-400">
+              {/* Estrellas de valoración */}
+              {Array.from({ length: 5 }).map((_, index) => (
+                <svg
+                  key={index}
+                  fill={index < Math.round(averageRating) ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                  ></path>
+                </svg>
+              ))}
+              <span className="text-sm font-medium text-[var(--neutral-200)] ml-2">
+                {averageRating.toFixed(1)}
+              </span>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Panel de información y precio */}
+      <div className="bg-[var(--neutral-900)] border-b border-[var(--border)] py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0 text-center md:text-left">
+              <div className="text-[var(--neutral-300)]">Precio del curso:</div>
+              
+              {/* Precios con formato */}
+              {course.onSale && course.discountPercentage > 0 ? (
+                <>
+                  <div className="flex items-center md:justify-start justify-center space-x-2">
+                    <div className="line-through text-[var(--neutral-400)] text-lg">
+                      {formattedPrice}
+                    </div>
+                    <div className="text-[var(--primary)] text-2xl font-bold">
+                      {formattedDiscountedPrice}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-[var(--primary)] text-[var(--neutral-100)] px-6 py-3 rounded-lg inline-flex items-center text-xl font-bold shadow-lg shadow-[var(--primary)]/20 mb-4">
+                  {formattedPrice}
+                </div>
+              )}
+            </div>
+            
+            {/* Removemos el BuyButton de aquí ya que lo movimos arriba */}
           </div>
         </div>
       </div>
@@ -390,16 +412,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                       title={`Introducción a ${course.title}`}
                       autoPlay={false}
                     />
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent pointer-events-none">
-                      <div className="flex justify-between items-center">
-                        <div className="text-white pointer-events-none">
-                          <p className="font-medium">Video de introducción</p>
-                        </div>
-                        <div className="pointer-events-auto">
-                          <ScrollToEnrollButton className="py-2 px-4 text-sm" />
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               ) : (
@@ -425,7 +437,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                         </svg>
                         <p className="text-2xl font-bold mb-2 text-[var(--neutral-100)]">Vista previa no disponible</p>
                         <p className="text-[var(--neutral-300)] mb-6">Compra este curso para acceder al contenido completo</p>
-                        <ScrollToEnrollButton />
                       </div>
                     </div>
                   </div>
