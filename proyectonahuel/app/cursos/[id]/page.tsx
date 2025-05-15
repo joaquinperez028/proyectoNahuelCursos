@@ -294,16 +294,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                 : course.description}
             </p>
 
-            {/* Botón de compra destacado - ahora visible aquí */}
-            <div className="mb-8">
-              <BuyButton 
-                courseId={course._id} 
-                userHasCourse={userHasCourse}
-                className="mx-auto"
-                size="lg"
-              />
-            </div>
-          
             <div className="flex flex-wrap justify-center gap-4 mb-6">
               {course.onSale && course.discountPercentage > 0 && (
                 <div className="px-4 py-1.5 bg-[var(--primary-dark)] text-[var(--neutral-100)] rounded-full text-sm font-medium">
@@ -606,14 +596,15 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               </div>
               
               <div className="mb-6">
-                <EnrollSection 
-                  courseId={course._id} 
-                  price={course.price} 
-                  userHasCourse={userHasCourse}
-                  onSale={course.onSale}
-                  discountPercentage={course.discountPercentage}
-                  discountedPrice={course.discountedPrice}
-                />
+                {/* Eliminamos EnrollSection para evitar el botón duplicado */}
+                {!userHasCourse && (
+                  <BuyButton 
+                    courseId={course._id} 
+                    userHasCourse={userHasCourse}
+                    className="w-full"
+                    size="lg"
+                  />
+                )}
               </div>
               
               <div className="mt-6 border-t border-[var(--border)] pt-6">
