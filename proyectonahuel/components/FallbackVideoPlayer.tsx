@@ -26,7 +26,7 @@ export default function FallbackVideoPlayer({ src, poster, title = 'Video del cu
         })
         .catch((err) => {
           console.error('Error al reproducir video: ', err);
-          setError('No se pudo reproducir el video automáticamente. Intente haciendo clic en el botón de reproducción.');
+          setError('No se pudo reproducir el video automáticamente. Intente haciendo clic en el botón de reproducción');
         });
     }
   };
