@@ -124,25 +124,25 @@ export default function CategoriesSection() {
         {categorias.map((categoria) => (
           <motion.div 
             key={categoria.name} 
-            className="card-transition bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 border border-gray-700 hover:border-opacity-100 hover:border-blue-600 hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
+            className="card-transition bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 border border-gray-700 hover:border-opacity-100 hover:border-blue-600 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col h-full"
             variants={itemVariants}
             style={{ borderImageSource: `linear-gradient(to bottom, ${categoria.color.split(' ')[1]}, transparent)` }}
             aria-label={categoria.ariaLabel}
           >
             <div className={`h-2 bg-gradient-to-r ${categoria.color}`}></div>
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 flex flex-col flex-grow">
               <div className="w-12 h-12 sm:w-14 sm:h-14 mb-4">
                 {categoria.icon}
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
                 {categoria.name}
               </h3>
-              <p className="text-sm sm:text-base text-gray-400 mb-4">
+              <p className="text-sm sm:text-base text-gray-400 mb-4 flex-grow">
                 {categoria.description}
               </p>
               <Link
                 href={`/cursos?categoria=${categoria.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="inline-flex w-full sm:w-auto items-center justify-center sm:justify-start text-blue-400 font-medium hover:text-blue-500 transition-all duration-300 group hover:underline"
+                className="inline-flex w-full sm:w-auto items-center justify-center sm:justify-start text-blue-400 font-medium hover:text-blue-500 transition-all duration-300 group hover:underline mt-auto"
                 aria-label={`Explorar cursos de ${categoria.name}`}
               >
                 <span>Explorar cursos</span>
