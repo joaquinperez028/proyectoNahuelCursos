@@ -129,7 +129,7 @@ export default function CategoryDropdown({ categoriaActual, categoryCounts }: Ca
                 onClick={() => handleSelectCategory()}
                 className={`group px-5 py-3 flex items-center justify-between cursor-pointer transition-colors duration-200
                            hover:bg-[var(--neutral-700)] ${
-                  !categoriaActual ? 'bg-[var(--accent)] bg-opacity-10 text-[var(--accent)]' : 'text-[var(--neutral-200)]'
+                  !categoriaActual ? 'bg-[var(--accent)] bg-opacity-5 text-white font-medium' : 'text-[var(--neutral-200)]'
                 }`}
                 role="option"
                 aria-selected={!categoriaActual}
@@ -156,7 +156,7 @@ export default function CategoryDropdown({ categoriaActual, categoryCounts }: Ca
                   onClick={() => handleSelectCategory(categoria)}
                   className={`group px-5 py-3 flex items-center justify-between cursor-pointer transition-colors duration-200
                              hover:bg-[var(--neutral-700)] ${
-                    categoriaActual === categoria ? 'bg-[var(--accent)] bg-opacity-10 text-[var(--accent)]' : 'text-[var(--neutral-200)]'
+                    categoriaActual === categoria ? 'bg-[var(--accent)] bg-opacity-5 text-white font-medium' : 'text-[var(--neutral-200)]'
                   }`}
                   role="option"
                   aria-selected={categoriaActual === categoria}
