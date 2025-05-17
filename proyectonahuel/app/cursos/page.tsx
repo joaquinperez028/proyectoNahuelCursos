@@ -220,9 +220,9 @@ function CategoryFilter({ categoriaActual, categoryCounts }: { categoriaActual?:
 export default async function CoursesPage({
   searchParams,
 }: {
-  searchParams?: { categoria?: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }) {
-  const categoria = searchParams?.categoria || undefined;
+  const categoria = typeof searchParams?.categoria === 'string' ? searchParams.categoria : undefined;
   const courses = await getCourses(categoria);
   const categoryCounts = await getCategoryCounts();
   
