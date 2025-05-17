@@ -6,6 +6,7 @@ import Review from "@/models/Review";
 import CourseCard from "@/components/CourseCard";
 import { Suspense } from 'react';
 import Link from "next/link";
+import type { NextPage } from 'next';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,11 +218,14 @@ function CategoryFilter({ categoriaActual, categoryCounts }: { categoriaActual?:
 }
 
 // Página principal con soporte para filtros
-export default async function CoursesPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+interface PageProps {
+  params: Record<string, string>;
+  searchParams: Record<string, string | string[] | undefined>;
+}
+
+export default async function CoursesPage({ params, searchParams }: PageProps) {
+  // En Next.js 15 podemos seguir accediendo de forma síncrona por compatibilidad,
+  // pero en futuras versiones será una promesa
   const categoria = typeof searchParams?.categoria === 'string' ? searchParams.categoria : undefined;
   const courses = await getCourses(categoria);
   const categoryCounts = await getCategoryCounts();
