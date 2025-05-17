@@ -51,6 +51,7 @@ export default function NewCoursePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -836,6 +837,11 @@ export default function NewCoursePage() {
       return;
     }
     
+    if (!category) {
+      setError('Debes seleccionar una categoría');
+      return;
+    }
+    
     if (uploadMethod === 'url' && !videoUrl.trim()) {
       setError('La URL del video es obligatoria');
       return;
@@ -957,6 +963,7 @@ export default function NewCoursePage() {
           title,
           description,
           price: Number(price),
+          category,
           videoUrl: finalVideoUrl,
           ...introVideoData,
           ...thumbnailData,
@@ -1056,6 +1063,28 @@ export default function NewCoursePage() {
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
               placeholder="Ej: 49.99"
             />
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="category" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
+              Categoría
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              required
+            >
+              <option value="" disabled>Selecciona una categoría</option>
+              <option value="Análisis Técnico">Análisis Técnico</option>
+              <option value="Análisis Fundamental">Análisis Fundamental</option>
+              <option value="Estrategias de Trading">Estrategias de Trading</option>
+              <option value="Finanzas Personales">Finanzas Personales</option>
+            </select>
+            <p className="mt-1 text-xs text-[var(--neutral-400)]">
+              Esta categoría determinará dónde aparecerá tu curso en la página principal
+            </p>
           </div>
           
           {/* Imagen de miniatura */}

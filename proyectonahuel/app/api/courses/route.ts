@@ -53,9 +53,18 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     
     // Validar datos
-    if (!data.title || !data.description || !data.price || !data.videoUrl) {
+    if (!data.title || !data.description || !data.price || !data.videoUrl || !data.category) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos' },
+        { status: 400 }
+      );
+    }
+    
+    // Validar que la categoría sea una de las permitidas
+    const categoriasValidas = ['Análisis Técnico', 'Análisis Fundamental', 'Estrategias de Trading', 'Finanzas Personales'];
+    if (!categoriasValidas.includes(data.category)) {
+      return NextResponse.json(
+        { error: 'Categoría no válida' },
         { status: 400 }
       );
     }
@@ -75,6 +84,7 @@ export async function POST(request: NextRequest) {
       title: data.title,
       description: data.description,
       price: data.price,
+      category: data.category,
       videoId: assetId,
       playbackId: playbackId,
       createdBy: user._id,

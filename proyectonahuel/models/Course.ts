@@ -56,6 +56,11 @@ const CourseSchema = new Schema({
     type: Number,
     required: true,
   },
+  category: {
+    type: String,
+    required: true,
+    enum: ['Análisis Técnico', 'Análisis Fundamental', 'Estrategias de Trading', 'Finanzas Personales'],
+  },
   videoId: {
     type: String,
     required: true,
