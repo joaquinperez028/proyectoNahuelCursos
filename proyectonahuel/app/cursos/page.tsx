@@ -164,14 +164,15 @@ async function getCategoryCounts(): Promise<CategoryCount> {
 
 // Página principal con soporte para filtros
 interface PageProps {
-  params: Record<string, string>;
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<Record<string, string>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function CoursesPage({ params, searchParams }: PageProps) {
-  // En Next.js 15 podemos seguir accediendo de forma síncrona por compatibilidad,
-  // pero en futuras versiones será una promesa
-  const categoria = typeof searchParams?.categoria === 'string' ? searchParams.categoria : undefined;
+  // En Next.js 15, params y searchParams son Promise
+  // Podemos acceder a ellos de forma síncrona por compatibilidad o con await
+  const searchParamsResolved = await searchParams;
+  const categoria = typeof searchParamsResolved?.categoria === 'string' ? searchParamsResolved.categoria : undefined;
   const courses = await getCourses(categoria);
   const categoryCounts = await getCategoryCounts();
   
