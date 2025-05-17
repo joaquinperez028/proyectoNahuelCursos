@@ -82,9 +82,12 @@ export default function CategoryDropdown({ categoriaActual, categoryCounts }: Ca
         {/* Botón del dropdown */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between px-5 py-3.5 bg-[var(--neutral-800)] text-[var(--neutral-100)] 
-                     rounded-lg border border-[var(--border)] hover:bg-[var(--neutral-700)] shadow-sm
-                     transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-opacity-50"
+          className={`w-full flex items-center justify-between px-5 py-3.5 ${
+            categoriaActual 
+              ? 'bg-[var(--neutral-800)] border-[var(--accent)] text-[var(--accent)]' 
+              : 'bg-[var(--neutral-800)] text-[var(--neutral-100)] border-[var(--border)]'
+          } rounded-lg border hover:bg-[var(--neutral-700)] shadow-sm
+                     transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-opacity-50`}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >
