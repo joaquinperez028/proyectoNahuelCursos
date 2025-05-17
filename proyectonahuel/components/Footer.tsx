@@ -45,22 +45,22 @@ const Footer = () => {
             </h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/cursos?categoria=bolsa" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Inversión en Bolsa
+                <Link href="/cursos?categoria=analisis-tecnico" className="text-gray-400 hover:text-green-500 transition-colors">
+                  Análisis Técnico
                 </Link>
               </li>
               <li>
-                <Link href="/cursos?categoria=criptomonedas" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Criptomonedas
+                <Link href="/cursos?categoria=analisis-fundamental" className="text-gray-400 hover:text-green-500 transition-colors">
+                  Análisis Fundamental
                 </Link>
               </li>
               <li>
-                <Link href="/cursos?categoria=trading" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Trading
+                <Link href="/cursos?categoria=estrategias-de-trading" className="text-gray-400 hover:text-green-500 transition-colors">
+                  Estrategias de Trading
                 </Link>
               </li>
               <li>
-                <Link href="/cursos?categoria=finanzas" className="text-gray-400 hover:text-green-500 transition-colors">
+                <Link href="/cursos?categoria=finanzas-personales" className="text-gray-400 hover:text-green-500 transition-colors">
                   Finanzas Personales
                 </Link>
               </li>

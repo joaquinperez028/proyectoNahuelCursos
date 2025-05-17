@@ -52,34 +52,75 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { 
-                name: 'Inversión en Bolsa', 
-                icon: '📈', 
+                name: 'Análisis Técnico', 
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12 text-blue-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 19h4l10.5-10.5-4-4L4 15v4z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M13.5 6.5l4 4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M8 12v-2m5 4H9m-4 4h14" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect x="5" y="4" width="2" height="8" rx="1" strokeWidth="0" fill="currentColor" />
+                    <rect x="9" y="9" width="2" height="3" rx="1" strokeWidth="0" fill="currentColor" />
+                    <rect x="13" y="7" width="2" height="5" rx="1" strokeWidth="0" fill="currentColor" />
+                    <rect x="17" y="5" width="2" height="7" rx="1" strokeWidth="0" fill="currentColor" />
+                  </svg>
+                ),
                 color: 'from-blue-700 to-blue-500',
-                description: 'Aprende a invertir en acciones, ETFs y fondos de inversión con estrategias probadas.'
+                description: 'Domina el arte de los gráficos de velas japonesas y patrones de precio para predecir movimientos del mercado.'
               },
               { 
-                name: 'Criptomonedas', 
-                icon: '₿', 
+                name: 'Análisis Fundamental', 
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12 text-green-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M15 3v4H9V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M8 10v6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 10v6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M16 10v6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <rect x="7" y="16" width="2" height="4" rx="0.5" strokeWidth="0" fill="currentColor" />
+                    <rect x="11" y="14" width="2" height="6" rx="0.5" strokeWidth="0" fill="currentColor" />
+                    <rect x="15" y="12" width="2" height="8" rx="0.5" strokeWidth="0" fill="currentColor" />
+                  </svg>
+                ),
                 color: 'from-green-700 to-green-500',
-                description: 'Domina el mundo de Bitcoin, Ethereum y otras altcoins. Aprende a operar de forma segura.'
+                description: 'Aprende a evaluar el valor real de activos financieros mediante análisis de balances, ratios e informes económicos.'
               },
               { 
-                name: 'Trading', 
-                icon: '📊', 
+                name: 'Estrategias de Trading', 
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12 text-teal-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 5h20v14H2V5z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 9l3-3 3 3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6 17l3-3 2 2 4-4 3 3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M14 15h1v1h-1v-1z" strokeWidth="0" fill="currentColor" />
+                    <path d="M17 11h1v1h-1v-1z" strokeWidth="0" fill="currentColor" />
+                    <path d="M6 13h1v1H6v-1z" strokeWidth="0" fill="currentColor" />
+                    <path d="M10 11h1v1h-1v-1z" strokeWidth="0" fill="currentColor" />
+                  </svg>
+                ),
                 color: 'from-teal-700 to-teal-500',
-                description: 'Estrategias de trading, análisis técnico y gestión de riesgos para mercados financieros.'
+                description: 'Descubre sistemas de trading probados, gestión monetaria avanzada y psicología del trader profesional.'
               },
               { 
                 name: 'Finanzas Personales', 
-                icon: '💰', 
+                icon: (
+                  <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12 text-indigo-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.77 2 2.5 6.27 2.5 11.5c0 5.23 4.27 9.5 9.5 9.5 5.23 0 9.5-4.27 9.5-9.5C21.5 6.27 17.23 2 12 2z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 15v1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 8v4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 6v1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9.5 8.5h5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 11.5h6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path fill="currentColor" d="M11.75 7.25a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" strokeWidth="0" />
+                  </svg>
+                ),
                 color: 'from-indigo-700 to-indigo-500',
-                description: 'Aprende a gestionar tu dinero, crear presupuestos efectivos y planificar tu futuro financiero.'
+                description: 'Aprende a gestionar tu dinero, crear presupuestos efectivos y planificar tu futuro financiero con estrategias prácticas.'
               }
             ].map((categoria) => (
               <div key={categoria.name} className="card-transition bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-700 border border-gray-700">
                 <div className={`h-2 bg-gradient-to-r ${categoria.color}`}></div>
                 <div className="p-6">
-                  <div className="text-4xl mb-4">{categoria.icon}</div>
+                  <div className="mb-4">{categoria.icon}</div>
                   <h3 className="text-xl font-semibold text-white mb-2">{categoria.name}</h3>
                   <p className="text-gray-400 mb-4">
                     {categoria.description}
