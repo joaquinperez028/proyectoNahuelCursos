@@ -8,12 +8,10 @@ import Course from '@/models/Course';
 import Progress from '@/models/Progress';
 import { sendEmail } from '@/lib/email';
 
-// Tipos para los objetos de MongoDB
-interface MongoDBDocument {
-  _id: {
-    toString(): string;
-  };
-  [key: string]: any;
+// Función para convertir ObjectId de MongoDB a string de forma segura
+function safeToString(value: any): string {
+  if (!value) return '';
+  return typeof value.toString === 'function' ? value.toString() : String(value);
 }
 
 // Endpoint para obtener pagos por transferencia
@@ -60,24 +58,26 @@ export async function GET(request: Request) {
     ]);
 
     // Mapear usuarios y cursos por ID para acceso rápido
-    const userMap = users.reduce<Record<string, MongoDBDocument>>((map, user) => {
+    const userMap: Record<string, any> = {};
+    for (const user of users) {
       if (user && user._id) {
-        map[user._id.toString()] = user;
+        const id = safeToString(user._id);
+        userMap[id] = user;
       }
-      return map;
-    }, {});
+    }
 
-    const courseMap = courses.reduce<Record<string, MongoDBDocument>>((map, course) => {
+    const courseMap: Record<string, any> = {};
+    for (const course of courses) {
       if (course && course._id) {
-        map[course._id.toString()] = course;
+        const id = safeToString(course._id);
+        courseMap[id] = course;
       }
-      return map;
-    }, {});
+    }
 
     // Construir respuesta con datos enriquecidos
     const enrichedPayments = payments.map(payment => {
-      const userId = payment.userId.toString();
-      const courseId = payment.courseId.toString();
+      const userId = safeToString(payment.userId);
+      const courseId = safeToString(payment.courseId);
       
       return {
         ...payment,

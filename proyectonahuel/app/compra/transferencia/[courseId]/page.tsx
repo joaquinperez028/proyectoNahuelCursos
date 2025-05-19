@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -15,10 +15,11 @@ interface Course {
   thumbnail: string;
 }
 
-export default function TransferPaymentPage({ params }: { params: { courseId: string } }) {
+export default function TransferPaymentPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { courseId } = params;
+  const params = useParams();
+  const courseId = params.courseId as string;
   
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
