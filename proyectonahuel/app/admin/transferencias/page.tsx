@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useNotifications } from '@/components/Notification';
 
 interface TransferPayment {
   _id: string;
@@ -31,9 +32,20 @@ interface TransferPayment {
   createdAt: string;
 }
 
+// Tipos de notificación
+type NotificationType = 'success' | 'error' | 'info';
+
+// Interfaz para la notificación
+interface Notification {
+  message: string;
+  type: NotificationType;
+  id: number;
+}
+
 export default function TransferPaymentPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { showNotification } = useNotifications();
   
   const [loading, setLoading] = useState(true);
   const [payments, setPayments] = useState<TransferPayment[]>([]);
@@ -52,7 +64,7 @@ export default function TransferPaymentPage() {
   const [modalType, setModalType] = useState<'receipt' | 'reject' | 'confirm'>('receipt');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-
+  
   // Redireccionar si no es administrador
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -88,14 +100,14 @@ export default function TransferPaymentPage() {
         
       } catch (error) {
         console.error('Error al cargar pagos por transferencia:', error);
-        alert('Error al cargar datos de pagos por transferencia');
+        showNotification('Error al cargar datos de pagos por transferencia', 'error');
       } finally {
         setLoading(false);
       }
     };
 
     fetchTransferPayments();
-  }, [status, session, selectedStatus, pagination.page, pagination.limit]);
+  }, [status, session, selectedStatus, pagination.page, pagination.limit, showNotification]);
 
   // Cambiar filtro de estado
   const handleStatusChange = (status: string) => {
@@ -197,12 +209,12 @@ export default function TransferPaymentPage() {
       setPayments(payments.filter(p => p._id !== selectedPayment._id));
       setShowModal(false);
       
-      // Mostrar mensaje de éxito
-      alert('Pago aprobado correctamente');
+      // Mostrar mensaje de éxito con el hook global
+      showNotification('Pago aprobado correctamente', 'success');
       
     } catch (error) {
       console.error('Error al aprobar pago:', error);
-      alert('Error al aprobar el pago');
+      showNotification('Error al aprobar el pago', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -213,7 +225,7 @@ export default function TransferPaymentPage() {
     if (!selectedPayment) return;
     
     if (!rejectionReason.trim()) {
-      alert('Por favor, ingresa un motivo de rechazo');
+      showNotification('Por favor, ingresa un motivo de rechazo', 'error');
       return;
     }
     
@@ -241,12 +253,12 @@ export default function TransferPaymentPage() {
       setPayments(payments.filter(p => p._id !== selectedPayment._id));
       setShowModal(false);
       
-      // Mostrar mensaje de éxito
-      alert('Pago rechazado correctamente');
+      // Mostrar mensaje de éxito con el hook global
+      showNotification('Pago rechazado correctamente', 'success');
       
     } catch (error) {
       console.error('Error al rechazar pago:', error);
-      alert('Error al rechazar el pago');
+      showNotification('Error al rechazar el pago', 'error');
     } finally {
       setActionLoading(false);
     }

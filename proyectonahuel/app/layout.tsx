@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import NotificationProvider from "@/components/Notification";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -32,13 +33,15 @@ export default function RootLayout({
     <html lang="es" className={`${poppins.variable} ${inter.variable}`}>
       <body className={`${inter.className} bg-[var(--background)] text-[var(--foreground)]`}>
         <AuthProvider>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow pt-16">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <NotificationProvider>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-grow pt-16">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>
