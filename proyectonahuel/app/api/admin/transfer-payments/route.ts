@@ -118,6 +118,7 @@ export async function POST(request: Request) {
 
     // Obtener datos del cuerpo
     const { paymentId, action, rejectionReason } = await request.json();
+    console.log(`[TRANSFER] Procesando ${action} para pago ID: ${paymentId}`);
 
     if (!paymentId || !action || !['approve', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
@@ -126,8 +127,11 @@ export async function POST(request: Request) {
     // Buscar el pago
     const payment = await Payment.findById(paymentId);
     if (!payment) {
+      console.log(`[TRANSFER] ERROR: Pago con ID ${paymentId} no encontrado`);
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 });
     }
+
+    console.log(`[TRANSFER] Pago encontrado: ${payment._id}, método: ${payment.paymentMethod}, estado: ${payment.status}`);
 
     // Verificar que sea un pago por transferencia
     if (payment.paymentMethod !== 'Transferencia') {
@@ -141,30 +145,42 @@ export async function POST(request: Request) {
 
     // Procesar según la acción
     if (action === 'approve') {
-      // Actualizar estado del pago
-      payment.status = 'approved';
-      payment.paymentDetails = {
-        ...payment.paymentDetails,
-        approvalStatus: 'approved',
-        approvedBy: session.user.id,
-        approvedAt: new Date()
-      };
-      await payment.save();
+      console.log(`[TRANSFER] Aprobando pago ID: ${payment._id} para curso: ${payment.courseId} y usuario: ${payment.userId}`);
       
-      // Dar acceso al curso
-      await processCourseAccess(payment.courseId, payment.userId, true);
-
-      // Enviar correo de confirmación
       try {
-        const user = await User.findById(payment.userId);
-        const course = await Course.findById(payment.courseId);
+        // Actualizar estado del pago
+        payment.status = 'approved';
+        payment.paymentDetails = {
+          ...payment.paymentDetails,
+          approvalStatus: 'approved',
+          approvedBy: session.user.id,
+          approvedAt: new Date()
+        };
+        await payment.save();
+        console.log(`[TRANSFER] Estado del pago actualizado a: ${payment.status}`);
         
-        if (user && user.email && course) {
-          await sendConfirmationEmail(user.email, user.name, course.title);
+        // Dar acceso al curso
+        const accessResult = await processCourseAccess(payment.courseId, payment.userId, true);
+        console.log(`[TRANSFER] Resultado de conceder acceso: ${accessResult ? 'Éxito' : 'Fallo'}`);
+
+        // Enviar correo de confirmación
+        try {
+          const user = await User.findById(payment.userId);
+          const course = await Course.findById(payment.courseId);
+          
+          if (user && user.email && course) {
+            console.log(`[TRANSFER] Enviando correo de confirmación a: ${user.email} para curso: ${course.title}`);
+            await sendConfirmationEmail(user.email, user.name, course.title);
+          } else {
+            console.log(`[TRANSFER] No se pudo enviar correo - Usuario o curso no encontrado: userId=${payment.userId}, courseId=${payment.courseId}`);
+          }
+        } catch (emailError) {
+          console.error('[TRANSFER] Error al enviar correo de confirmación:', emailError);
+          // No interrumpir el flujo si el correo falla
         }
-      } catch (emailError) {
-        console.error('Error al enviar correo de confirmación:', emailError);
-        // No interrumpir el flujo si el correo falla
+      } catch (error) {
+        console.error('[TRANSFER] Error al procesar aprobación:', error);
+        return NextResponse.json({ error: 'Error al procesar la aprobación del pago' }, { status: 500 });
       }
     } else {
       // Actualizar estado del pago como rechazado
@@ -212,6 +228,8 @@ export async function POST(request: Request) {
 async function processCourseAccess(courseId: string, userId: string, grantAccess: boolean) {
   try {
     if (grantAccess) {
+      console.log(`[ACCESS] Otorgando acceso al curso ${courseId} para el usuario ${userId}`);
+      
       // Verificamos si ya existe un progreso para este usuario y curso
       const existingProgress = await Progress.findOne({
         courseId,
@@ -220,15 +238,41 @@ async function processCourseAccess(courseId: string, userId: string, grantAccess
 
       // Si no existe, creamos uno nuevo
       if (!existingProgress) {
-        await Progress.create({
+        console.log(`[ACCESS] Creando nuevo registro de progreso para curso ${courseId} y usuario ${userId}`);
+        
+        // Crear el registro de acuerdo con el esquema del modelo
+        const newProgress = new Progress({
           courseId,
           userId,
-          completed: false,
-          progress: 0,
-          lastAccessed: new Date()
+          totalProgress: 0,
+          isCompleted: false,
+          completedAt: null,
+          certificateIssued: false,
+          videoProgress: []
         });
+        
+        await newProgress.save();
+        console.log(`[ACCESS] Registro de progreso creado correctamente con ID: ${newProgress._id}`);
+      } else {
+        console.log(`[ACCESS] El usuario ya tiene acceso al curso. ID de progreso: ${existingProgress._id}`);
       }
+      
+      // También actualizamos el estado del pago para asegurarnos de que quede registrado correctamente
+      await Payment.updateOne(
+        { courseId, userId, status: 'approved' },
+        { $set: { 
+          paymentDetails: { 
+            ...existingProgress?.paymentDetails,
+            accessGranted: true,
+            accessGrantedAt: new Date()
+          } 
+        }}
+      );
+      
+      return true;
     }
+    
+    return false;
   } catch (error) {
     console.error('Error al procesar acceso al curso:', error);
     throw error;
