@@ -160,7 +160,7 @@ export async function POST(request: Request) {
         console.log(`[TRANSFER] Estado del pago actualizado a: ${payment.status}`);
         
         // Dar acceso al curso
-        const accessResult = await processCourseAccess(payment.courseId, payment.userId, true);
+        const accessResult = await processCourseAccess(payment.courseId, payment.userId, payment._id, true);
         console.log(`[TRANSFER] Resultado de conceder acceso: ${accessResult ? 'Éxito' : 'Fallo'}`);
 
         // Enviar correo de confirmación
@@ -225,7 +225,7 @@ export async function POST(request: Request) {
 }
 
 // Función para procesar el acceso al curso
-async function processCourseAccess(courseId: string, userId: string, grantAccess: boolean) {
+async function processCourseAccess(courseId: string, userId: string, paymentId: string, grantAccess: boolean) {
   try {
     if (grantAccess) {
       console.log(`[ACCESS] Otorgando acceso al curso ${courseId} para el usuario ${userId}`);
@@ -257,17 +257,19 @@ async function processCourseAccess(courseId: string, userId: string, grantAccess
         console.log(`[ACCESS] El usuario ya tiene acceso al curso. ID de progreso: ${existingProgress._id}`);
       }
       
-      // También actualizamos el estado del pago para asegurarnos de que quede registrado correctamente
-      await Payment.updateOne(
-        { courseId, userId, status: 'approved' },
-        { $set: { 
-          paymentDetails: { 
-            ...existingProgress?.paymentDetails,
-            accessGranted: true,
-            accessGrantedAt: new Date()
-          } 
-        }}
-      );
+      // Actualizamos el estado del pago usando directamente el ID del pago
+      const payment = await Payment.findById(paymentId);
+      if (payment) {
+        payment.paymentDetails = {
+          ...payment.paymentDetails,
+          accessGranted: true,
+          accessGrantedAt: new Date()
+        };
+        await payment.save();
+        console.log(`[ACCESS] Detalles de pago actualizados para ID: ${payment._id}`);
+      } else {
+        console.log(`[ACCESS] No se encontró el pago con ID ${paymentId} para actualizar detalles`);
+      }
       
       return true;
     }
