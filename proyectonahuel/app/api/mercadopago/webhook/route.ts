@@ -128,6 +128,12 @@ async function processCourseAccess(courseId: string, userId: string, grantAccess
           lastAccessed: new Date()
         });
       }
+      // Actualizar el array de cursos del usuario
+      await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { courses: courseId } },
+        { new: true }
+      );
     } else {
       // Si el pago fue rechazado o cancelado, podríamos eliminar el progreso temporal
       // o marcar el intento de pago como fallido en caso de que tengamos una tabla de transacciones

@@ -268,6 +268,14 @@ async function fixCourseAccess(payment: any) {
       console.log(`[FIX-ACCESS] El usuario ya tiene registro de progreso. ID: ${existingProgress._id}`);
     }
 
+    // Actualizar el array de cursos del usuario
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { courses: courseId } },
+      { new: true }
+    );
+    console.log(`[FIX-ACCESS] Array de cursos del usuario actualizado`);
+
     // Actualizar el pago para marcar que se otorgó acceso
     let paymentUpdated = false;
     let dateFixed = false;

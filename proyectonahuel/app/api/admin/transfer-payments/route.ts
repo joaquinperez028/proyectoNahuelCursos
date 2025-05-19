@@ -256,7 +256,13 @@ async function processCourseAccess(courseId: string, userId: string, paymentId: 
       } else {
         console.log(`[ACCESS] El usuario ya tiene acceso al curso. ID de progreso: ${existingProgress._id}`);
       }
-      
+      // Actualizar el array de cursos del usuario
+      await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { courses: courseId } },
+        { new: true }
+      );
+      console.log(`[ACCESS] Array de cursos del usuario actualizado`);
       // Actualizamos el estado del pago usando directamente el ID del pago
       const payment = await Payment.findById(paymentId);
       if (payment) {
