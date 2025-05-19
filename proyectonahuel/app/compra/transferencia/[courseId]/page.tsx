@@ -19,7 +19,7 @@ export default function TransferPaymentPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const courseId = params.courseId as string;
+  const courseId = params ? (params.courseId as string) : '';
   
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);

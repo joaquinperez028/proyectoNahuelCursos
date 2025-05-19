@@ -8,7 +8,7 @@ function CompraPendienteContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(10);
-  const courseId = searchParams.get('course_id');
+  const courseId = searchParams ? searchParams.get('course_id') : null;
 
   // Redireccionamiento automático después de 10 segundos
   useEffect(() => {

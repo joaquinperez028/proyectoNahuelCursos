@@ -7,14 +7,6 @@ import User from '@/models/User';
 import Payment from '@/models/Payment';
 import Progress from '@/models/Progress';
 import { v4 as uuidv4 } from 'uuid';
-import cloudinary from 'cloudinary';
-
-// Configurar Cloudinary
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 export async function POST(request: Request) {
   try {
@@ -63,34 +55,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Ya tienes acceso a este curso' }, { status: 400 });
     }
 
-    // Subir el archivo a Cloudinary
+    // Procesar el archivo para almacenarlo en MongoDB
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Convertir el buffer a base64
+    // Convertir el buffer a base64 para almacenamiento en MongoDB
     const base64Data = buffer.toString('base64');
     const fileType = file.type;
-    const dataURI = `data:${fileType};base64,${base64Data}`;
+    const fileName = file.name;
     
-    // Generar un ID único para evitar colisiones de nombres
+    // Generar un ID único para la transacción
     const uniqueId = uuidv4().substring(0, 8);
     
-    // Subir a Cloudinary
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.v2.uploader.upload(
-        dataURI,
-        {
-          folder: 'transferencias',
-          resource_type: 'auto',
-          public_id: `transfer_${courseId}_${userId}_${uniqueId}`,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-    });
-
     // Crear registro de pago pendiente
     const paymentData = {
       userId,
@@ -100,8 +76,11 @@ export async function POST(request: Request) {
       status: 'pending', // Siempre iniciar como pendiente hasta aprobación manual
       transactionId: `TRANSFER-${uniqueId}`,
       paymentDetails: {
-        receiptUrl: (uploadResult as any).secure_url,
-        publicId: (uploadResult as any).public_id,
+        receiptData: base64Data,
+        fileType: fileType,
+        fileName: fileName,
+        fileSize: file.size,
+        uploadDate: new Date(),
         approvalStatus: 'pending'
       },
       currency: 'ARS'

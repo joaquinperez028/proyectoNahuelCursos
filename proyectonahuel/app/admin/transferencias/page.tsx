@@ -16,8 +16,13 @@ interface TransferPayment {
   status: string;
   transactionId: string;
   paymentDetails: {
-    receiptUrl: string;
-    publicId: string;
+    receiptData?: string;  // Dato base64 del comprobante
+    fileType?: string;     // Tipo MIME del archivo
+    fileName?: string;     // Nombre del archivo
+    fileSize?: number;     // Tamaño del archivo
+    uploadDate?: string;   // Fecha de subida
+    receiptUrl?: string;   // Campo legacy para compatibilidad
+    publicId?: string;     // Campo legacy para compatibilidad
     approvalStatus: string;
   };
   userName: string;
@@ -105,7 +110,14 @@ export default function TransferPaymentPage() {
   // Abrir modal para ver comprobante
   const handleViewReceipt = (payment: TransferPayment) => {
     setSelectedPayment(payment);
-    setPreviewImage(payment.paymentDetails.receiptUrl);
+    // Si el pago tiene datos en el nuevo formato (base64), usarlos
+    if (payment.paymentDetails.receiptData) {
+      setPreviewImage(`data:${payment.paymentDetails.fileType};base64,${payment.paymentDetails.receiptData}`);
+    } 
+    // Si no, usar la URL de Cloudinary (para pagos anteriores)
+    else if (payment.paymentDetails.receiptUrl) {
+      setPreviewImage(payment.paymentDetails.receiptUrl);
+    }
     setModalType('receipt');
     setShowModal(true);
   };

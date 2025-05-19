@@ -8,7 +8,7 @@ import Link from 'next/link';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams ? searchParams.get('callbackUrl') || '/' : '/';
   
   // Verificar si hay un curso pendiente en sessionStorage después de iniciar sesión
   useEffect(() => {

@@ -8,7 +8,7 @@ function CompraExitosaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [countdown, setCountdown] = useState(5);
-  const courseId = searchParams.get('course_id');
+  const courseId = searchParams ? searchParams.get('course_id') : null;
 
   // Redireccionamiento automático después de 5 segundos
   useEffect(() => {
