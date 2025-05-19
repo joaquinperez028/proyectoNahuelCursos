@@ -202,6 +202,16 @@ export default function AdminPanel({
                   </Link>
                   
                   <Link
+                    href="/admin/transferencias"
+                    className="w-full flex items-center justify-center px-4 py-3 bg-[#007bff] hover:bg-[#0069d9] text-white rounded-md transition-colors duration-200"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Gestionar Transferencias
+                  </Link>
+                  
+                  <Link
                     href="/admin/reviews"
                     className="w-full flex items-center justify-center px-4 py-3 bg-[#ff9800] hover:bg-[#f57c00] text-white rounded-md transition-colors duration-200"
                   >

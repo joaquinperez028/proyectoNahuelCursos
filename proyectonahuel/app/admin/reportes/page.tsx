@@ -56,6 +56,7 @@ interface Stats {
   approvedTransactions: number;
   pendingTransactions: number;
   rejectedTransactions: number;
+  pendingTransferTransactions: number;
   monthlyData: Array<{
     year: number;
     month: number;
@@ -349,6 +350,163 @@ export default function ReportesPage() {
     },
   };
 
+  // Ir a la página de transferencias pendientes
+  const goToPendingTransfers = () => {
+    router.push('/admin/transferencias');
+  };
+
+  // Estadísticas generales
+  const renderGeneralStats = () => {
+    if (!stats) return null;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Ingresos Totales */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-2">Ingresos Totales</h3>
+          <p className="text-3xl font-bold text-[var(--neutral-800)]">
+            {formatCurrency(stats.totalAmount)}
+          </p>
+          <div className="mt-2 flex items-center text-[var(--neutral-500)]">
+            <span className="text-sm">
+              {stats.totalTransactions} transacciones
+            </span>
+          </div>
+        </div>
+
+        {/* Ingresos Aprobados */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-2">Ingresos Aprobados</h3>
+          <p className="text-3xl font-bold text-[var(--success)]">
+            {formatCurrency(stats.approvedAmount)}
+          </p>
+          <div className="mt-2 flex items-center text-[var(--neutral-500)]">
+            <span className="text-sm">
+              {stats.approvedTransactions} transacciones
+            </span>
+          </div>
+        </div>
+
+        {/* Ingresos Pendientes */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-2">Ingresos Pendientes</h3>
+          <p className="text-3xl font-bold text-[var(--warning)]">
+            {formatCurrency(stats.pendingAmount)}
+          </p>
+          <div className="mt-2 flex items-center text-[var(--neutral-500)]">
+            <span className="text-sm">
+              {stats.pendingTransactions} transacciones
+            </span>
+          </div>
+        </div>
+
+        {/* Cursos Vendidos */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-2">Cursos Vendidos</h3>
+          <p className="text-3xl font-bold text-[var(--primary)]">
+            {stats.coursesSold}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  // Nuevo componente para alerta de transferencias pendientes
+  const renderPendingTransfersAlert = () => {
+    if (!stats || stats.pendingTransferTransactions === 0) return null;
+
+    return (
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded-md">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <p className="text-sm text-yellow-700">
+              Tienes <span className="font-medium">{stats.pendingTransferTransactions}</span> pagos por transferencia pendientes de aprobación.
+            </p>
+            <div className="mt-2">
+              <button
+                onClick={goToPendingTransfers}
+                className="text-sm font-medium text-yellow-700 hover:text-yellow-600 underline"
+              >
+                Ver transferencias pendientes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Distribución de métodos de pago
+  const renderPaymentMethodsChart = () => {
+    if (!stats || !stats.paymentMethods) return null;
+
+    const paymentMethods = stats.paymentMethods;
+    const labels = Object.keys(paymentMethods).map(key => 
+      key === 'MercadoPago' ? 'MercadoPago' : 
+      key === 'Transferencia' ? 'Transferencia' : 
+      key === 'PayPal' ? 'PayPal' : 
+      'Otro'
+    );
+    const data = Object.values(paymentMethods).map(item => item.count);
+    const backgroundColor = [
+      '#8B5CF6', // Primary (MercadoPago)
+      '#10B981', // Success (PayPal)
+      '#4CAF50', // Transferencia
+      '#6B7280', // Other
+    ];
+
+    const chartData = {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor,
+          borderWidth: 0,
+        },
+      ],
+    };
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            padding: 20,
+            boxWidth: 10,
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context: any) => {
+              const label = context.label || '';
+              const value = context.raw || 0;
+              const total = data.reduce((a, b) => a + b, 0);
+              const percentage = Math.round((value / total) * 100);
+              return `${label}: ${value} (${percentage}%)`;
+            },
+          },
+        },
+      },
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow p-6 col-span-1">
+        <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-4">Métodos de Pago</h3>
+        <div className="h-64">
+          <Doughnut data={chartData} options={chartOptions} />
+        </div>
+      </div>
+    );
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
@@ -377,49 +535,9 @@ export default function ReportesPage() {
           </Link>
         </div>
         
-        {/* Resumen de ventas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-[var(--card)] p-4 rounded-lg border border-[var(--border)]">
-            <p className="text-sm text-[var(--neutral-400)]">Ventas Totales</p>
-            <h3 className="text-2xl font-bold text-[var(--neutral-100)]">
-              {stats ? formatCurrency(stats.approvedAmount) : formatCurrency(0)}
-            </h3>
-            <p className="text-xs text-[var(--neutral-400)] mt-1">
-              {stats ? `${stats.approvedTransactions} transacciones` : '0 transacciones'}
-            </p>
-          </div>
-          
-          <div className="bg-[var(--card)] p-4 rounded-lg border border-[var(--border)]">
-            <p className="text-sm text-[var(--neutral-400)]">Ventas por MercadoPago</p>
-            <h3 className="text-2xl font-bold text-[var(--neutral-100)]">
-              {stats && stats.paymentMethods && stats.paymentMethods.MercadoPago
-                ? formatCurrency(stats.paymentMethods.MercadoPago.total)
-                : formatCurrency(0)}
-            </h3>
-            <p className="text-xs text-[var(--neutral-400)] mt-1">
-              {stats && stats.paymentMethods && stats.paymentMethods.MercadoPago
-                ? `${stats.paymentMethods.MercadoPago.count} transacciones`
-                : '0 transacciones'}
-            </p>
-          </div>
-          
-          <div className="bg-[var(--card)] p-4 rounded-lg border border-[var(--border)]">
-            <p className="text-sm text-[var(--neutral-400)]">Cursos Vendidos</p>
-            <h3 className="text-2xl font-bold text-[var(--neutral-100)]">
-              {stats ? stats.coursesSold : 0}
-            </h3>
-          </div>
-          
-          <div className="bg-[var(--card)] p-4 rounded-lg border border-[var(--border)]">
-            <p className="text-sm text-[var(--neutral-400)]">Pagos Pendientes</p>
-            <h3 className="text-2xl font-bold text-[var(--neutral-100)]">
-              {stats ? formatCurrency(stats.pendingAmount) : formatCurrency(0)}
-            </h3>
-            <p className="text-xs text-[var(--neutral-400)] mt-1">
-              {stats ? `${stats.pendingTransactions} transacciones` : '0 transacciones'}
-            </p>
-          </div>
-        </div>
+        {renderGeneralStats()}
+        
+        {renderPendingTransfersAlert()}
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -452,15 +570,7 @@ export default function ReportesPage() {
           <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] lg:col-span-2">
             <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ventas por Método de Pago</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="h-80">
-                {stats && stats.paymentMethods && Object.keys(stats.paymentMethods).length > 0 ? (
-                  <Doughnut data={paymentMethodsData} options={chartOptions} />
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-[var(--neutral-400)]">No hay datos disponibles</p>
-                  </div>
-                )}
-              </div>
+              {renderPaymentMethodsChart()}
               
               <div className="flex flex-col justify-center">
                 {stats && stats.paymentMethods && Object.entries(stats.paymentMethods).map(([key, value]) => (

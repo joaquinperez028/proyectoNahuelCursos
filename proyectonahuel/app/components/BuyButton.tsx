@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import AuthModal from './AuthModal';
+import PaymentMethodModal from './PaymentMethodModal';
 
 interface BuyButtonProps {
   courseId: string;
@@ -20,16 +21,22 @@ export default function BuyButton({
 }: BuyButtonProps) {
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
 
-  const handlePurchase = async () => {
+  const handleBuyClick = () => {
     // Verificar si el usuario está autenticado
     if (!session) {
       setShowAuthModal(true);
       return;
     }
     
+    // Si está autenticado, mostrar el modal de selección de método de pago
+    setShowPaymentModal(true);
+  };
+
+  const handleMercadoPago = async () => {
     try {
       setLoading(true);
       
@@ -58,7 +65,12 @@ export default function BuyButton({
       alert('No se pudo procesar tu compra. Intenta nuevamente.');
     } finally {
       setLoading(false);
+      setShowPaymentModal(false);
     }
+  };
+
+  const handleTransferPayment = () => {
+    router.push(`/compra/transferencia/${courseId}`);
   };
 
   // Determinar clases de estilo según el tamaño
@@ -86,7 +98,7 @@ export default function BuyButton({
   return (
     <>
       <button
-        onClick={handlePurchase}
+        onClick={handleBuyClick}
         className={`bg-[#8B5CF6] hover:bg-[#7c4df2] text-[var(--neutral-100)] font-bold ${sizeClasses} rounded-lg transition-all transform hover:translate-y-[-2px] hover:shadow-lg flex items-center justify-center ${loading ? 'opacity-75' : ''} ${className}`}
         disabled={loading}
       >
@@ -113,6 +125,15 @@ export default function BuyButton({
         <AuthModal 
           onClose={() => setShowAuthModal(false)}
           courseId={courseId}
+        />
+      )}
+
+      {/* Modal de selección de método de pago */}
+      {showPaymentModal && (
+        <PaymentMethodModal
+          onClose={() => setShowPaymentModal(false)}
+          onMercadoPago={handleMercadoPago}
+          onTransfer={handleTransferPayment}
         />
       )}
     </>

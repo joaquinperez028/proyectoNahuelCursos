@@ -195,6 +195,20 @@ const Header = () => {
                   Usuarios
                 </Link>
                 <Link 
+                  href="/admin/transferencias" 
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Transferencias
+                </Link>
+                <Link 
+                  href="/admin/reportes" 
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Reportes
+                </Link>
+                <Link 
                   href="/admin/actualizar-playback" 
                   className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
                   onClick={() => setMobileMenuOpen(false)}
