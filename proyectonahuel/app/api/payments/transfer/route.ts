@@ -33,6 +33,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Falta el comprobante de pago' }, { status: 400 });
     }
 
+    // Validación de tipo de archivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Formato de archivo no válido. Por favor, sube un archivo JPG, PNG o PDF' }, { status: 400 });
+    }
+
+    // Validación de tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'El archivo es demasiado grande. El tamaño máximo es 5MB' }, { status: 400 });
+    }
+
     if (!courseId || !userId || isNaN(amount)) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
     }
@@ -56,11 +67,25 @@ export async function POST(request: Request) {
     }
 
     // Procesar el archivo para almacenarlo en MongoDB
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let base64Data;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      // Convertir el buffer a base64 para almacenamiento en MongoDB
+      base64Data = buffer.toString('base64');
+      
+      // Verificar que la conversión fue exitosa
+      if (!base64Data || base64Data.length === 0) {
+        throw new Error('Error al procesar el archivo');
+      }
+    } catch (error) {
+      console.error('Error al procesar archivo:', error);
+      return NextResponse.json({ 
+        error: 'Error al procesar el archivo. Por favor, intenta con otro archivo o un formato diferente.' 
+      }, { status: 500 });
+    }
     
-    // Convertir el buffer a base64 para almacenamiento en MongoDB
-    const base64Data = buffer.toString('base64');
     const fileType = file.type;
     const fileName = file.name;
     
@@ -83,7 +108,8 @@ export async function POST(request: Request) {
         uploadDate: new Date(),
         approvalStatus: 'pending'
       },
-      currency: 'ARS'
+      currency: 'ARS',
+      createdAt: new Date()
     };
 
     // Guardar en la base de datos

@@ -95,9 +95,12 @@ export default function TransferPaymentPage() {
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      // Para PDF usar un icono más descriptivo con el nombre del archivo
+      setPreviewUrl('/pdf-icon.svg'); // Asegúrate de que esta imagen exista o usa una URL inline
     } else {
-      // Para PDF simplemente mostrar un icono
-      setPreviewUrl('/icons/pdf-icon.png');
+      // Fallback para otros tipos
+      setPreviewUrl('/file-icon.svg');
     }
   };
 
@@ -297,10 +300,11 @@ export default function TransferPaymentPage() {
                         />
                       </div>
                     ) : (
-                      <div className="flex justify-center">
+                      <div className="flex flex-col items-center justify-center">
                         <svg className="h-16 w-16 text-[var(--neutral-400)]" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                         </svg>
+                        <p className="mt-2 text-sm font-medium text-[var(--neutral-700)]">Archivo PDF seleccionado</p>
                       </div>
                     )}
                     <p className="mt-2 text-sm text-[var(--neutral-600)]">
@@ -340,6 +344,15 @@ export default function TransferPaymentPage() {
                     </label>
                   </>
                 )}
+              </div>
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+                <p className="font-medium mb-1">Recomendaciones para el comprobante:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Asegúrate de que se vea claramente la fecha y hora de la transferencia</li>
+                  <li>El monto debe coincidir exactamente con el precio del curso</li>
+                  <li>Incluye el número de transacción o comprobante completo</li>
+                  <li>La imagen debe ser nítida y legible</li>
+                </ul>
               </div>
             </div>
 

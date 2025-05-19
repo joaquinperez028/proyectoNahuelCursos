@@ -50,6 +50,8 @@ export default function TransferPaymentPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'receipt' | 'reject' | 'confirm'>('receipt');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Redireccionar si no es administrador
   useEffect(() => {
@@ -110,14 +112,45 @@ export default function TransferPaymentPage() {
   // Abrir modal para ver comprobante
   const handleViewReceipt = (payment: TransferPayment) => {
     setSelectedPayment(payment);
-    // Si el pago tiene datos en el nuevo formato (base64), usarlos
-    if (payment.paymentDetails.receiptData) {
-      setPreviewImage(`data:${payment.paymentDetails.fileType};base64,${payment.paymentDetails.receiptData}`);
-    } 
-    // Si no, usar la URL de Cloudinary (para pagos anteriores)
-    else if (payment.paymentDetails.receiptUrl) {
-      setPreviewImage(payment.paymentDetails.receiptUrl);
+    setPreviewLoading(true);
+    setPreviewError(null);
+    
+    try {
+      // Si el pago tiene datos en el nuevo formato (base64), usarlos
+      if (payment.paymentDetails.receiptData) {
+        // Validar que los datos base64 sean válidos
+        if (payment.paymentDetails.receiptData.length > 0) {
+          // Comprobar si los datos son demasiado grandes (más de 10MB)
+          if (payment.paymentDetails.receiptData.length > 14000000) { // ~10MB en base64
+            // En lugar de fallar, mostrar una versión reducida o un mensaje
+            setPreviewImage(null);
+            setPreviewError('El comprobante es demasiado grande para visualizarse. Puede descargar el archivo para verlo.');
+          } else {
+            // Asegurarnos de que el tipo de archivo es válido
+            const fileType = payment.paymentDetails.fileType || 'image/jpeg';
+            setPreviewImage(`data:${fileType};base64,${payment.paymentDetails.receiptData}`);
+          }
+        } else {
+          setPreviewImage(null);
+          setPreviewError('Los datos del comprobante están dañados');
+        }
+      } 
+      // Si no, usar la URL de Cloudinary (para pagos anteriores)
+      else if (payment.paymentDetails.receiptUrl) {
+        setPreviewImage(payment.paymentDetails.receiptUrl);
+      } else {
+        // Si no hay imagen, mostrar un mensaje
+        setPreviewImage(null);
+        setPreviewError('No se encontró ningún comprobante adjunto');
+      }
+    } catch (error) {
+      console.error('Error al procesar el comprobante:', error);
+      setPreviewError('Error al procesar el comprobante');
+      setPreviewImage(null);
+    } finally {
+      setPreviewLoading(false);
     }
+    
     setModalType('receipt');
     setShowModal(true);
   };
@@ -485,18 +518,113 @@ export default function TransferPaymentPage() {
               </svg>
             </button>
 
-            {modalType === 'receipt' && previewImage && (
+            {modalType === 'receipt' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-[var(--neutral-800)]">Comprobante de Pago</h3>
-                <div className="relative w-full h-96">
-                  <Image
-                    src={previewImage}
-                    alt="Comprobante de pago"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
+                
+                {previewLoading ? (
+                  <div className="flex flex-col items-center justify-center h-96 border border-gray-200 rounded-lg">
+                    <div className="animate-spin h-10 w-10 border-4 border-[var(--primary)] border-t-transparent rounded-full mb-2"></div>
+                    <p className="text-[var(--neutral-600)]">Cargando comprobante...</p>
+                  </div>
+                ) : previewError ? (
+                  <div className="flex flex-col items-center justify-center h-96 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <p className="text-gray-500 text-center">{previewError}</p>
+                    
+                    {/* Botón de descarga para archivos grandes */}
+                    {previewError.includes('demasiado grande') && selectedPayment?.paymentDetails.receiptData && (
+                      <button
+                        onClick={() => {
+                          // Crear un enlace de descarga
+                          const fileType = selectedPayment.paymentDetails.fileType || 'application/octet-stream';
+                          const fileName = selectedPayment.paymentDetails.fileName || 'comprobante.pdf';
+                          const link = document.createElement('a');
+                          link.href = `data:${fileType};base64,${selectedPayment.paymentDetails.receiptData}`;
+                          link.download = fileName;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="mt-4 px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white rounded-md"
+                      >
+                        Descargar Comprobante
+                      </button>
+                    )}
+                  </div>
+                ) : previewImage ? (
+                  <div className="relative w-full max-h-[500px] overflow-auto border border-gray-200 rounded-lg">
+                    {selectedPayment?.paymentDetails.fileType?.includes('pdf') ? (
+                      // Si es un PDF, mostrar un iframe
+                      <iframe 
+                        src={previewImage}
+                        className="w-full h-[500px] border-0"
+                        title="Comprobante de pago PDF"
+                      />
+                    ) : (
+                      // Si es una imagen, mostrar con Image pero con un div contenedor de tamaño fijo
+                      <div className="relative h-[500px] w-full">
+                        <Image
+                          src={previewImage}
+                          alt="Comprobante de pago"
+                          fill
+                          className="object-contain"
+                          onError={() => {
+                            setPreviewError('Error al cargar la imagen');
+                            setPreviewImage(null);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-gray-500 text-center">No se pudo cargar el comprobante</p>
+                  </div>
+                )}
+                
+                {selectedPayment?.paymentDetails.fileName && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-[var(--neutral-700)]">
+                      <span className="text-[var(--neutral-500)]">Archivo:</span> {selectedPayment.paymentDetails.fileName} 
+                      {selectedPayment.paymentDetails.fileSize && (
+                        <span className="text-[var(--neutral-500)]"> ({(selectedPayment.paymentDetails.fileSize / 1024 < 1000 
+                          ? Math.round(selectedPayment.paymentDetails.fileSize / 1024) + " KB" 
+                          : (selectedPayment.paymentDetails.fileSize / (1024 * 1024)).toFixed(2) + " MB")})</span>
+                      )}
+                    </p>
+                    {selectedPayment.paymentDetails.uploadDate && (
+                      <p className="text-xs text-[var(--neutral-500)]">
+                        Subido el {new Date(selectedPayment.paymentDetails.uploadDate).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 <div className="flex justify-end gap-2 mt-4">
+                  {/* Botón de descarga para todos los comprobantes válidos */}
+                  {selectedPayment?.paymentDetails.receiptData && !previewError && (
+                    <button
+                      onClick={() => {
+                        const fileType = selectedPayment.paymentDetails.fileType || 'application/octet-stream';
+                        const fileName = selectedPayment.paymentDetails.fileName || 'comprobante.pdf';
+                        const link = document.createElement('a');
+                        link.href = `data:${fileType};base64,${selectedPayment.paymentDetails.receiptData}`;
+                        link.download = fileName;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white py-2 px-4 rounded-lg font-medium"
+                    >
+                      Descargar
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowModal(false)}
                     className="bg-[var(--neutral-200)] hover:bg-[var(--neutral-300)] text-[var(--neutral-800)] py-2 px-4 rounded-lg font-medium"
