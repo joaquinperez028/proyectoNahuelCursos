@@ -69,6 +69,14 @@ export async function POST(request: Request) {
     await newProgress.save();
     console.log(`[ASSIGN-COURSE] Acceso concedido al curso ${courseId} para el usuario ${userId}`);
 
+    // Actualizar el array de cursos del usuario
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { courses: courseId } }, // Usar $addToSet para evitar duplicados
+      { new: true }
+    );
+    console.log(`[ASSIGN-COURSE] Array de cursos del usuario actualizado`);
+
     // Si se solicita, crear un registro de pago para mantener consistencia en los registros
     let paymentRecord = null;
     if (createPaymentRecord) {
