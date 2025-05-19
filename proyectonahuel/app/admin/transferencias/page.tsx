@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useNotifications } from '@/components/Notification';
+import FixCourseAccessButton from '@/components/FixCourseAccessButton';
 
 interface TransferPayment {
   _id: string;
@@ -298,6 +299,9 @@ export default function TransferPaymentPage() {
           </p>
         </div>
 
+        {/* Herramienta de corrección de acceso */}
+        <FixCourseAccessButton />
+        
         {/* Filtros */}
         <div className="mb-6 flex flex-wrap gap-2">
           <button

@@ -269,23 +269,76 @@ async function fixCourseAccess(payment: any) {
     }
 
     // Actualizar el pago para marcar que se otorgó acceso
-    const accessGranted = payment.paymentDetails?.accessGranted === true;
+    let paymentUpdated = false;
+    let dateFixed = false;
+    let invoiceAdded = false;
+
+    // Verificar si hay fechas inválidas o nulas
+    const paymentDate = payment.paymentDate ? new Date(payment.paymentDate) : null;
+    const createdAt = payment.createdAt ? new Date(payment.createdAt) : null;
     
-    if (!accessGranted) {
-      payment.paymentDetails = {
+    const isPaymentDateValid = paymentDate && !isNaN(paymentDate.getTime());
+    const isCreatedAtValid = createdAt && !isNaN(createdAt.getTime());
+    
+    // Preparar actualizaciones
+    const updates: any = {};
+
+    // Corregir accessGranted en paymentDetails
+    if (!payment.paymentDetails?.accessGranted) {
+      updates.paymentDetails = {
         ...payment.paymentDetails,
         accessGranted: true,
         accessGrantedAt: new Date()
       };
+      paymentUpdated = true;
+    }
+
+    // Corregir fechas inválidas
+    if (!isPaymentDateValid) {
+      updates.paymentDate = isCreatedAtValid ? payment.createdAt : new Date();
+      dateFixed = true;
+      console.log(`[FIX-ACCESS] Corrigiendo fecha de pago para ${_id}`);
+    }
+
+    // Generar o corregir datos de factura si es necesario
+    if (!payment.invoiceId || !payment.invoiceData) {
+      const invoiceId = `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
+      updates.invoiceId = invoiceId;
+      updates.invoiceData = {
+        invoiceNumber: invoiceId,
+        issuedDate: new Date(),
+        items: [{
+          description: `Curso: ${course.title}`,
+          quantity: 1,
+          price: payment.amount
+        }],
+        total: payment.amount,
+        customer: {
+          name: user.name,
+          email: user.email,
+          id: userId
+        }
+      };
+      
+      invoiceAdded = true;
+      console.log(`[FIX-ACCESS] Generando datos de factura con ID: ${invoiceId}`);
+    }
+
+    // Aplicar actualizaciones si hay cambios
+    if (paymentUpdated || dateFixed || invoiceAdded) {
+      Object.assign(payment, updates);
       await payment.save();
-      console.log(`[FIX-ACCESS] Pago ${_id} marcado con acceso otorgado`);
+      console.log(`[FIX-ACCESS] Pago ${_id} actualizado correctamente`);
     }
 
     return { 
       success: true, 
-      progressCreated, 
-      alreadyHadAccess: existingProgress !== null && accessGranted 
+      progressCreated,
+      paymentUpdated,
+      dateFixed,
+      invoiceAdded,
+      alreadyHadAccess: existingProgress !== null && payment.paymentDetails?.accessGranted === true 
     };
     
   } catch (error) {
