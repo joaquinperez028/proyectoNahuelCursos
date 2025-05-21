@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import Review from '@/models/Review';
 import User from '@/models/User';
 import Course from '@/models/Course';
 
 export async function GET() {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener las mejores reseñas (rating alto y con comentarios sustanciales)
     const reviews = await Review.find({ rating: { $gte: 4 } })

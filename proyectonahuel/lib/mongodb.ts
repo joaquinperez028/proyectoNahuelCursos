@@ -10,11 +10,13 @@ if (!MONGODB_URI) {
   throw new Error('Por favor define MONGODB_URI en el archivo .env');
 }
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+declare global {
+  // eslint-disable-next-line no-var
+  var mongoose: { conn: any; promise: any } | undefined;
 }
+
+let cached: { conn: any; promise: any };
+cached = global.mongoose || (global.mongoose = { conn: null, promise: null });
 
 export async function connectToDatabase() {
   if (cached.conn) {

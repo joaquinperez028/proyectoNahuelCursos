@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import { createMuxAsset } from "@/lib/mux";
 import Course from "@/models/Course";
 import User from "@/models/User";
@@ -9,7 +9,7 @@ import { authOptions } from "../auth/[...nextauth]/options";
 // GET /api/courses - Obtener todos los cursos
 export async function GET() {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     const courses = await Course.find()
       .sort({ createdAt: -1 })
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     

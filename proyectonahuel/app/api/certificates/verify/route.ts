@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import Progress from '@/models/Progress';
 import Course from '@/models/Course';
 import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener el ID del certificado de los query parameters
     const url = new URL(request.url);

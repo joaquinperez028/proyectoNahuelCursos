@@ -6,7 +6,7 @@
  * 4. El botón ahora es responsivo y se ve bien en dispositivos móviles y de escritorio
  */
 
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import Review from "@/models/Review";
 import User from "@/models/User";
@@ -104,7 +104,7 @@ async function getUserHasCourse(courseId: string): Promise<boolean> {
       return false;
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     // Usar findOne en lugar de lean para obtener el documento completo
     const userDoc = await User.findOne({ email: session.user.email });
@@ -125,7 +125,7 @@ async function getUserHasCourse(courseId: string): Promise<boolean> {
 
 async function getCourse(id: string): Promise<CourseType | null> {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener el curso como documento completo
     const courseDoc = await Course.findById(id).populate('createdBy', 'name');

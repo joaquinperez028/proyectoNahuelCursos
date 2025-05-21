@@ -8,11 +8,20 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
+      );
+    }
+    
+    const { searchParams } = new URL(request.url);
+    const courseId = searchParams.get('courseId');
+    
+    if (!courseId) {
+      return NextResponse.json(
+        { error: 'ID de curso no proporcionado' },
+        { status: 400 }
       );
     }
     
@@ -27,22 +36,18 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Formatear la respuesta con la información del perfil
+    const hasCourse = user.courses.some((id: any) => 
+      id && typeof id.toString === 'function' && id.toString() === courseId
+    );
+    
     return NextResponse.json({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      image: user.image,
-      role: user.role,
-      createdAt: user.createdAt, // Fecha de registro
-      updatedAt: user.updatedAt, // Fecha de última actualización
-      lastLogin: new Date().toISOString(), // En una implementación real, esto se obtendría del modelo o de los registros de sesión
+      hasCourse
     });
     
   } catch (error) {
-    console.error('Error al obtener perfil de usuario:', error);
+    console.error('Error al verificar compra:', error);
     return NextResponse.json(
-      { error: 'Error al procesar la solicitud' },
+      { error: 'Error al verificar compra' },
       { status: 500 }
     );
   }

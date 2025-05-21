@@ -1,5 +1,5 @@
 import GoogleProvider from "next-auth/providers/google";
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/User";
 import { NextAuthOptions } from "next-auth";
 
@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ session }) {
       // Buscar usuario por email para determinar si es admin
-      await connectDB();
+      await connectToDatabase();
       const userExists = await User.findOne({ email: session.user?.email });
       
       if (userExists) {
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
     },
     async signIn({ user }) {
       try {
-        await connectDB();
+        await connectToDatabase();
         
         // Verificar si el usuario ya existe
         const userExists = await User.findOne({ email: user.email });

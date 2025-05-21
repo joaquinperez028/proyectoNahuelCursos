@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from '@/lib/mongodb';
 import User from "@/models/User";
 
 // POST /api/make-admin - Convertir al usuario actual en administrador
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     // Buscar y actualizar el usuario
     const user = await User.findOneAndUpdate(

@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import mongoose from 'mongoose';
 import User from "@/models/User";
 import Course from "@/models/Course";
@@ -54,7 +54,7 @@ interface CategoryCount {
 // Función para obtener la categoría de la URL
 async function getCourses(categoria?: string): Promise<CourseType[]> {
   try {
-    await connectDB();
+    await connectToDatabase();
     console.log('Modelos registrados:', Object.keys(mongoose.models).join(', '));
     
     // Crear consulta base
@@ -136,7 +136,7 @@ async function getCourses(categoria?: string): Promise<CourseType[]> {
 // Función para obtener contadores de categorías
 async function getCategoryCounts(): Promise<CategoryCount> {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener conteo por categoría
     const categoryCounts = await Course.aggregate([

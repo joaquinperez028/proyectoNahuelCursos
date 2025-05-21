@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -33,7 +33,7 @@ async function getAdminStatus() {
 
 async function getCourses(): Promise<CourseType[]> {
   try {
-    await connectDB();
+    await connectToDatabase();
     const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
     
     return courses.map((course: any) => ({

@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { redirect } from 'next/navigation';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from "@/lib/mongodb";
 import User from '@/models/User';
 import UsersTable from './components/UsersTable';
 import AssignCourseButton from '@/components/AssignCourseButton';
@@ -11,7 +11,7 @@ async function getAdminStatus() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) return false;
   
-  await connectDB();
+  await connectToDatabase();
   const user = await User.findOne({ email: session.user.email });
   return user?.role === 'admin';
 }

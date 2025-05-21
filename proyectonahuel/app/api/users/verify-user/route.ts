@@ -1,14 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
-    // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'No autorizado' },
@@ -27,22 +26,20 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Formatear la respuesta con la información del perfil
     return NextResponse.json({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      image: user.image,
-      role: user.role,
-      createdAt: user.createdAt, // Fecha de registro
-      updatedAt: user.updatedAt, // Fecha de última actualización
-      lastLogin: new Date().toISOString(), // En una implementación real, esto se obtendría del modelo o de los registros de sesión
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        image: user.image
+      }
     });
     
   } catch (error) {
-    console.error('Error al obtener perfil de usuario:', error);
+    console.error('Error al verificar usuario:', error);
     return NextResponse.json(
-      { error: 'Error al procesar la solicitud' },
+      { error: 'Error al verificar usuario' },
       { status: 500 }
     );
   }

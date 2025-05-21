@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 import Progress from '@/models/Progress';
 
@@ -20,7 +20,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     // Verificar si el usuario actual es administrador
     const currentUser = await User.findOne({ email: session.user.email });

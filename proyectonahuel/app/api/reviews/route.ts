@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from '@/lib/mongodb';
 import Review from "@/models/Review";
 import Course from "@/models/Course";
 import User from "@/models/User";
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     
@@ -104,5 +104,14 @@ export async function POST(request: NextRequest) {
       { error: 'Error al crear la reseña' },
       { status: 500 }
     );
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    await connectToDatabase();
+    // ... existing code ...
+  } catch (error) {
+    // ... existing code ...
   }
 } 
