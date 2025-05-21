@@ -51,7 +51,7 @@ export default function BuyButton({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Error al crear preferencia de pago.');
+        throw new Error(error.error || 'Error al crear preferencia de pago');
       }
 
       // Obtener la URL de pago de MercadoPago
