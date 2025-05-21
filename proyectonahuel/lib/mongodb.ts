@@ -4,23 +4,39 @@ import mongoose from 'mongoose';
 import '../models/User';
 import '../models/Course';
 
-let isConnected = false;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-export const connectDB = async () => {
-  if (isConnected) {
-    return;
+if (!MONGODB_URI) {
+  throw new Error('Por favor define MONGODB_URI en el archivo .env');
+}
+
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+export async function connectToDatabase() {
+  if (cached.conn) {
+    return cached.conn;
   }
 
-  if (!process.env.MONGODB_URI) {
-    throw new Error('MONGODB_URI no está definido en las variables de entorno');
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+      return mongoose;
+    });
   }
 
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    isConnected = true;
-    console.log('Conexión a MongoDB establecida');
-  } catch (error) {
-    console.error('Error al conectar a MongoDB:', error);
-    throw error;
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
   }
-}; 
+
+  return cached.conn;
+} 

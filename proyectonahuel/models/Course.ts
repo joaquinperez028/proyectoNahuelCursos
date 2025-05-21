@@ -96,8 +96,6 @@ const CourseSchema = new Schema({
     min: 0,
     max: 100,
   },
-  videos: [VideoSchema],
-  exercises: [ExerciseSchema],
   duration: {
     type: Number,
   },

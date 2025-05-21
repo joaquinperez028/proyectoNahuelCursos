@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@mux/mux-node": "^7.3.1",
     "@mux/mux-player-react": "^3.4.0",
+    "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
     "chart.js": "^4.4.9",
     "cloudinary": "^2.6.1",
