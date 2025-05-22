@@ -484,7 +484,6 @@ export default function PerfilPage() {
             totalCourses={profileData.stats.totalCourses}
             completedCourses={profileData.stats.completedCourses}
             certificatesEarned={profileData.stats.certificatesEarned}
-            totalHoursLearned={profileData.stats.totalHoursLearned}
           />
         </div>
         

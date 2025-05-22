@@ -50,17 +50,15 @@ type UserStatsProps = {
   totalCourses: number;
   completedCourses: number;
   certificatesEarned: number;
-  totalHoursLearned: number;
 };
 
 export default function UserStats({
   totalCourses,
   completedCourses,
-  certificatesEarned,
-  totalHoursLearned
+  certificatesEarned
 }: UserStatsProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <StatCard
         title="Cursos Inscritos"
         value={totalCourses}
@@ -92,17 +90,6 @@ export default function UserStats({
         icon={
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
-        }
-      />
-      
-      <StatCard
-        title="Horas de Aprendizaje"
-        value={totalHoursLearned}
-        bgClass="bg-gradient-to-r from-[#9c27b0] to-[#7b1fa2]"
-        icon={
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         }
       />
