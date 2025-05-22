@@ -25,7 +25,7 @@ interface PackType {
   description: string;
   price: number;
   originalPrice: number;
-  courses: { _id: string; title: string; thumbnailUrl: string }[];
+  courses: { _id: string; title: string; thumbnailUrl?: string }[];
   imageUrl?: string;
 }
 
@@ -39,37 +39,19 @@ export default function PacksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Reemplazar por fetch real a /api/packs cuando exista
-    setTimeout(() => {
-      setPacks([
-        {
-          _id: 'pack1',
-          name: 'Pack Trading Pro',
-          description: 'Aprende análisis técnico y fundamental con este pack de 3 cursos.',
-          price: 19999,
-          originalPrice: 35000,
-          courses: [
-            { _id: 'c1', title: 'Análisis Técnico', thumbnailUrl: 'https://placehold.co/80x80/4CAF50/FFFFFF.png?text=AT' },
-            { _id: 'c2', title: 'Análisis Fundamental', thumbnailUrl: 'https://placehold.co/80x80/2196F3/FFFFFF.png?text=AF' },
-            { _id: 'c3', title: 'Estrategias de Trading', thumbnailUrl: 'https://placehold.co/80x80/FF9800/FFFFFF.png?text=ET' },
-          ],
-          imageUrl: 'https://placehold.co/400x200/4CAF50/FFFFFF?text=Pack+Trading+Pro',
-        },
-        {
-          _id: 'pack2',
-          name: 'Pack Finanzas Personales',
-          description: 'Domina tus finanzas y aprende a invertir.',
-          price: 14999,
-          originalPrice: 25000,
-          courses: [
-            { _id: 'c4', title: 'Finanzas Personales', thumbnailUrl: 'https://placehold.co/80x80/673AB7/FFFFFF.png?text=FP' },
-            { _id: 'c5', title: 'Inversiones Básicas', thumbnailUrl: 'https://placehold.co/80x80/009688/FFFFFF.png?text=INV' },
-          ],
-          imageUrl: 'https://placehold.co/400x200/009688/FFFFFF?text=Pack+Finanzas',
-        },
-      ]);
-      setLoading(false);
-    }, 800);
+    const fetchPacks = async () => {
+      try {
+        const res = await fetch('/api/packs');
+        if (!res.ok) throw new Error('Error al cargar packs');
+        const data = await res.json();
+        setPacks(data);
+      } catch (err) {
+        setPacks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPacks();
   }, []);
 
   return (
@@ -111,7 +93,9 @@ export default function PacksPage() {
                 <div className="flex flex-wrap gap-2 mb-4">
                   {pack.courses.map((course) => (
                     <div key={course._id} className="flex items-center gap-2 bg-[#2A2A3C] px-2 py-1 rounded">
-                      <img src={course.thumbnailUrl} alt={course.title} className="w-8 h-8 rounded" />
+                      {course.thumbnailUrl && (
+                        <img src={course.thumbnailUrl} alt={course.title} className="w-8 h-8 rounded" />
+                      )}
                       <span className="text-xs text-white">{course.title}</span>
                     </div>
                   ))}
