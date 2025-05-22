@@ -4,6 +4,7 @@ import Payment from '@/models/Payment';
 import Course from '@/models/Course';
 import { connectToDatabase } from '@/lib/mongodb';
 import { NextRequest } from 'next/server';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,12 @@ export async function GET(req: NextRequest) {
 
   try {
     // Buscar pagos aprobados del usuario
+    const userObjectId = new mongoose.Types.ObjectId(session.user.id);
     const payments = await Payment.find({
       status: 'approved',
-      userId: session.user.id
+      userId: userObjectId
     }).populate('courseId');
+    console.log('Pagos encontrados para usuario', session.user.id, payments);
 
     const purchases = payments.map(payment => ({
       id: payment._id,
