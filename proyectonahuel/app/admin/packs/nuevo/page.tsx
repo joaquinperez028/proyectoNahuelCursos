@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function NuevoPackPage() {
   const [nombre, setNombre] = useState("");
@@ -12,6 +13,9 @@ export default function NuevoPackPage() {
   const [cursos, setCursos] = useState<string[]>([]);
   const [cursosDisponibles, setCursosDisponibles] = useState<{_id: string, title: string}[]>([]);
   const [loadingCursos, setLoadingCursos] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const fetchCursos = async () => {
@@ -35,10 +39,33 @@ export default function NuevoPackPage() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí iría la lógica para guardar el pack (POST a /api/packs)
-    alert("Pack creado (mock): " + nombre);
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/packs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nombre,
+          description: descripcion,
+          price: Number(precio),
+          originalPrice: Number(precioOriginal),
+          courses: cursos,
+          imageUrl: imagen
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al crear el pack");
+      }
+      router.push("/admin/packs");
+    } catch (err: any) {
+      setError(err.message || "Error inesperado");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,9 +116,12 @@ export default function NuevoPackPage() {
               </div>
             )}
           </div>
+          {error && <div className="text-red-600 text-sm">{error}</div>}
           <div className="flex justify-between items-center mt-6">
             <Link href="/admin/packs" className="text-gray-600 hover:underline">Cancelar</Link>
-            <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold">Crear pack</button>
+            <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold" disabled={loading}>
+              {loading ? "Creando..." : "Crear pack"}
+            </button>
           </div>
         </form>
       </div>
