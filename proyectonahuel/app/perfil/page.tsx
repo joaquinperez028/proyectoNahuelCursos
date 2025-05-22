@@ -157,7 +157,7 @@ export default function PerfilPage() {
             purchases.push({
               id: purchase._id || purchase.id,
               courseTitle: purchase.courseTitle || purchase.course?.title || 'Curso',
-              date: purchase.createdAt,
+              date: purchase.date,
               paymentMethod: purchase.paymentMethod || 'No especificado',
               amount: purchase.amount || purchase.price || 0,
               invoiceUrl: purchase.invoiceUrl
