@@ -13,7 +13,7 @@ function CompraPendienteContent() {
   // Redireccionamiento automático después de 10 segundos
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push('/mis-cursos');
+      router.push('/cursos');
     }, 10000);
 
     const interval = setInterval(() => {
@@ -48,7 +48,7 @@ function CompraPendienteContent() {
           
           <div className="flex flex-col space-y-3">
             <Link 
-              href="/mis-cursos"
+              href="/cursos"
               className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-white font-medium rounded-lg transition-colors"
             >
               Ver Mis Cursos
