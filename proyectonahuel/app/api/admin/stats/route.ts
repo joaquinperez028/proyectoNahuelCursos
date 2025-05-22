@@ -16,8 +16,8 @@ export async function GET() {
 
     await connectToDatabase();
 
-    // Total de usuarios (rol user)
-    const totalUsers = await User.countDocuments({ role: 'user' });
+    // Total de usuarios (todos)
+    const totalUsers = await User.countDocuments();
     // Total de cursos
     const totalCourses = await Course.countDocuments();
 
