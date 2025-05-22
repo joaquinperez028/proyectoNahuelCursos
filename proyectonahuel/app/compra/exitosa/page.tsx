@@ -52,7 +52,7 @@ function CompraExitosaContent() {
           
           <div className="flex flex-col space-y-3">
             <Link 
-              href={courseId ? `/cursos/${courseId}` : '/cursos'}
+              href={`/cursos/${courseId}`}
               className="px-4 py-2 bg-[#4CAF50] hover:bg-[#45a049] text-white font-medium rounded-lg transition-colors"
             >
               Ir al Curso
