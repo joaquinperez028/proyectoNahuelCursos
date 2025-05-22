@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface PackType {
@@ -14,33 +14,24 @@ interface PackType {
 }
 
 export default function AdminPacksPage() {
-  const [packs, setPacks] = useState<PackType[]>([
-    {
-      _id: "pack1",
-      name: "Pack Trading Pro",
-      description: "Aprende análisis técnico y fundamental con este pack de 3 cursos.",
-      price: 19999,
-      originalPrice: 35000,
-      courses: [
-        { _id: "c1", title: "Análisis Técnico" },
-        { _id: "c2", title: "Análisis Fundamental" },
-        { _id: "c3", title: "Estrategias de Trading" },
-      ],
-      imageUrl: "https://placehold.co/400x200/4CAF50/FFFFFF?text=Pack+Trading+Pro",
-    },
-    {
-      _id: "pack2",
-      name: "Pack Finanzas Personales",
-      description: "Domina tus finanzas y aprende a invertir.",
-      price: 14999,
-      originalPrice: 25000,
-      courses: [
-        { _id: "c4", title: "Finanzas Personales" },
-        { _id: "c5", title: "Inversiones Básicas" },
-      ],
-      imageUrl: "https://placehold.co/400x200/009688/FFFFFF?text=Pack+Finanzas",
-    },
-  ]);
+  const [packs, setPacks] = useState<PackType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPacks = async () => {
+      try {
+        const res = await fetch("/api/packs");
+        if (!res.ok) throw new Error("Error al cargar packs");
+        const data = await res.json();
+        setPacks(data);
+      } catch (err) {
+        setPacks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPacks();
+  }, []);
 
   return (
     <div className="py-10">
@@ -56,7 +47,9 @@ export default function AdminPacksPage() {
             + Crear nuevo pack
           </Link>
         </div>
-        {packs.length === 0 ? (
+        {loading ? (
+          <div className="bg-white shadow overflow-hidden rounded-lg p-10 text-center text-gray-500">Cargando packs...</div>
+        ) : packs.length === 0 ? (
           <div className="bg-white shadow overflow-hidden rounded-lg p-10 text-center">
             <p className="text-gray-500 mb-4">No hay packs disponibles.</p>
             <Link
