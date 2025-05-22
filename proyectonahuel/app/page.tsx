@@ -33,10 +33,10 @@ export default function Home() {
               </Link>
               
               <Link
-                href="/cursos/destacados"
+                href="/cursos/packs"
                 className="group relative px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-700 transition-colors duration-300 flex items-center justify-center border border-gray-700"
               >
-                <span className="relative z-10">Cursos destacados</span>
+                <span className="relative z-10">Packs de cursos</span>
                 <span className="absolute bottom-0 left-0 h-1 w-full bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Link>
             </div>
