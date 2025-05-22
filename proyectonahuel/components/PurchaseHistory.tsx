@@ -20,7 +20,10 @@ export default function PurchaseHistory({ purchases }: PurchaseHistoryProps) {
   }>({ key: 'date', direction: 'descending' });
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    if (!dateString) return 'No disponible';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'No disponible';
+    return date.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -105,9 +108,6 @@ export default function PurchaseHistory({ purchases }: PurchaseHistoryProps) {
                 Monto {getSortIndicator('amount')}
               </div>
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#B4B4C0] uppercase tracking-wider">
-              Factura
-            </th>
           </tr>
         </thead>
         <tbody className="bg-[#1E1E2F] divide-y divide-[#3A3A4C]">
@@ -124,23 +124,6 @@ export default function PurchaseHistory({ purchases }: PurchaseHistoryProps) {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-[#B4B4C0]">
                 {formatCurrency(purchase.amount)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm">
-                {purchase.invoiceUrl ? (
-                  <a
-                    href={purchase.invoiceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-[#007bff] hover:text-[#0069d9]"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    Descargar
-                  </a>
-                ) : (
-                  <span className="text-[#8A8A9A]">No disponible</span>
-                )}
               </td>
             </tr>
           ))}
