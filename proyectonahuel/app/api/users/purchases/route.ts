@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const purchases = payments.map(payment => ({
       id: payment._id,
       courseTitle: payment.courseId?.title || 'Curso',
-      date: payment.paymentDate || payment.createdAt,
+      date: (payment.paymentDate || payment.createdAt) ? new Date(payment.paymentDate || payment.createdAt).toISOString() : '',
       paymentMethod: payment.paymentMethod || 'No especificado',
       amount: payment.amount || 0,
       invoiceUrl: payment.invoiceUrl || null
