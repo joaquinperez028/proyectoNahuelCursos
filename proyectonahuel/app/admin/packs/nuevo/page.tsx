@@ -1,16 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-
-// Mock de cursos disponibles
-const cursosDisponibles = [
-  { _id: "c1", title: "Análisis Técnico" },
-  { _id: "c2", title: "Análisis Fundamental" },
-  { _id: "c3", title: "Estrategias de Trading" },
-  { _id: "c4", title: "Finanzas Personales" },
-  { _id: "c5", title: "Inversiones Básicas" },
-];
 
 export default function NuevoPackPage() {
   const [nombre, setNombre] = useState("");
@@ -19,6 +10,24 @@ export default function NuevoPackPage() {
   const [precioOriginal, setPrecioOriginal] = useState("");
   const [imagen, setImagen] = useState("");
   const [cursos, setCursos] = useState<string[]>([]);
+  const [cursosDisponibles, setCursosDisponibles] = useState<{_id: string, title: string}[]>([]);
+  const [loadingCursos, setLoadingCursos] = useState(true);
+
+  useEffect(() => {
+    const fetchCursos = async () => {
+      try {
+        const res = await fetch("/api/courses");
+        if (!res.ok) throw new Error("Error al cargar cursos");
+        const data = await res.json();
+        setCursosDisponibles(data.map((c: any) => ({ _id: c._id, title: c.title })));
+      } catch (err) {
+        setCursosDisponibles([]);
+      } finally {
+        setLoadingCursos(false);
+      }
+    };
+    fetchCursos();
+  }, []);
 
   const handleCursoChange = (id: string) => {
     setCursos((prev) =>
@@ -61,18 +70,24 @@ export default function NuevoPackPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Cursos incluidos</label>
-            <div className="grid grid-cols-1 gap-2">
-              {cursosDisponibles.map((curso) => (
-                <label key={curso._id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={cursos.includes(curso._id)}
-                    onChange={() => handleCursoChange(curso._id)}
-                  />
-                  <span>{curso.title}</span>
-                </label>
-              ))}
-            </div>
+            {loadingCursos ? (
+              <div className="text-gray-400 text-sm">Cargando cursos...</div>
+            ) : cursosDisponibles.length === 0 ? (
+              <div className="text-gray-400 text-sm">No hay cursos disponibles.</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {cursosDisponibles.map((curso) => (
+                  <label key={curso._id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={cursos.includes(curso._id)}
+                      onChange={() => handleCursoChange(curso._id)}
+                    />
+                    <span>{curso.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex justify-between items-center mt-6">
             <Link href="/admin/packs" className="text-gray-600 hover:underline">Cancelar</Link>
