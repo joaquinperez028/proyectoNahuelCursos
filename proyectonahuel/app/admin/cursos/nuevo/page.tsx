@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -31,6 +31,10 @@ interface ExerciseItem {
   error: string | null;
   order: number;
 }
+
+const MAX_UPLOAD_TIME = 300000; // 5 minutos
+const STATUS_CHECK_INTERVAL = 3000; // 3 segundos
+const MAX_RETRIES = 3; // Número máximo de intentos
 
 export default function NewCoursePage() {
   const { data: session, status } = useSession();
@@ -711,36 +715,84 @@ export default function NewCoursePage() {
       setUploadProgress(30);
       setUploadStatus('waiting');
       
-      // 3. Esperar a que el archivo se procese (esto ocurre en el useEffect)
-      
-      // 4. Devolver la URL de reproducción cuando esté disponible
+      // 3. Esperar a que el archivo se procese con reintentos
       return new Promise<string>((resolve, reject) => {
-        const checkForPlaybackId = setInterval(async () => {
-          if (playbackId) {
-            clearInterval(checkForPlaybackId);
-            resolve(`https://stream.mux.com/${playbackId}.m3u8`);
+        let retryCount = 0;
+        let statusCheckInterval: NodeJS.Timeout;
+        let timeoutTimer: NodeJS.Timeout;
+
+        const checkStatus = async () => {
+          try {
+            if (playbackId) {
+              clearInterval(statusCheckInterval);
+              clearTimeout(timeoutTimer);
+              resolve(`https://stream.mux.com/${playbackId}.m3u8`);
+              return;
+            }
+
+            const response = await fetch(`/api/mux-asset-status?uploadId=${directUploadData.uploadId}`);
+            if (!response.ok) {
+              throw new Error('Error al verificar el estado del video');
+            }
+
+            const data = await response.json();
+            
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            if (data.playbackId) {
+              setPlaybackId(data.playbackId);
+              setAssetId(data.assetId);
+              setUploadProgress(100);
+              clearInterval(statusCheckInterval);
+              clearTimeout(timeoutTimer);
+              resolve(`https://stream.mux.com/${data.playbackId}.m3u8`);
+              return;
+            }
+
+            // Actualizar progreso basado en el estado
+            switch (data.status) {
+              case 'waiting':
+                setUploadProgress(40);
+                break;
+              case 'processing':
+                setUploadProgress(70);
+                break;
+              case 'ready':
+                setUploadProgress(90);
+                break;
+            }
+
+          } catch (error) {
+            retryCount++;
+            console.error(`Error en intento ${retryCount}:`, error);
+            
+            if (retryCount >= MAX_RETRIES) {
+              clearInterval(statusCheckInterval);
+              clearTimeout(timeoutTimer);
+              reject(new Error('Error al procesar el video después de varios intentos'));
+            }
           }
-        }, 1000);
-        
-        // Timeout después de 2 minutos
-        setTimeout(() => {
-          clearInterval(checkForPlaybackId);
-          if (playbackId) {
-            resolve(`https://stream.mux.com/${playbackId}.m3u8`);
-          } else {
-            reject(new Error('Tiempo de espera agotado para la creación del asset'));
-          }
-        }, 120000);
+        };
+
+        // Iniciar verificación periódica
+        statusCheckInterval = setInterval(checkStatus, STATUS_CHECK_INTERVAL);
+
+        // Configurar timeout global
+        timeoutTimer = setTimeout(() => {
+          clearInterval(statusCheckInterval);
+          reject(new Error('El procesamiento del video está tomando más tiempo de lo esperado. Por favor, intenta con un archivo más pequeño o contacta al soporte.'));
+        }, MAX_UPLOAD_TIME);
       });
+      
     } catch (error) {
-      console.error('Error al subir archivo:', error);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('Error al subir el archivo');
-      }
+      console.error('Error en la carga del video:', error);
+      setUploadStatus('error');
+      setUploadProgress(0);
+      throw error;
+    } finally {
       setIsUploading(false);
-      return null;
     }
   };
   
