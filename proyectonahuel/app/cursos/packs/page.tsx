@@ -164,6 +164,14 @@ export default function PacksPage() {
                   >
                     {buyingPackId === pack._id ? 'Procesando...' : 'Comprar pack'}
                   </button>
+                  <a
+                    href="/transferencia"
+                    className="flex-1 px-4 py-2 rounded-full border border-blue-500 text-blue-500 bg-transparent font-semibold transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30 shadow-sm text-sm text-center flex items-center justify-center"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Pagar por transferencia
+                  </a>
                   <button
                     className="flex-1 px-4 py-2 rounded-full border border-green-500 text-green-500 bg-transparent font-semibold transition-all duration-200 hover:bg-green-50 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/30 shadow-sm text-sm"
                     onClick={() => setSelectedPack(pack)}
