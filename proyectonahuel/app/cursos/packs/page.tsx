@@ -37,6 +37,7 @@ function Skeleton({ className }: { className: string }) {
 export default function PacksPage() {
   const [packs, setPacks] = useState<PackType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPack, setSelectedPack] = useState<PackType | null>(null);
 
   useEffect(() => {
     const fetchPacks = async () => {
@@ -104,14 +105,64 @@ export default function PacksPage() {
                   <span className="text-2xl font-bold text-[#4CAF50]">${pack.price / 100}</span>
                   <span className="text-sm line-through text-[#B4B4C0]">${pack.originalPrice / 100}</span>
                 </div>
-                <button className="mt-4 px-6 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#388e3c] transition-colors duration-200 font-semibold">
-                  Comprar pack
-                </button>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    className="px-4 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#388e3c] transition-colors duration-200 font-semibold"
+                  >
+                    Comprar pack
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-[#23233a] border border-[#4CAF50] text-[#4CAF50] rounded-md hover:bg-[#2e7d32] hover:text-white transition-colors duration-200 font-semibold"
+                    onClick={() => setSelectedPack(pack)}
+                  >
+                    Ver detalles
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Modal de detalles */}
+      {selectedPack && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+          <div className="bg-[#23233a] rounded-lg shadow-xl p-8 max-w-lg w-full relative animate-fadeIn">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl"
+              onClick={() => setSelectedPack(null)}
+              aria-label="Cerrar"
+            >
+              &times;
+            </button>
+            {selectedPack.imageUrl && (
+              <img src={selectedPack.imageUrl} alt={selectedPack.name} className="w-full h-40 object-cover rounded-md mb-4" />
+            )}
+            <h2 className="text-2xl font-bold text-white mb-2">{selectedPack.name}</h2>
+            <p className="text-[#B4B4C0] mb-4">{selectedPack.description}</p>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white mb-2">Cursos incluidos</h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedPack.courses.map((course) => (
+                  <div key={course._id} className="flex items-center gap-2 bg-[#2A2A3C] px-2 py-1 rounded">
+                    {course.thumbnailUrl && (
+                      <img src={course.thumbnailUrl} alt={course.title} className="w-8 h-8 rounded" />
+                    )}
+                    <span className="text-xs text-white">{course.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-2xl font-bold text-[#4CAF50]">${selectedPack.price / 100}</span>
+              <span className="text-sm line-through text-[#B4B4C0]">${selectedPack.originalPrice / 100}</span>
+            </div>
+            <button className="w-full px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#388e3c] transition-colors duration-200 font-semibold">
+              Comprar pack
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
