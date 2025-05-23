@@ -61,14 +61,14 @@ export default function PacksPage() {
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
       </Head>
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
         <div className="text-center mb-14">
-          <h1 className="text-4xl sm:text-5xl font-bold text-neutral-100 mb-4 tracking-tight leading-tight" style={{ fontFamily: 'Roboto, sans-serif' }}>
+          <h1 className="text-4xl sm:text-5xl font-bold text-neutral-100 mb-4 tracking-tight leading-tight font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
             Packs de cursos
           </h1>
-          <p className="mt-2 text-lg sm:text-xl text-neutral-300 font-normal" style={{ fontFamily: 'Roboto, sans-serif' }}>
+          <p className="mt-2 text-lg sm:text-xl text-neutral-300 font-normal font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
             Seleccioná un pack y obtené varios cursos a precio promocional
           </p>
         </div>
@@ -91,36 +91,52 @@ export default function PacksPage() {
         ) : (
           <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {packs.map((pack) => (
-              <div key={pack._id} className="bg-neutral-900 rounded-2xl shadow-lg p-8 flex flex-col transition-shadow duration-300 hover:shadow-2xl border border-neutral-800">
-                {pack.imageUrl && (
-                  <img src={pack.imageUrl} alt={pack.name} className="w-full h-44 object-cover rounded-lg mb-6 border border-neutral-800" />
+              <div
+                key={pack._id}
+                className="flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg p-7 sm:p-8 gap-6 transition-shadow duration-300 hover:shadow-2xl font-sans"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                {/* Imagen o fallback */}
+                {pack.imageUrl ? (
+                  <img
+                    src={pack.imageUrl}
+                    alt={pack.name}
+                    className="w-full h-40 object-cover rounded-xl border border-neutral-200 mb-2"
+                  />
+                ) : (
+                  <div className="w-full h-40 flex items-center justify-center bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-400 text-3xl mb-2">
+                    <span className="font-bold">Sin imagen</span>
+                  </div>
                 )}
-                <h2 className="text-2xl font-bold text-white mb-2 tracking-tight" style={{ fontFamily: 'Roboto, sans-serif' }}>{pack.name}</h2>
-                <p className="text-neutral-300 mb-4 text-base" style={{ fontFamily: 'Roboto, sans-serif' }}>{pack.description}</p>
-                <div className="flex flex-wrap gap-3 mb-6">
+                {/* Título */}
+                <h2 className="text-2xl font-bold text-white mb-1 leading-tight">{pack.name}</h2>
+                {/* Descripción */}
+                <p className="text-sm text-neutral-400 mb-2">{pack.description}</p>
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-3">
                   {pack.courses.map((course) => (
-                    <div key={course._id} className="flex items-center gap-2 bg-neutral-800 px-3 py-1 rounded-lg border border-neutral-700">
-                      {course.thumbnailUrl && (
-                        <img src={course.thumbnailUrl} alt={course.title} className="w-8 h-8 rounded" />
-                      )}
-                      <span className="text-xs text-white" style={{ fontFamily: 'Roboto, sans-serif' }}>{course.title}</span>
-                    </div>
+                    <span
+                      key={course._id}
+                      className="px-3 py-1 bg-neutral-200 text-neutral-700 text-xs rounded-full font-medium border border-neutral-300"
+                    >
+                      {course.title}
+                    </span>
                   ))}
                 </div>
-                <div className="flex items-center gap-4 mt-auto mb-6">
-                  <span className="text-3xl font-bold text-[#4CAF50] tracking-tight" style={{ fontFamily: 'Roboto, sans-serif' }}>${pack.price / 100}</span>
-                  <span className="text-base line-through text-neutral-500" style={{ fontFamily: 'Roboto, sans-serif' }}>${pack.originalPrice / 100}</span>
+                {/* Precios */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-xl font-bold text-green-500">${pack.price / 100}</span>
+                  <span className="text-base line-through text-neutral-400">${pack.originalPrice / 100}</span>
                 </div>
+                {/* Botones */}
                 <div className="flex gap-3 mt-auto">
                   <button
-                    className="px-5 py-2 rounded-lg bg-[#4CAF50] text-white font-medium transition-all duration-200 hover:bg-[#388e3c] focus:outline-none focus:ring-2 focus:ring-[#4CAF50]/50 shadow-sm"
-                    style={{ fontFamily: 'Roboto, sans-serif' }}
+                    className="flex-1 px-4 py-2 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm"
                   >
                     Comprar pack
                   </button>
                   <button
-                    className="px-5 py-2 rounded-lg border border-[#4CAF50] text-[#4CAF50] bg-transparent font-medium transition-all duration-200 hover:bg-[#4CAF50] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#4CAF50]/30 shadow-sm"
-                    style={{ fontFamily: 'Roboto, sans-serif' }}
+                    className="flex-1 px-4 py-2 rounded-full border border-green-500 text-green-500 bg-transparent font-semibold transition-all duration-200 hover:bg-green-50 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/30 shadow-sm text-sm"
                     onClick={() => setSelectedPack(pack)}
                   >
                     Ver detalles
@@ -140,33 +156,37 @@ export default function PacksPage() {
               className="absolute top-4 right-4 text-neutral-400 hover:text-white text-3xl transition-colors duration-200"
               onClick={() => setSelectedPack(null)}
               aria-label="Cerrar"
-              style={{ fontFamily: 'Roboto, sans-serif' }}
+              style={{ fontFamily: 'Inter, sans-serif' }}
             >
               &times;
             </button>
-            {selectedPack.imageUrl && (
+            {selectedPack.imageUrl ? (
               <img src={selectedPack.imageUrl} alt={selectedPack.name} className="w-full h-44 object-cover rounded-lg mb-6 border border-neutral-800" />
+            ) : (
+              <div className="w-full h-44 flex items-center justify-center bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-lg text-neutral-400 text-2xl mb-6">
+                <span className="font-bold">Sin imagen</span>
+              </div>
             )}
-            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight" style={{ fontFamily: 'Roboto, sans-serif' }}>{selectedPack.name}</h2>
-            <p className="text-neutral-300 mb-6 text-base" style={{ fontFamily: 'Roboto, sans-serif' }}>{selectedPack.description}</p>
+            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPack.name}</h2>
+            <p className="text-neutral-300 mb-6 text-base" style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPack.description}</p>
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-3" style={{ fontFamily: 'Roboto, sans-serif' }}>Cursos incluidos</h3>
+              <h3 className="text-lg font-semibold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>Cursos incluidos</h3>
               <div className="flex flex-wrap gap-3">
                 {selectedPack.courses.map((course) => (
-                  <div key={course._id} className="flex items-center gap-2 bg-neutral-800 px-3 py-1 rounded-lg border border-neutral-700">
-                    {course.thumbnailUrl && (
-                      <img src={course.thumbnailUrl} alt={course.title} className="w-8 h-8 rounded" />
-                    )}
-                    <span className="text-xs text-white" style={{ fontFamily: 'Roboto, sans-serif' }}>{course.title}</span>
-                  </div>
+                  <span
+                    key={course._id}
+                    className="px-3 py-1 bg-neutral-200 text-neutral-700 text-xs rounded-full font-medium border border-neutral-300"
+                  >
+                    {course.title}
+                  </span>
                 ))}
               </div>
             </div>
             <div className="flex items-center gap-4 mb-8">
-              <span className="text-3xl font-bold text-[#4CAF50] tracking-tight" style={{ fontFamily: 'Roboto, sans-serif' }}>${selectedPack.price / 100}</span>
-              <span className="text-base line-through text-neutral-500" style={{ fontFamily: 'Roboto, sans-serif' }}>${selectedPack.originalPrice / 100}</span>
+              <span className="text-3xl font-bold text-green-500 tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.price / 100}</span>
+              <span className="text-base line-through text-neutral-400" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.originalPrice / 100}</span>
             </div>
-            <button className="w-full px-6 py-3 rounded-lg bg-[#4CAF50] text-white font-medium transition-all duration-200 hover:bg-[#388e3c] focus:outline-none focus:ring-2 focus:ring-[#4CAF50]/50 shadow-sm" style={{ fontFamily: 'Roboto, sans-serif' }}>
+            <button className="w-full px-6 py-3 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
               Comprar pack
             </button>
           </div>
