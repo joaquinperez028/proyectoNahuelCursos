@@ -1,4 +1,4 @@
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import Progress from '@/models/Progress';
 import Course from '@/models/Course';
 import User from '@/models/User';
@@ -32,7 +32,7 @@ export default async function CertificatePage({ params }: PageProps<CertificateP
   }
   
   // Conectar a la base de datos
-  await connectDB();
+  await connectToDatabase();
   
   // Buscar el certificado
   const progress = await Progress.findOne({

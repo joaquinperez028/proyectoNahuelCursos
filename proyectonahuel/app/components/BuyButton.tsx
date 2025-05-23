@@ -51,7 +51,7 @@ export default function BuyButton({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Error al crear preferencia de pago');
+        throw new Error(error.error || 'Error al crear preferencia de pago.');
       }
 
       // Obtener la URL de pago de MercadoPago
@@ -82,7 +82,7 @@ export default function BuyButton({
   if (userHasCourse) {
     return (
       <button
-        onClick={() => router.push(`/mis-cursos/${courseId}`)}
+        onClick={() => router.push(`/cursos/${courseId}`)}
         className={`bg-[var(--primary)] hover:bg-[var(--primary-dark)] text-[var(--neutral-100)] font-bold ${sizeClasses} rounded-lg transition-all duration-300 shadow-lg flex items-center justify-center ${className}`}
         disabled={loading}
       >

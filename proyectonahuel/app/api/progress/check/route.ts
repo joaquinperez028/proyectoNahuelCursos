@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import Progress from '@/models/Progress';
 import User from '@/models/User';
 import mongoose from 'mongoose';
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     

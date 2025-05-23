@@ -6,6 +6,7 @@ import User from '@/models/User';
 import Progress from '@/models/Progress';
 import Payment from '@/models/Payment';
 import { sendEmail } from '@/lib/email';
+import Pack from '@/models/Pack';
 
 // Configurar MercadoPago con la clave de acceso
 const client = new MercadoPagoConfig({ 
@@ -37,10 +38,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Referencia externa no encontrada' }, { status: 400 });
       }
 
-      const [courseId, userId] = externalReference.split('-');
-      if (!courseId || !userId) {
-        console.error('Formato de referencia externa inválido:', externalReference);
-        return NextResponse.json({ error: 'Formato de referencia externa inválido' }, { status: 400 });
+      // Soporta referencia de curso: "courseId-userId" y de pack: "pack-packId-userId"
+      let isPack = false;
+      let courseId = '';
+      let userId = '';
+      let packId = '';
+      if (externalReference.startsWith('pack-')) {
+        isPack = true;
+        [, packId, userId] = externalReference.split('-');
+      } else {
+        [courseId, userId] = externalReference.split('-');
       }
       
       // Obtener el estado del pago
@@ -84,19 +91,40 @@ export async function POST(request: Request) {
       
       // Procesar según el estado del pago
       if (paymentStatus === 'approved') {
-        // Pago aprobado, dar acceso al curso
-        await processCourseAccess(courseId, userId, true);
-        
-        // Enviar correo de confirmación
-        const user = await User.findById(userId);
-        const course = await Course.findById(courseId);
-        
-        if (user && user.email && course) {
-          await sendConfirmationEmail(user.email, user.name, course.title);
+        if (isPack) {
+          // Pago de pack aprobado, asignar todos los cursos del pack
+          const pack = await Pack.findById(packId).populate('courses');
+          if (pack && pack.courses && Array.isArray(pack.courses)) {
+            for (const course of pack.courses) {
+              await processCourseAccess(course._id.toString(), userId, true);
+            }
+          }
+          // Enviar correo de confirmación de pack
+          const user = await User.findById(userId);
+          if (user && user.email && pack) {
+            await sendConfirmationEmail(user.email, user.name, `Pack: ${pack.name}`);
+          }
+        } else {
+          // Pago de curso individual
+          await processCourseAccess(courseId, userId, true);
+          // Enviar correo de confirmación
+          const user = await User.findById(userId);
+          const course = await Course.findById(courseId);
+          if (user && user.email && course) {
+            await sendConfirmationEmail(user.email, user.name, course.title);
+          }
         }
       } else if (paymentStatus === 'rejected' || paymentStatus === 'cancelled') {
-        // Pago rechazado o cancelado
-        await processCourseAccess(courseId, userId, false);
+        if (isPack) {
+          const pack = await Pack.findById(packId).populate('courses');
+          if (pack && pack.courses && Array.isArray(pack.courses)) {
+            for (const course of pack.courses) {
+              await processCourseAccess(course._id.toString(), userId, false);
+            }
+          }
+        } else {
+          await processCourseAccess(courseId, userId, false);
+        }
       }
       // Si está pendiente, no hacemos nada hasta recibir confirmación
     }

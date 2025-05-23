@@ -6,7 +6,7 @@
  * 2. Ejecuta: npx ts-node scripts/actualizar-playback-id.ts
  */
 
-import { connectDB } from '../lib/mongodb';
+import { connectToDatabase } from '../lib/mongodb';
 import mongoose from 'mongoose';
 import path from 'path';
 import { config } from 'dotenv';
@@ -48,7 +48,7 @@ const CourseSchema = new mongoose.Schema({
 async function actualizarPlaybackId() {
   try {
     console.log('Conectando a la base de datos...');
-    await connectDB();
+    await connectToDatabase();
     
     // Usar el esquema para definir el modelo Course
     const Course = mongoose.models.Course || mongoose.model('Course', CourseSchema);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/options';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 import Course from '@/models/Course';
 import Progress from '@/models/Progress';
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
     
     try {
-      await connectDB();
+      await connectToDatabase();
       console.log('API: Conexión a la base de datos establecida');
     } catch (dbError) {
       console.error('API: Error al conectar a la base de datos:', dbError);

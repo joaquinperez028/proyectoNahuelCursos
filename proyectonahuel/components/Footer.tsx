@@ -83,8 +83,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/cursos/destacados" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Cursos destacados
+                <Link href="/cursos/packs" className="text-gray-400 hover:text-green-500 transition-colors">
+                  Packs de cursos
                 </Link>
               </li>
               <li>

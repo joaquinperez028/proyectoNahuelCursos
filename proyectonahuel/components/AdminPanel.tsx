@@ -119,7 +119,7 @@ export default function AdminPanel({
 
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-white mb-4">Acciones Rápidas</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Link
                   href="/admin/cursos/nuevo"
                   className="flex items-center justify-center px-4 py-3 bg-[#4CAF50] hover:bg-[#45a049] text-white rounded-md transition-colors duration-200"
@@ -137,6 +137,15 @@ export default function AdminPanel({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                   Gestionar Usuarios
+                </Link>
+                <Link
+                  href="/admin/packs"
+                  className="flex items-center justify-center px-4 py-3 bg-[#ff9800] hover:bg-[#f57c00] text-white rounded-md transition-colors duration-200"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4" />
+                  </svg>
+                  Gestionar Packs
                 </Link>
                 <Link
                   href="/admin/reportes"

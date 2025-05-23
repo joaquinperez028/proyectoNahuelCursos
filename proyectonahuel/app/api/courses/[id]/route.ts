@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { connectDB } from "@/lib/mongodb";
+import { connectToDatabase } from '@/lib/mongodb';
 import { deleteMuxAsset } from "@/lib/mux";
 import Course from "@/models/Course";
 import User from "@/models/User";
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const id = request.nextUrl.pathname.split('/').pop();
   
   try {
-    await connectDB();
+    await connectToDatabase();
     
     const course = await Course.findById(id)
       .populate('createdBy', 'name')
@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     
@@ -140,7 +140,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    await connectDB();
+    await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     

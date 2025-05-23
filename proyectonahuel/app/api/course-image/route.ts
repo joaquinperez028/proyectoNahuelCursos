@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import Course from '@/models/Course';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener el ID del curso de los query parameters
     const url = new URL(request.url);

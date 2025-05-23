@@ -157,7 +157,7 @@ export default function PerfilPage() {
             purchases.push({
               id: purchase._id || purchase.id,
               courseTitle: purchase.courseTitle || purchase.course?.title || 'Curso',
-              date: purchase.createdAt,
+              date: purchase.date,
               paymentMethod: purchase.paymentMethod || 'No especificado',
               amount: purchase.amount || purchase.price || 0,
               invoiceUrl: purchase.invoiceUrl
@@ -439,12 +439,6 @@ export default function PerfilPage() {
                   {session?.user?.name?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
-              <button className="absolute bottom-0 right-0 bg-[#007bff] p-2 rounded-full hover:bg-[#0069d9] transition-colors duration-200">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
             </div>
             
             <div className="flex-1">
@@ -484,7 +478,6 @@ export default function PerfilPage() {
             totalCourses={profileData.stats.totalCourses}
             completedCourses={profileData.stats.completedCourses}
             certificatesEarned={profileData.stats.certificatesEarned}
-            totalHoursLearned={profileData.stats.totalHoursLearned}
           />
         </div>
         
@@ -530,16 +523,6 @@ export default function PerfilPage() {
               }`}
             >
               Historial de Compras
-            </button>
-            <button
-              onClick={() => setActiveTab('configuracion')}
-              className={`py-4 px-6 text-sm font-medium ${
-                activeTab === 'configuracion'
-                  ? 'border-b-2 border-[#4CAF50] text-[#4CAF50]'
-                  : 'text-[#B4B4C0] hover:text-white hover:border-[#8A8A9A] border-b-2 border-transparent'
-              }`}
-            >
-              Configuración
             </button>
             {session?.user?.role === 'admin' && (
               <button
@@ -672,73 +655,6 @@ export default function PerfilPage() {
               <h2 className="text-xl font-semibold text-white mb-6">Historial de Compras</h2>
               
               <PurchaseHistory purchases={profileData.purchases} />
-            </div>
-          )}
-          
-          {/* Configuración */}
-          {activeTab === 'configuracion' && (
-            <div className="bg-[#2A2A3C] rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-white mb-6">Configuración de Cuenta</h2>
-              
-              <div className="space-y-6">
-                {/* Preferencias de notificaciones */}
-                <div>
-                  <h3 className="text-lg font-medium text-white mb-3">Preferencias de Notificaciones</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <input
-                        id="notify-updates"
-                        type="checkbox"
-                        className="h-4 w-4 text-[#4CAF50] focus:ring-[#4CAF50] border-[#3A3A4C] rounded"
-                        defaultChecked
-                      />
-                      <label htmlFor="notify-updates" className="ml-2 block text-sm text-[#B4B4C0]">
-                        Actualizaciones de cursos y nuevo contenido
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        id="notify-promos"
-                        type="checkbox"
-                        className="h-4 w-4 text-[#4CAF50] focus:ring-[#4CAF50] border-[#3A3A4C] rounded"
-                        defaultChecked
-                      />
-                      <label htmlFor="notify-promos" className="ml-2 block text-sm text-[#B4B4C0]">
-                        Promociones y descuentos
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        id="notify-news"
-                        type="checkbox"
-                        className="h-4 w-4 text-[#4CAF50] focus:ring-[#4CAF50] border-[#3A3A4C] rounded"
-                      />
-                      <label htmlFor="notify-news" className="ml-2 block text-sm text-[#B4B4C0]">
-                        Novedades y blog
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Cambio de contraseña */}
-                <div>
-                  <h3 className="text-lg font-medium text-white mb-3">Cambiar Contraseña</h3>
-                  <p className="text-sm text-[#B4B4C0] mb-4">
-                    Para cambiar tu contraseña, primero cierra la sesión y luego utiliza la opción "Olvidé mi contraseña" en la pantalla de inicio de sesión.
-                  </p>
-                </div>
-                
-                {/* Eliminar cuenta */}
-                <div>
-                  <h3 className="text-lg font-medium text-white mb-3">Eliminar Cuenta</h3>
-                  <p className="text-sm text-[#B4B4C0] mb-4">
-                    Al eliminar tu cuenta, perderás acceso a todos tus cursos y certificados. Esta acción no puede deshacerse.
-                  </p>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200">
-                    Solicitar Eliminación de Cuenta
-                  </button>
-                </div>
-              </div>
             </div>
           )}
           

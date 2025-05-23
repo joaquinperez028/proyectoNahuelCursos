@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
+import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 import Course from '@/models/Course';
 import Review from '@/models/Review';
 
 export async function GET() {
   try {
-    await connectDB();
+    await connectToDatabase();
     
     // Obtener conteo de estudiantes (usuarios con rol 'user')
     const studentsCount = await User.countDocuments({ role: 'user' });
