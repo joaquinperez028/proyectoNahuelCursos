@@ -145,10 +145,13 @@ export default function TransferPaymentPage() {
         method: 'POST',
         body: formData,
       });
+      
+      const data = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || 'Error al procesar el pago');
       }
+      
       setSuccess(true);
       setTimeout(() => {
         if (isPack) {
@@ -157,8 +160,9 @@ export default function TransferPaymentPage() {
           router.push('/compra/pendiente?course_id=' + id);
         }
       }, 3000);
-    } catch (error) {
-      setError('Ocurrió un error al procesar tu solicitud');
+    } catch (error: any) {
+      console.error('Error al procesar el pago:', error);
+      setError(error.message || 'Ocurrió un error al procesar tu solicitud. Por favor, verifica que el comprobante sea válido y el monto coincida con el precio del producto.');
     } finally {
       setUploading(false);
     }
