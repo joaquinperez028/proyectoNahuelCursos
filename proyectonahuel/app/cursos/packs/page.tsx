@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import CourseCard from '@/components/CourseCard';
 import Head from 'next/head';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface CourseType {
   _id: string;
@@ -39,6 +41,9 @@ export default function PacksPage() {
   const [packs, setPacks] = useState<PackType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPack, setSelectedPack] = useState<PackType | null>(null);
+  const [buyingPackId, setBuyingPackId] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPacks = async () => {
@@ -55,6 +60,28 @@ export default function PacksPage() {
     };
     fetchPacks();
   }, []);
+
+  const handleBuyPack = async (packId: string) => {
+    if (!session) {
+      router.push('/api/auth/signin');
+      return;
+    }
+    setBuyingPackId(packId);
+    try {
+      const res = await fetch('/api/mercadopago/create-pack-preference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packId }),
+      });
+      if (!res.ok) throw new Error('Error al iniciar compra');
+      const data = await res.json();
+      window.location.href = data.init_point;
+    } catch (err) {
+      alert('No se pudo procesar la compra. Intenta nuevamente.');
+    } finally {
+      setBuyingPackId(null);
+    }
+  };
 
   return (
     <div className="py-14 bg-neutral-950 min-h-screen font-sans">
@@ -131,9 +158,11 @@ export default function PacksPage() {
                 {/* Botones */}
                 <div className="flex gap-3 mt-auto">
                   <button
-                    className="flex-1 px-4 py-2 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm"
+                    className="flex-1 px-4 py-2 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm disabled:opacity-60"
+                    onClick={() => handleBuyPack(pack._id)}
+                    disabled={buyingPackId === pack._id}
                   >
-                    Comprar pack
+                    {buyingPackId === pack._id ? 'Procesando...' : 'Comprar pack'}
                   </button>
                   <button
                     className="flex-1 px-4 py-2 rounded-full border border-green-500 text-green-500 bg-transparent font-semibold transition-all duration-200 hover:bg-green-50 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/30 shadow-sm text-sm"
@@ -186,8 +215,13 @@ export default function PacksPage() {
               <span className="text-3xl font-bold text-green-500 tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.price / 100}</span>
               <span className="text-base line-through text-neutral-400" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.originalPrice / 100}</span>
             </div>
-            <button className="w-full px-6 py-3 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Comprar pack
+            <button
+              className="w-full px-6 py-3 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm"
+              onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
+              disabled={buyingPackId === selectedPack?._id}
+              style={{ fontFamily: 'Inter, sans-serif' }}
+            >
+              {buyingPackId === selectedPack?._id ? 'Procesando...' : 'Comprar pack'}
             </button>
           </div>
         </div>
