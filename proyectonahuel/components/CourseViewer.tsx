@@ -14,10 +14,9 @@ interface CourseViewerProps {
 const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProps) => {
   const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [useToken, setUseToken] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState(0);
   const [useFallback, setUseFallback] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [showCompletionNotification, setShowCompletionNotification] = useState(false);
   
@@ -33,12 +32,17 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     progressUpdateInterval: 15000, // Actualizar cada 15 segundos
   });
 
+  const MAX_RETRIES = 3;
+
   useEffect(() => {
     setIsClient(true);
-    // Limpiar error al cambiar el playbackId
+    // Resetear estados cuando cambia el playbackId
     setError(null);
-    setAttempts(0);
     setUseFallback(false);
+    setDebugInfo(null);
+    setRetryCount(0);
+    setVideoCompleted(false);
+    setShowCompletionNotification(false);
     
     // Limpiar intervalos de seguimiento al desmontar el componente
     return () => {
@@ -50,14 +54,14 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   // Reintentar automáticamente una vez si hay error
   useEffect(() => {
-    if (error && attempts < 1) {
+    if (error && retryCount < MAX_RETRIES) {
       const timer = setTimeout(() => {
         setError(null);
-        setAttempts(prev => prev + 1);
+        setRetryCount(prev => prev + 1);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [error, attempts]);
+  }, [error, retryCount]);
   
   // Configurar seguimiento de progreso cuando el video está listo
   const setupProgressTracking = () => {
@@ -183,6 +187,8 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   // Manejar eventos de video
   const handleVideoReady = () => {
+    setError(null);
+    setDebugInfo(null);
     setupProgressTracking();
   };
   
@@ -225,10 +231,28 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   }
   
   // Manejo de errores
-  const handleError = (event: any) => {
+  const handleError = async (event: any) => {
     console.error('Error en el reproductor MUX:', event);
     const errorDetails = event.detail?.sourceError?.message || 'Error desconocido';
     setDebugInfo(`PlaybackID: ${playbackId} | Error: ${errorDetails}`);
+
+    // Si el error es de token o acceso, intentar recargar con token nuevo
+    if (errorDetails.includes('not currently active') && retryCount < MAX_RETRIES) {
+      setRetryCount(prev => prev + 1);
+      try {
+        // Esperar un momento antes de reintentar
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Intentar recargar el reproductor
+        if (playerRef.current) {
+          playerRef.current.load();
+        }
+        return;
+      } catch (retryError) {
+        console.error('Error al reintentar reproducción:', retryError);
+      }
+    }
+
     setError('Error al cargar el video. Intente con opciones alternativas.');
   };
   
@@ -263,10 +287,16 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
               </div>
             )}
             
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
-              <button 
-                onClick={() => setError(null)} 
-                className="px-4 py-2 bg-[var(--primary)] text-white text-sm rounded-lg hover:bg-[var(--primary-dark)] transition-colors flex items-center shadow-md"
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setError(null);
+                  setUseFallback(false);
+                  if (playerRef.current) {
+                    playerRef.current.load();
+                  }
+                }}
+                className="px-4 py-2 bg-[var(--primary)] text-white text-sm rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center shadow-md"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -274,13 +304,12 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
                 Reintentar
               </button>
               
-              <button 
-                onClick={switchToFallback} 
-                className="px-4 py-2 bg-[var(--secondary)] text-white text-sm rounded-lg hover:bg-[var(--secondary-dark)] transition-colors flex items-center shadow-md"
+              <button
+                onClick={switchToFallback}
+                className="px-4 py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center shadow-md"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
                 Usar reproductor alternativo
               </button>
@@ -289,7 +318,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
                 href={directUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-opacity-90 transition-colors flex items-center shadow-md"
+                className="px-4 py-2 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-opacity-90 transition-colors flex items-center justify-center shadow-md"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -305,7 +334,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
             <MuxPlayer
               ref={playerRef}
               playbackId={playbackId}
-              tokens={undefined}
+              tokens={token ? { playback: token } : undefined}
               metadata={{
                 video_title: 'Video del curso',
                 viewer_user_id: 'usuario',
