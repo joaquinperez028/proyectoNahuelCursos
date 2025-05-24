@@ -157,17 +157,18 @@ export default function PacksPage() {
                   {/* Descripción */}
                   <p className="text-sm text-neutral-400 flex-grow">{pack.description}</p>
 
-                  {/* Cursos incluidos con iconos */}
+                  {/* Cursos incluidos con iconos e hipervínculos */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-neutral-300 mb-2">Cursos incluidos:</h3>
                     <div className="flex flex-wrap gap-2">
                       {pack.courses.map((course) => (
-                        <span
+                        <a
                           key={course._id}
-                          className="px-3 py-1.5 bg-neutral-800 text-neutral-300 text-xs rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50"
+                          href={`/cursos/${course._id}`}
+                          className="px-3 py-1.5 bg-neutral-800 text-neutral-300 text-xs rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50 hover:text-green-400"
                         >
                           {course.title}
-                        </span>
+                        </a>
                       ))}
                     </div>
                   </div>
@@ -178,7 +179,7 @@ export default function PacksPage() {
                     <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
                   </div>
 
-                  {/* Botones con nueva organización */}
+                  {/* Botones con nueva organización y menú mejorado */}
                   <div className="flex flex-col gap-3">
                     <div className="relative group/menu">
                       <button
@@ -190,9 +191,9 @@ export default function PacksPage() {
                         </svg>
                       </button>
                       
-                      {/* Menú desplegable */}
-                      <div className="absolute z-10 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
-                        <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 overflow-hidden">
+                      {/* Menú desplegable con posición absoluta ajustada */}
+                      <div className="fixed z-50 mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300" style={{ width: 'calc(100% - 2rem)', left: '1rem' }}>
+                        <div className="bg-neutral-800 rounded-xl shadow-xl border border-neutral-700 overflow-hidden backdrop-blur-lg backdrop-filter">
                           <button
                             onClick={() => handleBuyPack(pack._id)}
                             disabled={buyingPackId === pack._id}
@@ -285,16 +286,18 @@ export default function PacksPage() {
 
             <p className="text-neutral-300 mb-6 text-base leading-relaxed">{selectedPack.description}</p>
 
+            {/* Modal: Cursos incluidos con hipervínculos */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white mb-3">Cursos incluidos</h3>
               <div className="grid grid-cols-2 gap-2">
                 {selectedPack.courses.map((course) => (
-                  <span
+                  <a
                     key={course._id}
-                    className="px-3 py-2 bg-neutral-800 text-neutral-300 text-sm rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50"
+                    href={`/cursos/${course._id}`}
+                    className="px-3 py-2 bg-neutral-800 text-neutral-300 text-sm rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50 hover:text-green-400"
                   >
                     {course.title}
-                  </span>
+                  </a>
                 ))}
               </div>
             </div>
