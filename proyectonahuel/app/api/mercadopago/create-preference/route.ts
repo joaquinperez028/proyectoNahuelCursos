@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       },
       auto_return: 'approved',
       notification_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/mercadopago/webhook`,
-      external_reference: `${courseId}-${session.user.id}`, // Referencia para identificar la compra
+      external_reference: `course-${courseId}-${session.user.id}`,
       statement_descriptor: 'Curso Online',
       payment_methods: {
         excluded_payment_types: [

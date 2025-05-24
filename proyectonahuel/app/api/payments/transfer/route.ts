@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { connectToDB } from '@/lib/database';
 import Course from '@/models/Course';
+import Pack from '@/models/Pack';
 import User from '@/models/User';
 import Payment from '@/models/Payment';
 import Progress from '@/models/Progress';
@@ -12,7 +13,9 @@ export async function POST(request: Request) {
   try {
     // Verificar autenticación
     const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    console.log('Sesión:', session);
+    
+    if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
@@ -25,13 +28,39 @@ export async function POST(request: Request) {
     // Obtener los archivos y datos
     const file = formData.get('file') as File;
     const courseId = formData.get('courseId') as string;
+    const packId = formData.get('packId') as string;
     const userId = formData.get('userId') as string;
-    const amount = parseFloat(formData.get('amount') as string);
+    const amountStr = formData.get('amount') as string;
 
-    // Validaciones
+    // Log de datos recibidos
+    console.log('Datos recibidos:', {
+      hasFile: !!file,
+      fileType: file?.type,
+      fileSize: file?.size,
+      courseId,
+      packId,
+      userId,
+      amountStr
+    });
+
+    // Validaciones básicas
     if (!file) {
-      return NextResponse.json({ error: 'Falta el comprobante de pago' }, { status: 400 });
+      return NextResponse.json({ error: 'Por favor, sube un comprobante de pago' }, { status: 400 });
     }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'No se pudo identificar al usuario' }, { status: 400 });
+    }
+
+    if (!amountStr || isNaN(parseFloat(amountStr))) {
+      return NextResponse.json({ error: 'El monto del pago es inválido' }, { status: 400 });
+    }
+
+    if (!courseId && !packId) {
+      return NextResponse.json({ error: 'Debe especificar un curso o pack para la compra' }, { status: 400 });
+    }
+
+    const amount = parseFloat(amountStr);
 
     // Validación de tipo de archivo
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
@@ -44,61 +73,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El archivo es demasiado grande. El tamaño máximo es 5MB' }, { status: 400 });
     }
 
-    if (!courseId || !userId || isNaN(amount)) {
-      return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
-    }
-
     // Verificar que el usuario existe
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verificar que el curso existe
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 });
-    }
+    // Verificar el item (curso o pack) y su precio
+    let itemType = 'course';
+    let itemPrice = 0;
+    let itemId = courseId;
 
-    // Verificar que el usuario no tenga ya acceso al curso
-    const existingProgress = await Progress.findOne({ courseId, userId });
-    if (existingProgress) {
-      return NextResponse.json({ error: 'Ya tienes acceso a este curso' }, { status: 400 });
-    }
-
-    // Procesar el archivo para almacenarlo en MongoDB
-    let base64Data;
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      
-      // Convertir el buffer a base64 para almacenamiento en MongoDB
-      base64Data = buffer.toString('base64');
-      
-      // Verificar que la conversión fue exitosa
-      if (!base64Data || base64Data.length === 0) {
-        throw new Error('Error al procesar el archivo');
+    if (packId) {
+      itemType = 'pack';
+      itemId = packId;
+      const pack = await Pack.findById(packId);
+      if (!pack) {
+        return NextResponse.json({ error: 'Pack no encontrado' }, { status: 404 });
       }
-    } catch (error) {
-      console.error('Error al procesar archivo:', error);
-      return NextResponse.json({ 
-        error: 'Error al procesar el archivo. Por favor, intenta con otro archivo o un formato diferente.' 
-      }, { status: 500 });
+      itemPrice = pack.price;
+      console.log('Pack encontrado:', { id: pack._id, price: pack.price });
+    } else {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 });
+      }
+      itemPrice = course.onSale && course.discountPercentage > 0
+        ? course.price - (course.price * (course.discountPercentage / 100))
+        : course.price;
+      console.log('Curso encontrado:', { id: course._id, price: itemPrice });
     }
-    
+
+    // Verificar que el monto coincida
+    if (Math.abs(amount - itemPrice) > 0.01) { // Permitir una pequeña diferencia por redondeo
+      console.log('Error de monto:', { amount, itemPrice, difference: Math.abs(amount - itemPrice) });
+      return NextResponse.json({ 
+        error: `El monto del pago (${amount}) no coincide con el precio del ${itemType === 'pack' ? 'pack' : 'curso'} (${itemPrice})` 
+      }, { status: 400 });
+    }
+
+    // Procesar el archivo
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Data = buffer.toString('base64');
     const fileType = file.type;
     const fileName = file.name;
-    
-    // Generar un ID único para la transacción
-    const uniqueId = uuidv4().substring(0, 8);
-    
+    const uniqueId = uuidv4();
+
     // Crear registro de pago pendiente
     const paymentData = {
       userId,
-      courseId,
       amount,
       paymentMethod: 'Transferencia',
-      status: 'pending', // Siempre iniciar como pendiente hasta aprobación manual
+      status: 'pending',
       transactionId: `TRANSFER-${uniqueId}`,
       paymentDetails: {
         receiptData: base64Data,
@@ -109,13 +136,14 @@ export async function POST(request: Request) {
         approvalStatus: 'pending'
       },
       currency: 'ARS',
-      createdAt: new Date()
+      createdAt: new Date(),
+      packId: itemType === 'pack' ? itemId : undefined,
+      courseId: itemType === 'pack' ? undefined : itemId
     };
 
     // Guardar en la base de datos
-    await Payment.create(paymentData);
-
-    // Nota: No se crea el progreso ni se da acceso hasta que un admin apruebe
+    const payment = await Payment.create(paymentData);
+    console.log('Pago creado:', payment._id);
 
     // Retornar éxito
     return NextResponse.json({ 
@@ -126,7 +154,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error al procesar pago por transferencia:', error);
     return NextResponse.json({ 
-      error: 'Error al procesar el pago por transferencia' 
+      error: 'Error al procesar el pago por transferencia. Por favor, intenta nuevamente.' 
     }, { status: 500 });
   }
 } 
