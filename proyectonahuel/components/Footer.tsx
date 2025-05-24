@@ -105,7 +105,7 @@ const Footer = () => {
               Síguenos en Redes
             </h3>
             <p className="text-sm mb-4">
-              Mantente al día con nuestras últimas actualizaciones, contenido exclusivo y comunidad
+              Mantente al día con nuestras últimas actualizaciones, contenido exclusivo y comunidad.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <a 
