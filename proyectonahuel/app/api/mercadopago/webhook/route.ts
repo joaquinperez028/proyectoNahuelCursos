@@ -37,6 +37,12 @@ async function processCourseAccess(courseId: string, userId: string, approved: b
         progress.lastAccessed = new Date();
         await progress.save();
       }
+      // Asignar el curso al usuario si no lo tiene
+      await User.findByIdAndUpdate(
+        userId,
+        { $addToSet: { courses: courseId } },
+        { new: true }
+      );
     } else if (progress) {
       // Si el pago fue rechazado y existe un progreso, lo eliminamos
       await progress.deleteOne();
