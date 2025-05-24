@@ -121,64 +121,97 @@ export default function PacksPage() {
             {packs.filter(pack => pack.active).map((pack) => (
               <div
                 key={pack._id}
-                className="flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg p-7 sm:p-8 gap-6 transition-shadow duration-300 hover:shadow-2xl font-sans"
+                className="group flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/10 hover:border-green-500/20 hover:-translate-y-1 font-sans"
                 style={{ fontFamily: 'Inter, sans-serif' }}
               >
-                {/* Imagen o fallback */}
-                {pack.imageUrl ? (
-                  <img
-                    src={pack.imageUrl}
-                    alt={pack.name}
-                    className="w-full h-40 object-cover rounded-xl border border-neutral-200 mb-2"
-                  />
-                ) : (
-                  <div className="w-full h-40 flex items-center justify-center bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-xl text-neutral-400 text-3xl mb-2">
-                    <span className="font-bold">Sin imagen</span>
+                {/* Imagen con overlay al hover */}
+                <div className="relative overflow-hidden">
+                  {pack.imageUrl ? (
+                    <>
+                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
+                      <img
+                        src={pack.imageUrl}
+                        alt={pack.name}
+                        className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                    </>
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center bg-neutral-800 text-neutral-400 text-3xl">
+                      <span className="font-bold">Sin imagen</span>
+                    </div>
+                  )}
+                  {/* Badge de descuento */}
+                  <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20 transform transition-transform duration-300 group-hover:scale-110">
+                    {Math.round((1 - pack.price / pack.originalPrice) * 100)}% OFF
                   </div>
-                )}
-                {/* Título */}
-                <h2 className="text-2xl font-bold text-white mb-1 leading-tight">{pack.name}</h2>
-                {/* Descripción */}
-                <p className="text-sm text-neutral-400 mb-2">{pack.description}</p>
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {pack.courses.map((course) => (
-                    <span
-                      key={course._id}
-                      className="px-3 py-1 bg-neutral-200 text-neutral-700 text-xs rounded-full font-medium border border-neutral-300"
+                </div>
+
+                {/* Contenido */}
+                <div className="p-6 flex flex-col gap-4 flex-grow">
+                  {/* Título con línea decorativa */}
+                  <div className="relative">
+                    <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors duration-300">{pack.name}</h2>
+                    <div className="h-0.5 w-16 bg-green-500 transform origin-left transition-all duration-300 group-hover:w-full"></div>
+                  </div>
+
+                  {/* Descripción */}
+                  <p className="text-sm text-neutral-400 flex-grow">{pack.description}</p>
+
+                  {/* Cursos incluidos con iconos */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-neutral-300 mb-2">Cursos incluidos:</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {pack.courses.map((course) => (
+                        <span
+                          key={course._id}
+                          className="px-3 py-1.5 bg-neutral-800 text-neutral-300 text-xs rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50"
+                        >
+                          {course.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Precios con animación */}
+                  <div className="flex items-center gap-3 my-4">
+                    <span className="text-2xl font-bold text-green-500 transition-all duration-300 group-hover:scale-110">${pack.price / 100}</span>
+                    <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
+                  </div>
+
+                  {/* Botones con mejores animaciones */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      className="col-span-2 px-4 py-3 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5"
+                      onClick={() => handleBuyPack(pack._id)}
+                      disabled={buyingPackId === pack._id}
                     >
-                      {course.title}
-                    </span>
-                  ))}
-                </div>
-                {/* Precios */}
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-xl font-bold text-green-500">${pack.price / 100}</span>
-                  <span className="text-base line-through text-neutral-400">${pack.originalPrice / 100}</span>
-                </div>
-                {/* Botones */}
-                <div className="flex gap-3 mt-auto">
-                  <button
-                    className="flex-1 px-4 py-2 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm disabled:opacity-60"
-                    onClick={() => handleBuyPack(pack._id)}
-                    disabled={buyingPackId === pack._id}
-                  >
-                    {buyingPackId === pack._id ? 'Procesando...' : 'Comprar pack'}
-                  </button>
-                  <a
-                    href={`/compra/transferencia/${pack._id}`}
-                    className="flex-1 px-4 py-2 rounded-full border border-blue-500 text-blue-500 bg-transparent font-semibold transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/30 shadow-sm text-sm text-center flex items-center justify-center"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Pagar por transferencia
-                  </a>
-                  <button
-                    className="flex-1 px-4 py-2 rounded-full border border-green-500 text-green-500 bg-transparent font-semibold transition-all duration-200 hover:bg-green-50 hover:text-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/30 shadow-sm text-sm"
-                    onClick={() => setSelectedPack(pack)}
-                  >
-                    Ver detalles
-                  </button>
+                      {buyingPackId === pack._id ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Procesando...
+                        </span>
+                      ) : (
+                        'Comprar pack'
+                      )}
+                    </button>
+                    <a
+                      href={`/compra/transferencia/${pack._id}`}
+                      className="px-4 py-3 rounded-xl border-2 border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 text-center transform hover:-translate-y-0.5"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Transferencia
+                    </a>
+                    <button
+                      className="px-4 py-3 rounded-xl border-2 border-green-500/50 text-green-400 bg-transparent font-semibold transition-all duration-300 hover:bg-green-500/10 focus:outline-none focus:ring-2 focus:ring-green-400/30 transform hover:-translate-y-0.5"
+                      onClick={() => setSelectedPack(pack)}
+                    >
+                      Ver detalles
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -186,52 +219,98 @@ export default function PacksPage() {
         )}
       </div>
 
-      {/* Modal de detalles */}
+      {/* Modal mejorado */}
       {selectedPack && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 transition-all duration-300">
-          <div className="bg-neutral-900 rounded-2xl shadow-2xl p-10 max-w-lg w-full relative animate-fadeIn border border-neutral-800">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm transition-all duration-300"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedPack(null);
+          }}
+        >
+          <div className="bg-neutral-900 rounded-2xl shadow-2xl p-8 max-w-lg w-full relative animate-fadeIn border border-neutral-800 transform transition-all duration-300 hover:border-green-500/20">
             <button
-              className="absolute top-4 right-4 text-neutral-400 hover:text-white text-3xl transition-colors duration-200"
+              className="absolute -top-4 -right-4 w-8 h-8 bg-neutral-800 text-neutral-400 rounded-full hover:bg-green-500 hover:text-white transition-all duration-300"
               onClick={() => setSelectedPack(null)}
               aria-label="Cerrar"
-              style={{ fontFamily: 'Inter, sans-serif' }}
             >
-              &times;
+              ×
             </button>
-            {selectedPack.imageUrl ? (
-              <img src={selectedPack.imageUrl} alt={selectedPack.name} className="w-full h-44 object-cover rounded-lg mb-6 border border-neutral-800" />
-            ) : (
-              <div className="w-full h-44 flex items-center justify-center bg-neutral-100 border-2 border-dashed border-neutral-300 rounded-lg text-neutral-400 text-2xl mb-6">
-                <span className="font-bold">Sin imagen</span>
+            
+            <div className="relative overflow-hidden rounded-xl mb-6">
+              <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
+              {selectedPack.imageUrl ? (
+                <img 
+                  src={selectedPack.imageUrl} 
+                  alt={selectedPack.name} 
+                  className="w-full h-56 object-cover transition-transform duration-500 hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-56 flex items-center justify-center bg-neutral-800 text-neutral-400 text-2xl">
+                  <span className="font-bold">Sin imagen</span>
+                </div>
+              )}
+              {/* Badge de descuento */}
+              <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
+                {Math.round((1 - selectedPack.price / selectedPack.originalPrice) * 100)}% OFF
               </div>
-            )}
-            <h2 className="text-3xl font-bold text-white mb-2 tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPack.name}</h2>
-            <p className="text-neutral-300 mb-6 text-base" style={{ fontFamily: 'Inter, sans-serif' }}>{selectedPack.description}</p>
+            </div>
+
+            <div className="relative mb-6">
+              <h2 className="text-3xl font-bold text-white mb-2">{selectedPack.name}</h2>
+              <div className="h-0.5 w-16 bg-green-500 transition-all duration-300 hover:w-32"></div>
+            </div>
+
+            <p className="text-neutral-300 mb-6 text-base leading-relaxed">{selectedPack.description}</p>
+
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-white mb-3" style={{ fontFamily: 'Inter, sans-serif' }}>Cursos incluidos</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-lg font-semibold text-white mb-3">Cursos incluidos</h3>
+              <div className="grid grid-cols-2 gap-2">
                 {selectedPack.courses.map((course) => (
                   <span
                     key={course._id}
-                    className="px-3 py-1 bg-neutral-200 text-neutral-700 text-xs rounded-full font-medium border border-neutral-300"
+                    className="px-3 py-2 bg-neutral-800 text-neutral-300 text-sm rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50"
                   >
                     {course.title}
                   </span>
                 ))}
               </div>
             </div>
+
             <div className="flex items-center gap-4 mb-8">
-              <span className="text-3xl font-bold text-green-500 tracking-tight" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.price / 100}</span>
-              <span className="text-base line-through text-neutral-400" style={{ fontFamily: 'Inter, sans-serif' }}>${selectedPack.originalPrice / 100}</span>
+              <span className="text-4xl font-bold text-green-500">${selectedPack.price / 100}</span>
+              <span className="text-xl line-through text-neutral-500">${selectedPack.originalPrice / 100}</span>
+              <span className="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-sm font-semibold">
+                Ahorrás ${(selectedPack.originalPrice - selectedPack.price) / 100}
+              </span>
             </div>
-            <button
-              className="w-full px-6 py-3 rounded-full bg-green-500 text-white font-semibold transition-all duration-200 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400/50 shadow-sm text-sm"
-              onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
-              disabled={buyingPackId === selectedPack?._id}
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
-              {buyingPackId === selectedPack?._id ? 'Procesando...' : 'Comprar pack'}
-            </button>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                className="col-span-2 px-6 py-4 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5"
+                onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
+                disabled={buyingPackId === selectedPack?._id}
+              >
+                {buyingPackId === selectedPack?._id ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Procesando...
+                  </span>
+                ) : (
+                  'Comprar pack'
+                )}
+              </button>
+              <a
+                href={`/compra/transferencia/${selectedPack._id}`}
+                className="px-4 py-3 rounded-xl border-2 border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 text-center transform hover:-translate-y-0.5"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Pagar por transferencia
+              </a>
+            </div>
           </div>
         </div>
       )}
