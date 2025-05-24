@@ -14,6 +14,57 @@ export async function GET(request, context) {
   return NextResponse.json(pack);
 }
 
+export async function PATCH(request, context) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    // Verificar si el usuario está autenticado y es admin
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+    
+    await connectToDatabase();
+    
+    // Verificar si el usuario es admin
+    if (session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'No tienes permisos para modificar packs' },
+        { status: 403 }
+      );
+    }
+    
+    const packId = context.params.id;
+    const pack = await Pack.findById(packId);
+    
+    if (!pack) {
+      return NextResponse.json(
+        { error: 'Pack no encontrado' },
+        { status: 404 }
+      );
+    }
+    
+    const data = await request.json();
+    
+    // Actualizar el estado active del pack
+    pack.active = data.active;
+    await pack.save();
+    
+    return NextResponse.json({
+      message: `Pack ${data.active ? 'activado' : 'desactivado'} correctamente`,
+      pack
+    });
+  } catch (error) {
+    console.error('Error al modificar el pack:', error);
+    return NextResponse.json(
+      { error: 'Error al modificar el pack' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request, context) {
   try {
     const session = await getServerSession(authOptions);

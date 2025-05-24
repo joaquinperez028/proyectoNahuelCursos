@@ -8,7 +8,20 @@ import Course from '@/models/Course';
 export async function GET() {
   try {
     await connectToDatabase();
-    const packs = await Pack.find().populate('courses', 'title price thumbnailUrl').lean();
+    const session = await getServerSession(authOptions);
+    
+    // Si es admin, devolver todos los packs
+    if (session?.user?.role === 'admin') {
+      const packs = await Pack.find()
+        .populate('courses', 'title price thumbnailUrl')
+        .lean();
+      return NextResponse.json(packs);
+    }
+    
+    // Si no es admin, solo devolver packs activos
+    const packs = await Pack.find({ active: true })
+      .populate('courses', 'title price thumbnailUrl')
+      .lean();
     return NextResponse.json(packs);
   } catch (error) {
     return NextResponse.json({ error: 'Error al obtener packs' }, { status: 500 });
