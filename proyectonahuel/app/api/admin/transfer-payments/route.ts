@@ -7,6 +7,7 @@ import User from '@/models/User';
 import Course from '@/models/Course';
 import Progress from '@/models/Progress';
 import { sendEmail } from '@/lib/email';
+import Pack from '@/models/Pack';
 
 // Función para convertir ObjectId de MongoDB a string de forma segura
 function safeToString(value: any): string {
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
 
     // Procesar según la acción
     if (action === 'approve') {
-      console.log(`[TRANSFER] Aprobando pago ID: ${payment._id} para curso: ${payment.courseId} y usuario: ${payment.userId}`);
+      console.log(`[TRANSFER] Aprobando pago ID: ${payment._id}`);
       
       try {
         // Actualizar estado del pago
@@ -159,20 +160,34 @@ export async function POST(request: Request) {
         await payment.save();
         console.log(`[TRANSFER] Estado del pago actualizado a: ${payment.status}`);
         
-        // Dar acceso al curso
-        const accessResult = await processCourseAccess(payment.courseId, payment.userId, payment._id, true);
+        // Dar acceso al curso o pack
+        const accessResult = await processCourseAccess(
+          payment.courseId || null,
+          payment.userId,
+          payment._id,
+          true,
+          payment.packId
+        );
         console.log(`[TRANSFER] Resultado de conceder acceso: ${accessResult ? 'Éxito' : 'Fallo'}`);
 
         // Enviar correo de confirmación
         try {
           const user = await User.findById(payment.userId);
-          const course = await Course.findById(payment.courseId);
-          
-          if (user && user.email && course) {
-            console.log(`[TRANSFER] Enviando correo de confirmación a: ${user.email} para curso: ${course.title}`);
-            await sendConfirmationEmail(user.email, user.name, course.title);
+          let itemTitle = '';
+
+          if (payment.packId) {
+            const pack = await Pack.findById(payment.packId);
+            itemTitle = pack ? `Pack: ${pack.name}` : 'Pack desconocido';
           } else {
-            console.log(`[TRANSFER] No se pudo enviar correo - Usuario o curso no encontrado: userId=${payment.userId}, courseId=${payment.courseId}`);
+            const course = await Course.findById(payment.courseId);
+            itemTitle = course ? course.title : 'Curso desconocido';
+          }
+          
+          if (user && user.email) {
+            console.log(`[TRANSFER] Enviando correo de confirmación a: ${user.email} para: ${itemTitle}`);
+            await sendConfirmationEmail(user.email, user.name || 'Usuario', itemTitle);
+          } else {
+            console.log(`[TRANSFER] No se pudo enviar correo - Usuario no encontrado: userId=${payment.userId}`);
           }
         } catch (emailError) {
           console.error('[TRANSFER] Error al enviar correo de confirmación:', emailError);
@@ -225,45 +240,82 @@ export async function POST(request: Request) {
 }
 
 // Función para procesar el acceso al curso
-async function processCourseAccess(courseId: string, userId: string, paymentId: string, grantAccess: boolean) {
+async function processCourseAccess(courseId: string | null, userId: string, paymentId: string, grantAccess: boolean, packId?: string) {
   try {
     if (grantAccess) {
-      console.log(`[ACCESS] Otorgando acceso al curso ${courseId} para el usuario ${userId}`);
-      
-      // Verificamos si ya existe un progreso para este usuario y curso
-      const existingProgress = await Progress.findOne({
-        courseId,
-        userId
-      });
+      if (packId) {
+        // Si es un pack, obtener todos los cursos del pack
+        const pack = await Pack.findById(packId).populate('courses');
+        if (!pack) {
+          console.error(`[ACCESS] Pack ${packId} no encontrado`);
+          return false;
+        }
 
-      // Si no existe, creamos uno nuevo
-      if (!existingProgress) {
-        console.log(`[ACCESS] Creando nuevo registro de progreso para curso ${courseId} y usuario ${userId}`);
-        
-        // Crear el registro de acuerdo con el esquema del modelo
-        const newProgress = new Progress({
+        // Procesar cada curso del pack
+        for (const course of pack.courses) {
+          // Verificar si ya existe un progreso para este curso y usuario
+          const existingProgress = await Progress.findOne({
+            courseId: course._id,
+            userId
+          });
+
+          // Si no existe, creamos uno nuevo
+          if (!existingProgress) {
+            console.log(`[ACCESS] Creando nuevo registro de progreso para curso ${course._id} y usuario ${userId}`);
+            
+            const newProgress = new Progress({
+              courseId: course._id,
+              userId,
+              totalProgress: 0,
+              isCompleted: false,
+              completedAt: null,
+              certificateIssued: false,
+              videoProgress: []
+            });
+            
+            await newProgress.save();
+          }
+
+          // Actualizar el array de cursos del usuario
+          await User.findByIdAndUpdate(
+            userId,
+            { $addToSet: { courses: course._id } },
+            { new: true }
+          );
+        }
+      } else if (courseId) {
+        // Si es un curso individual
+        const existingProgress = await Progress.findOne({
           courseId,
-          userId,
-          totalProgress: 0,
-          isCompleted: false,
-          completedAt: null,
-          certificateIssued: false,
-          videoProgress: []
+          userId
         });
-        
-        await newProgress.save();
-        console.log(`[ACCESS] Registro de progreso creado correctamente con ID: ${newProgress._id}`);
-      } else {
-        console.log(`[ACCESS] El usuario ya tiene acceso al curso. ID de progreso: ${existingProgress._id}`);
+
+        // Si no existe, creamos uno nuevo
+        if (!existingProgress) {
+          console.log(`[ACCESS] Creando nuevo registro de progreso para curso ${courseId} y usuario ${userId}`);
+          
+          const newProgress = new Progress({
+            courseId,
+            userId,
+            totalProgress: 0,
+            isCompleted: false,
+            completedAt: null,
+            certificateIssued: false,
+            videoProgress: []
+          });
+          
+          await newProgress.save();
+        }
+
+        // Actualizar el array de cursos del usuario
+        await User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { courses: courseId } },
+          { new: true }
+        );
       }
-      // Actualizar el array de cursos del usuario
-      await User.findByIdAndUpdate(
-        userId,
-        { $addToSet: { courses: courseId } },
-        { new: true }
-      );
-      console.log(`[ACCESS] Array de cursos del usuario actualizado`);
-      // Actualizamos el estado del pago usando directamente el ID del pago
+
+      // Actualizar el estado del pago
       const payment = await Payment.findById(paymentId);
       if (payment) {
         payment.paymentDetails = {
@@ -272,9 +324,6 @@ async function processCourseAccess(courseId: string, userId: string, paymentId: 
           accessGrantedAt: new Date()
         };
         await payment.save();
-        console.log(`[ACCESS] Detalles de pago actualizados para ID: ${payment._id}`);
-      } else {
-        console.log(`[ACCESS] No se encontró el pago con ID ${paymentId} para actualizar detalles`);
       }
       
       return true;
