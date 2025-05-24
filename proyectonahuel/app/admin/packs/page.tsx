@@ -73,42 +73,44 @@ export default function AdminPacksPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {packs.map((pack) => (
                   <tr key={pack._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="flex items-center">
                         {pack.imageUrl && (
-                          <img src={pack.imageUrl} alt={pack.name} className="h-12 w-20 object-cover rounded mr-3" />
+                          <img
+                            className="h-10 w-10 rounded-lg object-cover mr-3"
+                            src={pack.imageUrl}
+                            alt={pack.name}
+                          />
                         )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">{pack.name}</div>
-                          <div className="text-xs text-gray-500 truncate max-w-xs">{pack.description}</div>
+                          <div className="text-sm text-gray-500">{pack.description}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <ul className="text-xs text-gray-700 list-disc pl-4">
-                        {pack.courses.map((c) => (
-                          <li key={c._id}>{c.title}</li>
-                        ))}
-                      </ul>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {pack.courses.map(course => course.title).join(", ")}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-bold">${(pack.price / 100).toFixed(2)}</div>
-                      <div className="text-xs line-through text-gray-400">${(pack.originalPrice / 100).toFixed(2)}</div>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">${pack.price / 100}</div>
+                      <div className="text-sm text-gray-500 line-through">${pack.originalPrice / 100}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex space-x-2">
-                        <Link
-                          href={`/admin/packs/editar/${pack._id}`}
+                        <Link 
+                          href={`/admin/packs/editar/${pack._id}`} 
                           className="text-indigo-600 hover:text-indigo-900 text-sm"
                         >
                           Editar
                         </Link>
-                        <button
+                        <Link 
+                          href={`/admin/packs/eliminar/${pack._id}`} 
                           className="text-red-600 hover:text-red-900 text-sm"
-                          onClick={() => setPacks(packs.filter((p) => p._id !== pack._id))}
                         >
                           Eliminar
-                        </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
