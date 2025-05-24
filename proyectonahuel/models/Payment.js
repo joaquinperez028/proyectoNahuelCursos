@@ -9,7 +9,16 @@ const PaymentSchema = new mongoose.Schema({
   courseId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
-    required: true
+    required: function() {
+      return !this.packId; // courseId es requerido solo si no hay packId
+    }
+  },
+  packId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Pack',
+    required: function() {
+      return !this.courseId; // packId es requerido solo si no hay courseId
+    }
   },
   amount: {
     type: Number,
@@ -58,6 +67,7 @@ const PaymentSchema = new mongoose.Schema({
 // Índices para mejorar el rendimiento de las consultas frecuentes
 PaymentSchema.index({ userId: 1 });
 PaymentSchema.index({ courseId: 1 });
+PaymentSchema.index({ packId: 1 });
 PaymentSchema.index({ status: 1 });
 PaymentSchema.index({ paymentDate: 1 });
 PaymentSchema.index({ paymentMethod: 1 });
