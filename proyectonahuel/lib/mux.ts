@@ -7,6 +7,11 @@ const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET || 'development_token_secr
 // Cliente MUX (singleton)
 let muxClient: any = null;
 
+// Estados válidos para un asset
+const READY_STATES = ['ready', 'preparing'];
+const MAX_CHECK_ATTEMPTS = 10;
+const CHECK_INTERVAL = 3000; // 3 segundos
+
 /**
  * Obtiene una instancia del cliente MUX
  */
@@ -23,8 +28,13 @@ function getMuxClient() {
           Assets: {
             create: async () => ({ 
               id: 'dev_asset_id', 
-              playback_ids: [{ id: 'dev_playback_id' }] 
+              playback_ids: [{ id: 'dev_playback_id' }],
+              status: 'ready'
             }),
+            get: async () => ({
+              status: 'ready',
+              playback_ids: [{ id: 'dev_playback_id', policy: 'public' }]
+            })
           }
         }
       };
@@ -32,6 +42,39 @@ function getMuxClient() {
   }
   return muxClient;
 }
+
+/**
+ * Espera a que un asset esté listo
+ */
+const waitForAssetReady = async (assetId: string): Promise<boolean> => {
+  const client = getMuxClient();
+  let attempts = 0;
+
+  while (attempts < MAX_CHECK_ATTEMPTS) {
+    try {
+      const asset = await client.Video.Assets.get(assetId);
+      console.log(`Estado del asset ${assetId}:`, asset.status);
+      
+      if (READY_STATES.includes(asset.status)) {
+        return true;
+      }
+      
+      if (asset.status === 'errored') {
+        console.error('El asset ha fallado:', asset.errors);
+        return false;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, CHECK_INTERVAL));
+      attempts++;
+    } catch (error) {
+      console.error('Error al verificar estado del asset:', error);
+      return false;
+    }
+  }
+  
+  console.error('Tiempo de espera agotado para el asset:', assetId);
+  return false;
+};
 
 /**
  * Crea un asset en MUX desde una URL
@@ -44,34 +87,45 @@ export const createMuxAsset = async (videoUrl: string) => {
       return {
         assetId: 'dev_asset_id',
         playbackId: 'dev_playback_id',
+        ready: true
       };
     }
     
     // Obtener cliente
     const client = getMuxClient();
     
-    // Crear asset siempre con política pública para evitar problemas de reproducción
+    // Crear asset con política pública
     const asset = await client.Video.Assets.create({
       input: [{ url: videoUrl }],
       playback_policy: ['public'],
+      test: false
     });
     
     console.log('Asset creado en MUX:', {
       id: asset.id,
       playbackId: asset.playback_ids?.[0]?.id,
-      policy: asset.playback_ids?.[0]?.policy
+      policy: asset.playback_ids?.[0]?.policy,
+      status: asset.status
     });
+
+    // Esperar a que el asset esté listo
+    const isReady = await waitForAssetReady(asset.id);
+    
+    if (!isReady) {
+      throw new Error('El asset no pudo ser procesado correctamente');
+    }
+    
+    // Obtener el asset actualizado para asegurarnos de tener la información más reciente
+    const readyAsset = await client.Video.Assets.get(asset.id);
     
     return {
-      assetId: asset.id,
-      playbackId: asset.playback_ids?.[0]?.id,
+      assetId: readyAsset.id,
+      playbackId: readyAsset.playback_ids?.[0]?.id,
+      ready: true
     };
   } catch (error) {
     console.error('Error al crear el asset en MUX:', error);
-    return {
-      assetId: 'error_asset_id',
-      playbackId: 'error_playback_id',
-    };
+    throw error;
   }
 };
 

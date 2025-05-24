@@ -1,119 +1,101 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import Mux from '@mux/mux-node';
 
-// Definir los tipos de estado de MUX
-type MuxUploadStatus = 'waiting' | 'asset_created' | 'errored' | 'cancelled' | 'timed_out' | 'processing' | 'ready';
+// Credenciales
+const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID || 'development_token_id';
+const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET || 'development_token_secret';
+
+// Cliente MUX (singleton)
+let muxClient: any = null;
+
+function getMuxClient() {
+  if (!muxClient) {
+    muxClient = new Mux(MUX_TOKEN_ID, MUX_TOKEN_SECRET);
+  }
+  return muxClient;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Verificar si el usuario está autenticado y es admin
-    if (!session?.user?.email || session.user.role !== 'admin') {
+    // Verificar si el usuario está autenticado
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    // Obtener el ID del asset de la query
+    // Obtener el ID del playback de la query
     const { searchParams } = new URL(request.url);
-    const uploadId = searchParams.get('uploadId');
+    const playbackId = searchParams.get('playbackId');
     
-    if (!uploadId) {
+    if (!playbackId) {
       return NextResponse.json(
-        { error: 'ID de carga no proporcionado' },
+        { error: 'ID de playback no proporcionado' },
         { status: 400 }
       );
     }
 
-    // Inicializar cliente MUX
-    const muxClient = new Mux(
-      process.env.MUX_TOKEN_ID || '',
-      process.env.MUX_TOKEN_SECRET || ''
-    );
+    // En modo desarrollo, simular respuesta
+    if (process.env.NODE_ENV === 'development' && !process.env.MUX_TOKEN_ID) {
+      return NextResponse.json({
+        status: 'ready',
+        playback_policy: 'public',
+        created_at: new Date().toISOString(),
+        duration: 120,
+        aspect_ratio: '16:9',
+        playback_id: playbackId
+      });
+    }
 
     try {
-      // Obtener el estado de la carga
-      const upload = await muxClient.Video.Uploads.get(uploadId);
+      const client = getMuxClient();
       
-      // Si hay un error en la carga, devolverlo
-      if (upload.error) {
-        return NextResponse.json({
-          success: false,
-          error: `Error en la carga: ${upload.error.message || 'Error desconocido'}`,
-          status: upload.status
-        });
-      }
-      
-      // Si el asset está listo, obtenemos sus detalles
-      let asset = null;
-      let playbackId = null;
-      
-      if (upload.asset_id) {
-        try {
-          asset = await muxClient.Video.Assets.get(upload.asset_id);
-          if (asset && asset.playback_ids && asset.playback_ids.length > 0) {
-            playbackId = asset.playback_ids[0].id;
-          }
-        } catch (assetError) {
-          console.error('Error al obtener detalles del asset:', assetError);
-          // No fallamos aquí, solo registramos el error y continuamos
-        }
-      }
-
-      // Calcular el progreso estimado basado en el estado
-      let progress = 0;
-      switch (upload.status as MuxUploadStatus) {
-        case 'waiting':
-          progress = 40;
-          break;
-        case 'processing':
-          progress = 70;
-          break;
-        case 'ready':
-        case 'asset_created':
-          progress = playbackId ? 100 : 90;
-          break;
-        case 'errored':
-        case 'cancelled':
-        case 'timed_out':
-          return NextResponse.json({
-            success: false,
-            error: 'Error en el procesamiento del video',
-            status: upload.status
-          });
-      }
-
-      // Devolver el estado actual
-      return NextResponse.json({
-        success: true,
-        uploadId: upload.id,
-        status: upload.status,
-        progress,
-        assetId: upload.asset_id,
-        playbackId,
-        error: null,
+      // Buscar el asset por playback ID
+      const assets = await client.Video.Assets.list({
+        playback_id: playbackId
       });
-    } catch (muxError) {
-      console.error("Error al comunicarse con MUX:", muxError);
+
+      if (!assets.length) {
+        return NextResponse.json(
+          { error: 'Asset no encontrado', status: 'not_found' },
+          { status: 404 }
+        );
+      }
+
+      const asset = assets[0];
+      
+      // Devolver información detallada del asset
+      return NextResponse.json({
+        status: asset.status,
+        playback_policy: asset.playback_ids?.[0]?.policy,
+        created_at: asset.created_at,
+        duration: asset.duration,
+        aspect_ratio: asset.aspect_ratio,
+        playback_id: playbackId,
+        errors: asset.errors || [],
+        tracks: asset.tracks || [],
+        test: asset.test === true
+      });
+    } catch (muxError: any) {
+      console.error('Error al consultar MUX:', muxError);
       return NextResponse.json(
         { 
-          error: "Error al comunicarse con el servicio de video",
-          details: muxError instanceof Error ? muxError.message : "Error desconocido"
+          error: 'Error al consultar estado del asset',
+          details: muxError.message,
+          status: 'error'
         },
-        { status: 503 }
+        { status: 500 }
       );
     }
-  } catch (error) {
-    console.error("Error al verificar estado de carga:", error);
+  } catch (error: any) {
+    console.error('Error general:', error);
     return NextResponse.json(
-      { 
-        error: "Error al verificar el estado de la carga",
-        details: error instanceof Error ? error.message : "Error desconocido"
-      },
+      { error: 'Error interno del servidor', details: error.message },
       { status: 500 }
     );
   }

@@ -234,26 +234,44 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   const handleError = async (event: any) => {
     console.error('Error en el reproductor MUX:', event);
     const errorDetails = event.detail?.sourceError?.message || 'Error desconocido';
-    setDebugInfo(`PlaybackID: ${playbackId} | Error: ${errorDetails}`);
+    const errorType = event.detail?.sourceError?.type || '';
+    setDebugInfo(`PlaybackID: ${playbackId} | Error: ${errorDetails} | Tipo: ${errorType}`);
 
     // Si el error es de token o acceso, intentar recargar con token nuevo
-    if (errorDetails.includes('not currently active') && retryCount < MAX_RETRIES) {
-      setRetryCount(prev => prev + 1);
-      try {
-        // Esperar un momento antes de reintentar
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Intentar recargar el reproductor
-        if (playerRef.current) {
-          playerRef.current.load();
+    if (errorDetails.includes('not currently active') || errorDetails.includes('not ready') || errorType === 'MediaError') {
+      if (retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        try {
+          // Esperar un momento antes de reintentar
+          await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1))); // Incrementar el tiempo de espera con cada intento
+          
+          // Verificar estado del asset antes de reintentar
+          try {
+            const response = await fetch(`/api/mux-asset-status?playbackId=${playbackId}`);
+            const data = await response.json();
+            
+            if (data.status === 'ready') {
+              // Intentar recargar el reproductor
+              if (playerRef.current) {
+                playerRef.current.load();
+              }
+              return;
+            } else {
+              throw new Error(`Asset no está listo. Estado: ${data.status}`);
+            }
+          } catch (statusError) {
+            console.error('Error al verificar estado del asset:', statusError);
+            setError('El video no está disponible en este momento. Por favor, intente más tarde.');
+          }
+        } catch (retryError) {
+          console.error('Error al reintentar reproducción:', retryError);
         }
-        return;
-      } catch (retryError) {
-        console.error('Error al reintentar reproducción:', retryError);
+      } else {
+        setError('El video no está disponible en este momento. Por favor, intente más tarde.');
       }
+    } else {
+      setError('Error al cargar el video. Intente con opciones alternativas.');
     }
-
-    setError('Error al cargar el video. Intente con opciones alternativas.');
   };
   
   // Cambiar al reproductor de respaldo
