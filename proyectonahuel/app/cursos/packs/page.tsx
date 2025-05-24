@@ -178,35 +178,58 @@ export default function PacksPage() {
                     <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
                   </div>
 
-                  {/* Botones con mejores animaciones */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Botones con nueva organización */}
+                  <div className="flex flex-col gap-3">
+                    <div className="relative group/menu">
+                      <button
+                        className="w-full px-4 py-3 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                      >
+                        <span>Comprar pack</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-transform duration-300 group-hover/menu:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      
+                      {/* Menú desplegable */}
+                      <div className="absolute z-10 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
+                        <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 overflow-hidden">
+                          <button
+                            onClick={() => handleBuyPack(pack._id)}
+                            disabled={buyingPackId === pack._id}
+                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            {buyingPackId === pack._id ? (
+                              <span className="flex items-center gap-2">
+                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Procesando...
+                              </span>
+                            ) : (
+                              <span>Pagar con Mercado Pago</span>
+                            )}
+                          </button>
+                          <a
+                            href={`/compra/transferencia/${pack._id}`}
+                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            Pagar por transferencia
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <button
-                      className="col-span-2 px-4 py-3 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5"
-                      onClick={() => handleBuyPack(pack._id)}
-                      disabled={buyingPackId === pack._id}
-                    >
-                      {buyingPackId === pack._id ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Procesando...
-                        </span>
-                      ) : (
-                        'Comprar pack'
-                      )}
-                    </button>
-                    <a
-                      href={`/compra/transferencia/${pack._id}`}
-                      className="px-4 py-3 rounded-xl border-2 border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 text-center transform hover:-translate-y-0.5"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Transferencia
-                    </a>
-                    <button
-                      className="px-4 py-3 rounded-xl border-2 border-green-500/50 text-green-400 bg-transparent font-semibold transition-all duration-300 hover:bg-green-500/10 focus:outline-none focus:ring-2 focus:ring-green-400/30 transform hover:-translate-y-0.5"
+                      className="w-full px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 transform hover:-translate-y-0.5"
                       onClick={() => setSelectedPack(pack)}
                     >
                       Ver detalles
@@ -284,32 +307,54 @@ export default function PacksPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                className="col-span-2 px-6 py-4 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5"
-                onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
-                disabled={buyingPackId === selectedPack?._id}
-              >
-                {buyingPackId === selectedPack?._id ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Procesando...
-                  </span>
-                ) : (
-                  'Comprar pack'
-                )}
-              </button>
-              <a
-                href={`/compra/transferencia/${selectedPack._id}`}
-                className="px-4 py-3 rounded-xl border-2 border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 text-center transform hover:-translate-y-0.5"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Pagar por transferencia
-              </a>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="relative group/menu">
+                <button
+                  className="w-full px-6 py-4 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                >
+                  <span>Comprar pack</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transition-transform duration-300 group-hover/menu:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {/* Menú desplegable en el modal */}
+                <div className="absolute z-10 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
+                  <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 overflow-hidden">
+                    <button
+                      onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
+                      disabled={buyingPackId === selectedPack?._id}
+                      className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      {buyingPackId === selectedPack?._id ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Procesando...
+                        </span>
+                      ) : (
+                        <span>Pagar con Mercado Pago</span>
+                      )}
+                    </button>
+                    <a
+                      href={`/compra/transferencia/${selectedPack._id}`}
+                      className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                      Pagar por transferencia
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
