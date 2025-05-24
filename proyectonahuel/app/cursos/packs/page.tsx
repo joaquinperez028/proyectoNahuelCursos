@@ -30,6 +30,7 @@ interface PackType {
   originalPrice: number;
   courses: { _id: string; title: string; thumbnailUrl?: string }[];
   imageUrl?: string;
+  active: boolean;
 }
 
 // Componente Skeleton simple
@@ -117,7 +118,7 @@ export default function PacksPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {packs.map((pack) => (
+            {packs.filter(pack => pack.active).map((pack) => (
               <div
                 key={pack._id}
                 className="flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg p-7 sm:p-8 gap-6 transition-shadow duration-300 hover:shadow-2xl font-sans"
