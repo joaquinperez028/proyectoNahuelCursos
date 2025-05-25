@@ -192,14 +192,14 @@ export default function PacksPage() {
                       </button>
                       
                       {/* Menú desplegable con posición absoluta ajustada */}
-                      <div className="fixed z-50 mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300" style={{ width: 'calc(100% - 2rem)', left: '1rem' }}>
-                        <div className="bg-neutral-800 rounded-xl shadow-xl border border-neutral-700 overflow-hidden backdrop-blur-lg backdrop-filter">
+                      <div className="absolute z-50 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300" style={{ transform: 'translateY(0)', perspective: '1000px' }}>
+                        <div className="bg-neutral-800/95 backdrop-blur-md rounded-xl shadow-xl border border-neutral-700 overflow-hidden">
                           <button
                             onClick={() => handleBuyPack(pack._id)}
                             disabled={buyingPackId === pack._id}
-                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700/90 transition-colors duration-200 flex items-center gap-3"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                             </svg>
                             {buyingPackId === pack._id ? (
@@ -216,11 +216,11 @@ export default function PacksPage() {
                           </button>
                           <a
                             href={`/compra/transferencia/${pack._id}`}
-                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700 transition-colors duration-200 flex items-center gap-3"
+                            className="w-full px-4 py-3 text-left text-neutral-200 hover:bg-neutral-700/90 transition-colors duration-200 flex items-center gap-3"
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                             </svg>
                             Pagar por transferencia
