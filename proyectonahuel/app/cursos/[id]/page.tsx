@@ -118,7 +118,7 @@ async function getUserHasCourse(courseId: string): Promise<boolean> {
       id && typeof id.toString === 'function' && id.toString() === courseId
     );
   } catch (error) {
-    console.error('Error al verificar si el usuario tiene el curso::', error);
+    console.error('Error al verificar si el usuario tiene el curso:', error);
     return false;
   }
 }
