@@ -78,120 +78,120 @@ export default async function AdminCoursesPage() {
           </h1>
           <Link
             href="/admin/cursos/nuevo"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--neutral-900)] font-semibold shadow hover:bg-[var(--accent-dark)] transition-colors border border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
           >
             + Crear nuevo curso
           </Link>
         </div>
         
         {courses.length === 0 ? (
-          <div className="bg-white shadow overflow-hidden rounded-lg p-10 text-center">
-            <p className="text-gray-500 mb-4">No hay cursos disponibles.</p>
+          <div className="bg-[var(--neutral-900)] shadow-lg rounded-xl p-10 text-center border border-[var(--neutral-800)]">
+            <p className="text-[var(--neutral-400)] mb-4">No hay cursos disponibles.</p>
             <Link
               href="/admin/cursos/nuevo"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent)] text-[var(--neutral-900)] font-semibold shadow hover:bg-[var(--accent-dark)] transition-colors border border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
             >
               Crear el primer curso
             </Link>
           </div>
         ) : (
-          <div className="bg-white shadow overflow-hidden rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="bg-[var(--neutral-950)] shadow-xl rounded-xl border border-[var(--neutral-800)] overflow-x-auto">
+            <table className="min-w-full divide-y divide-[var(--neutral-800)]">
+              <thead className="bg-[var(--neutral-900)]">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[var(--neutral-400)] uppercase tracking-wider">
                     Curso
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[var(--neutral-400)] uppercase tracking-wider">
                     Precio
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[var(--neutral-400)] uppercase tracking-wider">
                     Instructor
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[var(--neutral-400)] uppercase tracking-wider">
                     Estado
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-[var(--neutral-400)] uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-[var(--neutral-950)] divide-y divide-[var(--neutral-800)]">
                 {courses.map((course) => (
                   <tr key={course._id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 relative">
+                        <div className="flex-shrink-0 h-12 w-12 relative">
                           {course.thumbnailUrl ? (
                             <Image
                               src={course.thumbnailUrl}
                               alt={course.title}
                               fill
-                              className="rounded-md object-cover"
+                              className="rounded-md object-cover border border-[var(--neutral-800)] bg-[var(--neutral-900)]"
                             />
                           ) : (
-                            <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center">
-                              <span className="text-gray-500 text-xs">Sin img</span>
+                            <div className="h-12 w-12 bg-[var(--neutral-800)] rounded-md flex items-center justify-center border border-[var(--neutral-700)]">
+                              <span className="text-[var(--neutral-500)] text-xs">Sin img</span>
                             </div>
                           )}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="ml-4 min-w-0">
+                          <div className="text-base font-semibold text-[var(--neutral-100)] truncate max-w-xs">
                             {course.title}
                           </div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
+                          <div className="text-xs text-[var(--neutral-400)] truncate max-w-xs">
                             {course.description}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[var(--neutral-200)]">${course.price.toFixed(2)}</div>
+                      <div className="text-sm text-[var(--neutral-100)] font-medium">${course.price.toFixed(2)}</div>
                       {course.onSale && (
                         <div className="flex items-center mt-1">
-                          <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
-                            {course.discountPercentage}% descuento
+                          <span className="bg-red-900 text-red-200 text-xs px-2 py-0.5 rounded-full">
+                            {course.discountPercentage}% desc.
                           </span>
-                          <span className="text-green-600 text-xs ml-2">
+                          <span className="text-green-400 text-xs ml-2 font-semibold">
                             ${(course.price - (course.price * (course.discountPercentage / 100))).toFixed(2)}
                           </span>
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-[var(--neutral-200)]">{course.createdBy.name}</div>
+                      <div className="text-sm text-[var(--neutral-300)] font-medium">{course.createdBy.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
                         {course.featured && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-900 text-blue-200">
                             Destacado
                           </span>
                         )}
                         {course.onSale && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-900 text-red-200">
                             Oferta
                           </span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2">
                         <Link 
                           href={`/cursos/${course._id}`} 
-                          className="text-blue-600 hover:text-blue-900 text-sm"
+                          className="px-3 py-1 rounded-md bg-[var(--neutral-800)] text-[var(--accent)] text-xs font-semibold hover:bg-[var(--accent)] hover:text-[var(--neutral-950)] border border-[var(--accent)] transition-colors"
                         >
                           Ver
                         </Link>
                         <Link 
                           href={`/admin/cursos/editar/${course._id}`} 
-                          className="text-indigo-600 hover:text-indigo-900 text-sm"
+                          className="px-3 py-1 rounded-md bg-[var(--neutral-800)] text-blue-300 text-xs font-semibold hover:bg-blue-700 hover:text-white border border-blue-700 transition-colors"
                         >
                           Editar
                         </Link>
                         <Link 
                           href={`/admin/cursos/eliminar/${course._id}`} 
-                          className="text-red-600 hover:text-red-900 text-sm"
+                          className="px-3 py-1 rounded-md bg-[var(--neutral-800)] text-red-300 text-xs font-semibold hover:bg-red-800 hover:text-white border border-red-800 transition-colors"
                         >
                           Eliminar
                         </Link>
