@@ -19,6 +19,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   const [retryCount, setRetryCount] = useState(0);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [showCompletionNotification, setShowCompletionNotification] = useState(false);
+  const [muxStatus, setMuxStatus] = useState<'checking' | 'ready' | 'processing' | 'error'>('checking');
   
   // Referencias para control de progreso
   const playerRef = useRef<any>(null);
@@ -43,6 +44,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     setRetryCount(0);
     setVideoCompleted(false);
     setShowCompletionNotification(false);
+    setMuxStatus('checking');
     
     // Limpiar intervalos de seguimiento al desmontar el componente
     return () => {
@@ -224,6 +226,35 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           <p className="text-[var(--error)] font-medium mb-2">Error: No se proporcionó un ID de reproducción válido</p>
+          <p className="text-[var(--neutral-400)] text-sm">Contacta al soporte técnico si este problema persiste.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (muxStatus === 'checking' || muxStatus === 'processing') {
+    return (
+      <div className="aspect-video bg-[var(--neutral-900)] w-full flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <svg className="w-12 h-12 text-[var(--accent)] mx-auto mb-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-[var(--neutral-100)] font-medium mb-2">Procesando video...</p>
+          <p className="text-[var(--neutral-400)] text-sm">El video está siendo procesado por MUX. Por favor, espera unos minutos y recarga la página.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (muxStatus === 'error') {
+    return (
+      <div className="aspect-video bg-[var(--neutral-900)] w-full flex items-center justify-center">
+        <div className="text-center p-6 max-w-md">
+          <svg className="w-12 h-12 text-[var(--error)] mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p className="text-[var(--error)] font-medium mb-2">Error: El video no está disponible o falló el procesamiento en MUX</p>
           <p className="text-[var(--neutral-400)] text-sm">Contacta al soporte técnico si este problema persiste.</p>
         </div>
       </div>

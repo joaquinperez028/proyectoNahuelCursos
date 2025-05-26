@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
     let playbackId = data.playbackId;
     // Si la URL es de MUX y no se pasó playbackId, extraerlo de la URL
     if (!playbackId && typeof data.videoUrl === 'string' && data.videoUrl.includes('stream.mux.com')) {
-      // Extraer el playbackId entre 'stream.mux.com/' y el siguiente '/'
       const match = data.videoUrl.match(/stream\.mux\.com\/([a-zA-Z0-9]+)\./);
       if (match && match[1]) {
         playbackId = match[1];
@@ -83,7 +82,10 @@ export async function POST(request: NextRequest) {
     if (!assetId || !playbackId) {
       const muxAsset = await createMuxAsset(data.videoUrl);
       assetId = muxAsset.assetId;
-      playbackId = muxAsset.playbackId;
+      // Buscar playbackId público
+      playbackId = Array.isArray(muxAsset.playbackIds)
+        ? (muxAsset.playbackIds.find((pb: any) => pb.policy === 'public')?.id || muxAsset.playbackIds[0]?.id)
+        : muxAsset.playbackId;
     }
     if (!assetId || !playbackId) {
       return NextResponse.json(
