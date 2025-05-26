@@ -988,16 +988,24 @@ export default function NewCoursePage() {
     try {
       // Si ya tenemos un playbackId, usamos esa URL
       let finalVideoUrl = videoUrl;
-      
+      let playbackIdToSend = playbackId;
       if (uploadMethod === 'file') {
         if (playbackId) {
           finalVideoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+          playbackIdToSend = playbackId;
         } else {
           const uploadedFileUrl = await uploadFile();
           if (!uploadedFileUrl) {
             throw new Error('Error al subir el archivo de video a MUX');
           }
           finalVideoUrl = uploadedFileUrl;
+        }
+      }
+      // Si el método es por URL y la URL es de MUX, extraer el playbackId
+      if (uploadMethod === 'url' && videoUrl.includes('stream.mux.com')) {
+        const match = videoUrl.match(/stream\.mux\.com\/([a-zA-Z0-9]+)\./);
+        if (match && match[1]) {
+          playbackIdToSend = match[1];
         }
       }
       
@@ -1065,6 +1073,7 @@ export default function NewCoursePage() {
           price: Number(price),
           category,
           videoUrl: finalVideoUrl,
+          playbackId: playbackIdToSend,
           ...introVideoData,
           ...thumbnailData,
           videos: videosData,
