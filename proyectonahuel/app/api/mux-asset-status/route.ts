@@ -29,13 +29,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener el ID del playback de la query
+    // Obtener el ID del upload o playback de la query
     const { searchParams } = new URL(request.url);
+    const uploadId = searchParams.get('uploadId');
     const playbackId = searchParams.get('playbackId');
     
-    if (!playbackId) {
+    if (!uploadId && !playbackId) {
       return NextResponse.json(
-        { error: 'ID de playback no proporcionado' },
+        { error: 'ID de upload o playback no proporcionado' },
         { status: 400 }
       );
     }
@@ -48,17 +49,21 @@ export async function GET(request: NextRequest) {
         created_at: new Date().toISOString(),
         duration: 120,
         aspect_ratio: '16:9',
-        playback_id: playbackId
+        playback_id: playbackId || 'simulado',
+        asset_id: 'asset_simulado'
       });
     }
 
     try {
       const client = getMuxClient();
-      
-      // Buscar el asset por playback ID
-      const assets = await client.Video.Assets.list({
-        playback_id: playbackId
-      });
+      let assets;
+      if (uploadId) {
+        // Buscar por upload_id
+        assets = await client.Video.Assets.list({ upload_id: uploadId });
+      } else {
+        // Buscar por playback_id
+        assets = await client.Video.Assets.list({ playback_id: playbackId });
+      }
 
       if (!assets.length) {
         return NextResponse.json(
@@ -68,15 +73,16 @@ export async function GET(request: NextRequest) {
       }
 
       const asset = assets[0];
-      
+      // Buscar playbackId público
+      const pbId = asset.playback_ids?.find((pb: { id: string; policy: string }) => pb.policy === 'public')?.id || asset.playback_ids?.[0]?.id;
       // Devolver información detallada del asset
       return NextResponse.json({
         status: asset.status,
-        playback_policy: asset.playback_ids?.[0]?.policy,
+        assetId: asset.id,
+        playbackId: pbId,
         created_at: asset.created_at,
         duration: asset.duration,
         aspect_ratio: asset.aspect_ratio,
-        playback_id: playbackId,
         errors: asset.errors || [],
         tracks: asset.tracks || [],
         test: asset.test === true
