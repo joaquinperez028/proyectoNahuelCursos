@@ -37,18 +37,18 @@ const Header = () => {
                 <span className="font-bold text-xl bg-gradient-to-r from-[var(--primary-light)] to-[var(--accent)] bg-clip-text text-transparent group-hover:from-[var(--accent)] group-hover:to-[var(--primary-light)] transition-all duration-300">Plataforma de Cursos</span>
               </Link>
             </div>
-            <nav className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <nav className="hidden sm:ml-6 sm:flex gap-x-8 items-center">
               <Link 
                 href="/cursos" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
               >
-                Todos los cursos
+                Cursos
               </Link>
               <Link 
                 href="/cursos/packs" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
               >
-                Packs de cursos
+                Packs
               </Link>
               <Link 
                 href="/contacto" 
@@ -65,20 +65,16 @@ const Header = () => {
                 </Link>
               )}
               {session?.user.role === 'admin' && (
-                <Link 
-                  href="/admin/cursos" 
-                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
-                >
-                  Administrar cursos
-                </Link>
-              )}
-              {session?.user.role === 'admin' && (
-                <Link 
-                  href="/admin/usuarios" 
-                  className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
-                >
-                  Usuarios
-                </Link>
+                <div className="relative group">
+                  <button className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200">
+                    Admin
+                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
+                    <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
+                    <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                  </div>
+                </div>
               )}
             </nav>
           </div>
@@ -166,14 +162,14 @@ const Header = () => {
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Todos los cursos
+              Cursos
             </Link>
             <Link 
               href="/cursos/packs" 
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Packs de cursos
+              Packs
             </Link>
             <Link 
               href="/contacto" 
@@ -192,52 +188,16 @@ const Header = () => {
               </Link>
             )}
             {session?.user.role === 'admin' && (
-              <>
-                <Link 
-                  href="/admin/cursos" 
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Administrar cursos
-                </Link>
-                <Link 
-                  href="/admin/usuarios" 
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Usuarios
-                </Link>
-                <Link 
-                  href="/admin/transferencias" 
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Transferencias
-                </Link>
-                <Link 
-                  href="/admin/reportes" 
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Reportes
-                </Link>
-                <Link 
-                  href="/admin/actualizar-playback" 
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Actualizar ID Videos
-                </Link>
-              </>
-            )}
-            {session && (
-              <Link 
-                href="/perfil" 
-                className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Mi Perfil
-              </Link>
+              <div className="relative group">
+                <button className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200">
+                  Admin
+                  <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
+                  <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
+                  <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                </div>
+              </div>
             )}
           </div>
           <div className="pt-4 pb-3 border-t border-[var(--border)]">
