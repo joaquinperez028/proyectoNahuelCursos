@@ -285,9 +285,11 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
 
   const studentsCount = await User.countDocuments({ courses: courseId });
 
-  // Ordenar videos y ejercicios por 'order'
-  const videosOrdenados = [...course.videos].sort((a, b) => a.order - b.order);
-  const ejerciciosOrdenados = [...course.exercises].sort((a, b) => a.order - b.order);
+  // Unificar videos y ejercicios en un solo array ordenado por 'order'
+  const itemsOrdenados = [
+    ...course.videos.map(v => ({ ...v, tipo: 'video' as const })),
+    ...course.exercises.map(e => ({ ...e, tipo: 'ejercicio' as const }))
+  ].sort((a, b) => a.order - b.order);
 
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
@@ -356,65 +358,32 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                 <p>{course.description}</p>
               </div>
             </section>
-            {/* Lecciones adicionales */}
-            {userHasCourse && videosOrdenados.length > 0 && (
+            {/* Lecciones y ejercicios en orden */}
+            {userHasCourse && itemsOrdenados.length > 0 && (
               <section>
                 <hr className="border-[var(--border)] my-8" />
-                <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Lecciones adicionales</h2>
+                <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Contenido del curso</h2>
                 <div className="space-y-4">
-                  {videosOrdenados.map((video, index) => (
-                    <div key={video._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
+                  {itemsOrdenados.map((item, index) => (
+                    <div key={item._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
-                          <div className="w-8 h-8 rounded-full bg-[var(--primary-dark)] text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0">
+                          <div className={`w-8 h-8 rounded-full ${item.tipo === 'video' ? 'bg-[var(--primary-dark)]' : 'bg-[var(--secondary-dark)]'} text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0`}>
                             {index + 1}
                           </div>
                           <div>
-                            <h3 className="text-lg font-semibold text-[var(--neutral-100)]">{video.title}</h3>
-                            {video.description && (
-                              <p className="text-[var(--neutral-400)] mt-1 text-sm">{video.description}</p>
+                            <h3 className="text-lg font-semibold text-[var(--neutral-100)]">
+                              {item.tipo === 'video' ? `Video: ${item.title}` : `Ejercicio: ${item.title}`}
+                            </h3>
+                            {item.description && (
+                              <p className="text-[var(--neutral-400)] mt-1 text-sm">{item.description}</p>
                             )}
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="mt-4">
-                        <CourseViewer 
-                          playbackId={video.playbackId || ''} 
-                          videoId={video.videoId || ''}
-                          courseId={course._id}
-                          token={videoTokens[video.playbackId] || ''} 
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-            {/* Ejercicios */}
-            {ejerciciosOrdenados.length > 0 && (
-              <section>
-                <hr className="border-[var(--border)] my-8" />
-                <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Ejercicios del curso</h2>
-                <div className="space-y-4">
-                  {ejerciciosOrdenados.map((exercise, index) => (
-                    <div key={exercise._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--secondary)] hover:shadow-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-start">
-                          <div className="w-8 h-8 rounded-full bg-[var(--secondary-dark)] text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[var(--neutral-100)]">{exercise.title}</h3>
-                            {exercise.description && (
-                              <p className="text-[var(--neutral-400)] mt-1 text-sm">{exercise.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {userHasCourse && (
+                        {/* Botón de descarga solo para ejercicios */}
+                        {item.tipo === 'ejercicio' && userHasCourse && (
                           <a 
-                            href={`/api/course-exercise?id=${exercise._id}`} 
+                            href={`/api/course-exercise?id=${item._id}`} 
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors duration-300 shadow-sm"
@@ -426,15 +395,17 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                           </a>
                         )}
                       </div>
-                      
-                      {!userHasCourse && (
-                        <div className="mt-3 text-[var(--neutral-500)] text-sm flex items-center">
-                          <svg className="h-4 w-4 text-[var(--accent)] mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          Este material estará disponible cuando compres el curso
+                      {/* Render de video o mensaje de ejercicio */}
+                      {item.tipo === 'video' ? (
+                        <div className="mt-4">
+                          <CourseViewer 
+                            playbackId={item.playbackId || ''} 
+                            videoId={item.videoId || ''}
+                            courseId={course._id}
+                            token={videoTokens[item.playbackId] || ''} 
+                          />
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>
