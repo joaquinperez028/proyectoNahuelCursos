@@ -193,7 +193,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
             <div className="w-6 h-6 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--neutral-100)] mr-2 text-xs">
               {course.createdBy?.name?.charAt(0) || 'I'}
             </div>
-            <span>{course.createdBy?.name || 'Instructor'}</span>
+            <span>{course.createdBy?.name || 'Instructor.'}</span>
           </div>
         </div>
       </div>
