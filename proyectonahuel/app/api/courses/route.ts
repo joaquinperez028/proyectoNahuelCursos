@@ -82,10 +82,7 @@ export async function POST(request: NextRequest) {
     if (!assetId || !playbackId) {
       const muxAsset = await createMuxAsset(data.videoUrl);
       assetId = muxAsset.assetId;
-      // Buscar playbackId público
-      playbackId = Array.isArray(muxAsset.playbackIds)
-        ? (muxAsset.playbackIds.find((pb: any) => pb.policy === 'public')?.id || muxAsset.playbackIds[0]?.id)
-        : muxAsset.playbackId;
+      playbackId = muxAsset.playbackId;
     }
     if (!assetId || !playbackId) {
       return NextResponse.json(
