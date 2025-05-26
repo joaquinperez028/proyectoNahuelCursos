@@ -285,6 +285,10 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
 
   const studentsCount = await User.countDocuments({ courses: courseId });
 
+  // Ordenar videos y ejercicios por 'order'
+  const videosOrdenados = [...course.videos].sort((a, b) => a.order - b.order);
+  const ejerciciosOrdenados = [...course.exercises].sort((a, b) => a.order - b.order);
+
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
       <div className="max-w-3xl mx-auto text-center mb-8">
@@ -353,12 +357,12 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               </div>
             </section>
             {/* Lecciones adicionales */}
-            {userHasCourse && course.videos && course.videos.length > 0 && (
+            {userHasCourse && videosOrdenados.length > 0 && (
               <section>
                 <hr className="border-[var(--border)] my-8" />
                 <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Lecciones adicionales</h2>
                 <div className="space-y-4">
-                  {course.videos.map((video, index) => (
+                  {videosOrdenados.map((video, index) => (
                     <div key={video._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
@@ -388,12 +392,12 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               </section>
             )}
             {/* Ejercicios */}
-            {course.exercises.length > 0 && (
+            {ejerciciosOrdenados.length > 0 && (
               <section>
                 <hr className="border-[var(--border)] my-8" />
                 <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Ejercicios del curso</h2>
                 <div className="space-y-4">
-                  {course.exercises.map((exercise, index) => (
+                  {ejerciciosOrdenados.map((exercise, index) => (
                     <div key={exercise._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--secondary)] hover:shadow-lg">
                       <div className="flex justify-between items-start">
                         <div className="flex items-start">
