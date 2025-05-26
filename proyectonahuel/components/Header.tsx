@@ -9,6 +9,7 @@ const Header = () => {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
 
   // Efecto para detectar el scroll y cambiar el estilo del header
   useEffect(() => {
@@ -65,15 +66,23 @@ const Header = () => {
                 </Link>
               )}
               {session?.user.role === 'admin' && (
-                <div className="relative group">
-                  <button className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200">
+                <div
+                  className="relative"
+                  onMouseEnter={() => setAdminDropdownOpen(true)}
+                  onMouseLeave={() => setAdminDropdownOpen(false)}
+                >
+                  <button
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium ${adminDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)]' : 'text-[var(--neutral-300)]'} hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200`}
+                  >
                     Admin
                     <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
-                    <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
-                    <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
-                  </div>
+                  {adminDropdownOpen && (
+                    <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
+                      <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
+                      <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                    </div>
+                  )}
                 </div>
               )}
             </nav>
@@ -188,15 +197,23 @@ const Header = () => {
               </Link>
             )}
             {session?.user.role === 'admin' && (
-              <div className="relative group">
-                <button className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200">
+              <div
+                className="relative"
+                onMouseEnter={() => setAdminDropdownOpen(true)}
+                onMouseLeave={() => setAdminDropdownOpen(false)}
+              >
+                <button
+                  className={`block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium ${adminDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)]' : 'text-[var(--neutral-300)]'} hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200`}
+                >
                   Admin
                   <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
-                <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
-                  <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
-                  <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
-                </div>
+                {adminDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
+                    <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
+                    <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                  </div>
+                )}
               </div>
             )}
           </div>
