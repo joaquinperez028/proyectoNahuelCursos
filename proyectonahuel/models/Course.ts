@@ -82,6 +82,8 @@ const CourseSchema = new Schema({
     data: Buffer,
     contentType: String,
   },
+  videos: [VideoSchema],
+  exercises: [ExerciseSchema],
   featured: {
     type: Boolean,
     default: false,
