@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Hls from 'hls.js';
 
 interface FallbackVideoPlayerProps {
   src: string;
@@ -14,25 +15,32 @@ export default function FallbackVideoPlayer({ src, poster, title = 'Video del cu
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    // Limpiar error cuando cambia la fuente
     setError(null);
+
+    if (videoRef.current) {
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(src);
+        hls.attachMedia(videoRef.current);
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          setError('No se pudo cargar el video. La URL podría ser inválida o no tener permisos de acceso.');
+        });
+        return () => {
+          hls.destroy();
+        };
+      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari soporta HLS nativo
+        videoRef.current.src = src;
+      }
+    }
   }, [src]);
 
   const handlePlay = () => {
     if (videoRef.current) {
       videoRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-        })
-        .catch((err) => {
-          console.error('Error al reproducir video: ', err);
-          setError('No se pudo reproducir el video automáticamente. Intente haciendo clic en el botón de reproducción');
-        });
+        .then(() => setIsPlaying(true))
+        .catch(() => setError('No se pudo reproducir el video automáticamente. Intente haciendo clic en el botón de reproducción'));
     }
-  };
-
-  const handleError = () => {
-    setError('No se pudo cargar el video. La URL podría ser inválida o no tener permisos de acceso.');
   };
 
   return (
@@ -42,14 +50,10 @@ export default function FallbackVideoPlayer({ src, poster, title = 'Video del cu
         className="w-full aspect-video"
         controls
         poster={poster}
-        onError={handleError}
+        onError={() => setError('No se pudo cargar el video. La URL podría ser inválida o no tener permisos de acceso.')}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-      >
-        <source src={src} type="application/x-mpegURL" />
-        Su navegador no soporta la reproducción de videos HTML5.
-      </video>
-
+      />
       {error && (
         <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4">
           <div className="text-white text-center max-w-md">
@@ -64,7 +68,6 @@ export default function FallbackVideoPlayer({ src, poster, title = 'Video del cu
           </div>
         </div>
       )}
-
       {!isPlaying && !error && (
         <div 
           className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center cursor-pointer"
