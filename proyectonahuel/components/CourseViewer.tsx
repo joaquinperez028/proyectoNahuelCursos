@@ -203,6 +203,30 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     // El seguimiento principal se hace en el intervalo
   };
 
+  useEffect(() => {
+    if (!playbackId) return;
+    let cancel = false;
+    setMuxStatus('checking');
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`/api/mux-asset-status?playbackId=${playbackId}`);
+        const data = await res.json();
+        if (cancel) return;
+        if (data.status === 'ready') {
+          setMuxStatus('ready');
+        } else if (data.status === 'errored' || data.status === 'error') {
+          setMuxStatus('error');
+        } else {
+          setMuxStatus('processing');
+        }
+      } catch (e) {
+        setMuxStatus('error');
+      }
+    };
+    checkStatus();
+    return () => { cancel = true; };
+  }, [playbackId]);
+
   if (!isClient) {
     return (
       <div className="aspect-video bg-[var(--neutral-900)] w-full flex items-center justify-center">
