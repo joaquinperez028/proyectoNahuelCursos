@@ -33,6 +33,9 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     progressUpdateInterval: 15000, // Actualizar cada 15 segundos
   });
 
+  // Obtener assetId del video si está disponible
+  const assetId = videoId;
+
   const MAX_RETRIES = 3;
 
   useEffect(() => {
@@ -204,12 +207,18 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   };
 
   useEffect(() => {
-    if (!playbackId) return;
+    if (!playbackId && !assetId) return;
     let cancel = false;
     setMuxStatus('checking');
     const checkStatus = async () => {
       try {
-        const res = await fetch(`/api/mux-asset-status?playbackId=${playbackId}`);
+        let url = '';
+        if (assetId) {
+          url = `/api/mux-asset-status?assetId=${assetId}`;
+        } else {
+          url = `/api/mux-asset-status?playbackId=${playbackId}`;
+        }
+        const res = await fetch(url);
         const data = await res.json();
         if (cancel) return;
         if (data.status === 'ready') {
@@ -225,7 +234,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     };
     checkStatus();
     return () => { cancel = true; };
-  }, [playbackId]);
+  }, [playbackId, assetId]);
 
   if (!isClient) {
     return (

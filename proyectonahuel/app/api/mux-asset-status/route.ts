@@ -29,14 +29,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener el ID del upload o playback de la query
+    // Obtener el ID del upload, playback o asset de la query
     const { searchParams } = new URL(request.url);
     const uploadId = searchParams.get('uploadId');
     const playbackId = searchParams.get('playbackId');
+    const assetId = searchParams.get('assetId');
     
-    if (!uploadId && !playbackId) {
+    if (!uploadId && !playbackId && !assetId) {
       return NextResponse.json(
-        { error: 'ID de upload o playback no proporcionado' },
+        { error: 'ID de upload, playback o asset no proporcionado' },
         { status: 400 }
       );
     }
@@ -56,23 +57,29 @@ export async function GET(request: NextRequest) {
 
     try {
       const client = getMuxClient();
-      let assets;
-      if (uploadId) {
-        // Buscar por upload_id
-        assets = await client.Video.Assets.list({ upload_id: uploadId });
+      let asset;
+      if (assetId) {
+        asset = await client.Video.Assets.get(assetId);
+      } else if (uploadId) {
+        const assets = await client.Video.Assets.list({ upload_id: uploadId });
+        if (!assets.length) {
+          return NextResponse.json(
+            { error: 'Asset no encontrado', status: 'not_found' },
+            { status: 404 }
+          );
+        }
+        asset = assets[0];
       } else {
-        // Buscar por playback_id
-        assets = await client.Video.Assets.list({ playback_id: playbackId });
+        const assets = await client.Video.Assets.list({ playback_id: playbackId });
+        if (!assets.length) {
+          return NextResponse.json(
+            { error: 'Asset no encontrado', status: 'not_found' },
+            { status: 404 }
+          );
+        }
+        asset = assets[0];
       }
 
-      if (!assets.length) {
-        return NextResponse.json(
-          { error: 'Asset no encontrado', status: 'not_found' },
-          { status: 404 }
-        );
-      }
-
-      const asset = assets[0];
       // Buscar playbackId público
       const pbId = asset.playback_ids?.find((pb: { id: string; policy: string }) => pb.policy === 'public')?.id || asset.playback_ids?.[0]?.id;
       // Devolver información detallada del asset
