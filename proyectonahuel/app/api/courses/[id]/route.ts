@@ -93,14 +93,31 @@ export async function PUT(request: NextRequest) {
     
     // Actualizar videos si se proporcionan
     if (data.videos && Array.isArray(data.videos)) {
-      course.set('videos', data.videos, { strict: false });
-      course.markModified('videos');
+      course.videos = [];
+      data.videos.forEach((videoData: any) => {
+        course.videos.push({
+          title: videoData.title,
+          description: videoData.description || '',
+          videoId: videoData.videoId,
+          playbackId: videoData.playbackId,
+          order: videoData.order,
+          _id: videoData._id // Mantener el ID si ya existe
+        });
+      });
     }
     
     // Actualizar ejercicios si se proporcionan
     if (data.exercises && Array.isArray(data.exercises)) {
-      course.set('exercises', data.exercises, { strict: false });
-      course.markModified('exercises');
+      course.exercises = [];
+      data.exercises.forEach((exerciseData: any) => {
+        course.exercises.push({
+          title: exerciseData.title,
+          description: exerciseData.description || '',
+          fileData: exerciseData.fileData,
+          order: exerciseData.order,
+          _id: exerciseData._id // Mantener el ID si ya existe
+        });
+      });
     }
     
     await course.save();
