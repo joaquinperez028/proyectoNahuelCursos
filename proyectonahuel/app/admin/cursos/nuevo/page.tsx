@@ -93,6 +93,54 @@ export default function NewCoursePage() {
   const [exercises, setExercises] = useState<ExerciseItem[]>([]);
   const [activeExerciseTab, setActiveExerciseTab] = useState<string | null>(null);
   
+  // 1. Estado combinado para la lista ordenable
+  const [courseItems, setCourseItems] = useState<Array<{ type: 'video' | 'exercise', id: string }>>([]);
+
+  // Sincronizar courseItems cada vez que videos o exercises cambian
+  useEffect(() => {
+    // Combinar y ordenar por 'order' (ya que ambos tienen ese campo)
+    const all = [
+      ...videos.map(v => ({ type: 'video' as const, id: v.id, order: v.order })),
+      ...exercises.map(e => ({ type: 'exercise' as const, id: e.id, order: e.order }))
+    ];
+    // Ordenar por order
+    all.sort((a, b) => a.order - b.order);
+    setCourseItems(all);
+  }, [videos, exercises]);
+
+  // Handler drag and drop nativo
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    dragItem.current = index;
+  };
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index;
+  };
+  const handleDragEnd = () => {
+    const from = dragItem.current;
+    const to = dragOverItem.current;
+    if (from === null || to === null || from === to) return;
+    const updated = [...courseItems];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
+    // Actualizar el campo order en videos y exercises
+    let v = [...videos];
+    let e = [...exercises];
+    updated.forEach((item, idx) => {
+      if (item.type === 'video') {
+        v = v.map(vid => vid.id === item.id ? { ...vid, order: idx } : vid);
+      } else {
+        e = e.map(ex => ex.id === item.id ? { ...ex, order: idx } : ex);
+      }
+    });
+    setVideos(v);
+    setExercises(e);
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
   // Funciones para gestionar videos adicionales
   const addVideo = () => {
     const newId = `video-${Date.now()}`;
@@ -1729,6 +1777,36 @@ export default function NewCoursePage() {
                 </p>
               </div>
             )}
+          </div>
+          
+          <div className="mb-8">
+            <h3 className="text-lg font-medium text-[var(--neutral-100)] mb-3">Orden de aparición en el curso</h3>
+            <p className="text-sm text-[var(--neutral-300)] mb-4">Arrastrá para reordenar/intercalar videos y ejercicios. Así se verá el curso para los alumnos.</p>
+            <ul>
+              {courseItems.map((item, idx) => {
+                let label = '';
+                if (item.type === 'video') {
+                  const v = videos.find(v => v.id === item.id);
+                  label = `Video ${idx + 1}: ${v?.title || ''}`;
+                } else {
+                  const ex = exercises.find(e => e.id === item.id);
+                  label = `Ejercicio ${idx + 1}: ${ex?.title || ''}`;
+                }
+                return (
+                  <li
+                    key={item.type + '-' + item.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnter={() => handleDragEnter(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={e => e.preventDefault()}
+                    className="mb-2 p-3 bg-[var(--neutral-800)] border border-[var(--border)] rounded-md cursor-move flex items-center gap-2"
+                  >
+                    <span className="font-semibold text-[var(--neutral-100)]">{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           
           <div className="flex justify-end space-x-3">
