@@ -93,23 +93,14 @@ export async function PUT(request: NextRequest) {
     
     // Actualizar videos si se proporcionan
     if (data.videos && Array.isArray(data.videos)) {
-      course.videos = data.videos.map((video: any) => ({
-        title: video.title,
-        description: video.description || '',
-        videoId: video.videoId,
-        playbackId: video.playbackId,
-        order: video.order
-      }));
+      course.set('videos', data.videos, { strict: false });
+      course.markModified('videos');
     }
     
     // Actualizar ejercicios si se proporcionan
     if (data.exercises && Array.isArray(data.exercises)) {
-      course.exercises = data.exercises.map((exercise: any) => ({
-        title: exercise.title,
-        description: exercise.description || '',
-        fileData: exercise.fileData,
-        order: exercise.order
-      }));
+      course.set('exercises', data.exercises, { strict: false });
+      course.markModified('exercises');
     }
     
     await course.save();
