@@ -69,9 +69,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Crear asset en MUX
-    const { assetId, playbackId } = await createMuxAsset(data.videoUrl);
-    
+    // Usar playbackId/videoId si ya existen, solo crear asset si faltan
+    let assetId = data.videoId;
+    let playbackId = data.playbackId;
+    if (!assetId || !playbackId) {
+      const muxAsset = await createMuxAsset(data.videoUrl);
+      assetId = muxAsset.assetId;
+      playbackId = muxAsset.playbackId;
+    }
     if (!assetId || !playbackId) {
       return NextResponse.json(
         { error: 'Error al procesar el video en MUX' },
