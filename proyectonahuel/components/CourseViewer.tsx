@@ -344,11 +344,8 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     setError(null);
   };
   
-  // URL directa para pruebas
-  const isPublic = !token; // Si no hay token, el asset es público
-  const directUrl = isPublic
-    ? `https://stream.mux.com/${playbackId}.m3u8`
-    : `https://stream.mux.com/${playbackId}.m3u8?token=${token}`;
+  // URL directa para pruebas (siempre pública)
+  const directUrl = `https://stream.mux.com/${playbackId}.m3u8`;
 
   // Si estamos en modo fallback, usar el reproductor alternativo
   if (useFallback) {
@@ -419,8 +416,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
             <MuxPlayer
               ref={playerRef}
               playbackId={playbackId}
-              // Solo pasar tokens si el asset es privado
-              {...(token ? { tokens: { playback: token } } : {})}
+              // No pasar tokens, siempre público
               metadata={{
                 video_title: 'Video del curso',
                 viewer_user_id: 'usuario',
