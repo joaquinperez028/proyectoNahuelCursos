@@ -76,8 +76,9 @@ const Header = () => {
                   </button>
                   {adminDropdownOpen && (
                     <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
-                      <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
-                      <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                      <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar cursos</Link>
+                      <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Usuarios</Link>
+                      <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Crear Pack</Link>
                     </div>
                   )}
                 </div>
@@ -204,8 +205,9 @@ const Header = () => {
                 </button>
                 {adminDropdownOpen && (
                   <div className="pl-6 mt-1 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
-                    <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-t-md">Administrar cursos</Link>
-                    <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Usuarios</Link>
+                    <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar cursos</Link>
+                    <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Usuarios</Link>
+                    <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Crear Pack</Link>
                   </div>
                 )}
               </div>

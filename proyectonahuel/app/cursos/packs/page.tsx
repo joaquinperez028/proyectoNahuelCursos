@@ -333,7 +333,7 @@ export default function PacksPage() {
                 </button>
                 
                 {/* Menú desplegable en el modal */}
-                <div className="absolute z-10 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
+                <div className="absolute z-50 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
                   <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 overflow-hidden">
                     <button
                       onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
