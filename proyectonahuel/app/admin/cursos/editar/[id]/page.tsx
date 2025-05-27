@@ -364,55 +364,44 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   }
 
   return (
-    <div className="py-10">
+    <div className="py-10 bg-neutral-900 min-h-screen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Editar curso</h1>
-        
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
+        <h1 className="text-3xl font-bold text-white mb-8">Editar curso</h1>
+        <form onSubmit={handleSubmit} className="bg-neutral-800 border border-neutral-700 rounded-xl p-8 space-y-6">
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
-              <p className="text-red-700">{error}</p>
+            <div className="bg-red-900 text-red-300 border border-red-700 rounded-lg px-3 py-2 text-sm mb-4">
+              {error}
             </div>
           )}
-          
           {success && (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
-              <p className="text-green-700">Curso actualizado correctamente. Redirigiendo...</p>
+            <div className="bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm mb-4">
+              Curso actualizado correctamente. Redirigiendo...
             </div>
           )}
-          
-          <div className="mb-6">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-              Título del curso
-            </label>
+          <div className="space-y-4">
+            <label htmlFor="title" className="block text-sm text-neutral-400 uppercase">Título del curso</label>
             <input
               type="text"
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Ej: Programación con JavaScript avanzado"
             />
           </div>
-          
-          <div className="mb-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción
-            </label>
+          <div className="space-y-4">
+            <label htmlFor="description" className="block text-sm text-neutral-400 uppercase">Descripción</label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe de qué trata el curso..."
             />
           </div>
-          
-          <div className="mb-6">
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-              Precio (USD)
-            </label>
+          <div className="space-y-2">
+            <label htmlFor="price" className="block text-sm text-neutral-400 uppercase">Precio (USD)</label>
             <input
               type="number"
               id="price"
@@ -420,346 +409,167 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               step="1"
               value={price}
               onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Precio del curso"
             />
-            <p className="mt-1 text-sm text-gray-500">Establecer a 0 para cursos gratuitos</p>
+            <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
           </div>
-          
-          <div className="mb-6">
-            <div className="flex items-center">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="featured"
+              checked={featured}
+              onChange={(e) => setFeatured(e.target.checked)}
+              className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-neutral-700 rounded bg-neutral-800"
+            />
+            <label htmlFor="featured" className="text-sm text-neutral-400 uppercase">Destacar curso en la página principal</label>
+          </div>
+          <div className="border-t border-neutral-700 mt-6 pt-6 space-y-6">
+            <h3 className="text-lg font-semibold text-white">Configuración de oferta</h3>
+            <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id="featured"
-                checked={featured}
-                onChange={(e) => setFeatured(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                id="onSale"
+                checked={onSale}
+                onChange={(e) => setOnSale(e.target.checked)}
+                className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-neutral-700 rounded bg-neutral-800"
               />
-              <label htmlFor="featured" className="ml-2 block text-sm font-medium text-gray-700">
-                Destacar curso en la página principal
-              </label>
+              <label htmlFor="onSale" className="text-sm text-neutral-400 uppercase">Activar oferta para este curso</label>
             </div>
-            <p className="mt-1 text-sm text-gray-500 ml-6">
-              Los cursos destacados aparecerán en secciones especiales para mayor visibilidad
-            </p>
+            <div className="space-y-2">
+              <label htmlFor="discountPercentage" className="block text-sm text-neutral-400 uppercase">Descuento (%)</label>
+              <input
+                type="number"
+                id="discountPercentage"
+                min="0"
+                max="100"
+                value={discountPercentage}
+                onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Porcentaje de descuento"
+              />
+            </div>
           </div>
-          
-          {/* Sección de ofertas */}
-          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración de oferta</h3>
-            
-            <div className="mb-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="onSale"
-                  checked={onSale}
-                  onChange={(e) => setOnSale(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="onSale" className="ml-2 block text-sm font-medium text-gray-700">
-                  Activar oferta para este curso
-                </label>
-              </div>
-              <p className="mt-1 text-sm text-gray-500 ml-6">
-                Los cursos en oferta mostrarán el precio original y el precio con descuento
-              </p>
-            </div>
-            
-            {onSale && (
-              <div className="mt-4">
-                <label htmlFor="discountPercentage" className="block text-sm font-medium text-gray-700 mb-1">
-                  Porcentaje de descuento
-                </label>
-                <div className="flex items-center">
-                  <select
-                    id="discountPercentage"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(Number(e.target.value))}
-                    className="rounded-md border border-gray-300 py-2 pl-3 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                    <option value="20">20%</option>
-                  </select>
-                  
-                  {price > 0 && (
-                    <div className="ml-4 p-2 bg-green-50 rounded-md">
-                      <p className="text-sm text-gray-700">
-                        Precio original: <span className="font-medium">${price}</span>
-                      </p>
-                      <p className="text-sm text-green-700">
-                        Precio con descuento: <span className="font-medium">${(price - (price * (discountPercentage / 100))).toFixed(2)}</span>
-                      </p>
+          <div className="border-t border-neutral-700 mt-6 pt-6 space-y-6">
+            <h3 className="text-lg font-semibold text-white">Videos del curso</h3>
+            <div className="space-y-4">
+              {videos.map(video => (
+                <div key={video.id} className={`bg-neutral-800 border border-neutral-700 rounded-lg p-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}>
+                  <div className="flex justify-between mb-4">
+                    <h4 className="text-md font-semibold text-white">{video.title ? video.title : 'Nuevo video'}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeVideo(video.id)}
+                      className="bg-neutral-700 hover:bg-neutral-600 text-white rounded-md px-3 py-1 text-sm"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-neutral-400 uppercase">Título del video*</label>
+                      <input
+                        type="text"
+                        value={video.title}
+                        onChange={(e) => updateVideo(video.id, { title: e.target.value })}
+                        className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Título del video"
+                      />
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-sm text-neutral-400 uppercase">Descripción</label>
+                      <textarea
+                        value={video.description}
+                        onChange={(e) => updateVideo(video.id, { description: e.target.value })}
+                        rows={3}
+                        className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Describe de qué trata este video"
+                      />
+                    </div>
+                    {video.playbackId && (
+                      <div className="mt-2 bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm">
+                        ✓ Video existente - Ya está subido y listo para reproducirse.
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Sección de videos */}
-          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Videos del curso</h3>
+              ))}
               <button
                 type="button"
                 onClick={addVideo}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="bg-neutral-700 hover:bg-neutral-600 text-white rounded-md px-4 py-2 mt-2"
               >
                 Añadir video
               </button>
             </div>
-            
-            {videos.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
-                <p className="text-gray-500">
-                  No hay videos añadidos. Haz clic en "Añadir video" para comenzar.
-                </p>
-              </div>
-            ) : (
-              <div>
-                {/* Pestañas de videos */}
-                <div className="border-b border-gray-200">
-                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
-                    {videos.map((video, index) => (
-                      <button
-                        key={video.id}
-                        onClick={() => setActiveVideoTab(video.id)}
-                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
-                          activeVideoTab === video.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                        type="button"
-                      >
-                        {video.title ? video.title : `Video ${index + 1}`}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-                
-                {/* Contenido de video activo */}
-                {videos.map(video => (
-                  <div
-                    key={video.id}
-                    className={`pt-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}
-                  >
-                    <div className="flex justify-between mb-4">
-                      <h4 className="text-md font-medium text-gray-900">
-                        {video.title ? video.title : 'Nuevo video'}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => removeVideo(video.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {/* Título del video */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título del video*
-                        </label>
-                        <input
-                          type="text"
-                          value={video.title}
-                          onChange={(e) => updateVideo(video.id, { title: e.target.value })}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Título del video"
-                        />
-                      </div>
-                      
-                      {/* Descripción del video */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descripción
-                        </label>
-                        <textarea
-                          value={video.description}
-                          onChange={(e) => updateVideo(video.id, { description: e.target.value })}
-                          rows={3}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Describe de qué trata este video"
-                        />
-                      </div>
-                      
-                      {/* Estado del video */}
-                      {video.playbackId && (
-                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                          <p className="text-sm text-green-700">
-                            <span className="font-medium">✓ Video existente</span> - Ya está subido y listo para reproducirse.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-          
-          {/* Sección de ejercicios */}
-          <div className="border rounded-lg p-6 mb-8 bg-white shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Ejercicios del curso</h3>
+          <div className="border-t border-neutral-700 mt-6 pt-6 space-y-6">
+            <h3 className="text-lg font-semibold text-white">Ejercicios del curso</h3>
+            <div className="space-y-4">
+              {exercises.map(exercise => (
+                <div key={exercise.id} className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
+                  <div className="flex justify-between mb-4">
+                    <h4 className="text-md font-semibold text-white">{exercise.title ? exercise.title : 'Nuevo ejercicio'}</h4>
+                    <button
+                      type="button"
+                      onClick={() => removeExercise(exercise.id)}
+                      className="bg-neutral-700 hover:bg-neutral-600 text-white rounded-md px-3 py-1 text-sm"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-neutral-400 uppercase">Título del ejercicio*</label>
+                      <input
+                        type="text"
+                        value={exercise.title}
+                        onChange={(e) => updateExercise(exercise.id, { title: e.target.value })}
+                        className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Título del ejercicio"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-neutral-400 uppercase">Descripción</label>
+                      <textarea
+                        value={exercise.description}
+                        onChange={(e) => updateExercise(exercise.id, { description: e.target.value })}
+                        rows={3}
+                        className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Describe de qué trata este ejercicio"
+                      />
+                    </div>
+                    {exercise.fileData && (
+                      <div className="mt-2 bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm">
+                        ✓ PDF existente - Ya está subido y listo para descargar.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
               <button
                 type="button"
                 onClick={addExercise}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="bg-neutral-700 hover:bg-neutral-600 text-white rounded-md px-4 py-2 mt-2"
               >
                 Añadir ejercicio
               </button>
             </div>
-            
-            {exercises.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
-                <p className="text-gray-500">
-                  No hay ejercicios añadidos. Haz clic en "Añadir ejercicio" para comenzar.
-                </p>
-              </div>
-            ) : (
-              <div>
-                {/* Pestañas de ejercicios */}
-                <div className="border-b border-gray-200">
-                  <nav className="-mb-px flex space-x-2 overflow-x-auto">
-                    {exercises.map((exercise, index) => (
-                      <button
-                        key={exercise.id}
-                        onClick={() => setActiveExerciseTab(exercise.id)}
-                        className={`py-2 px-3 border-b-2 whitespace-nowrap ${
-                          activeExerciseTab === exercise.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                        type="button"
-                      >
-                        {exercise.title ? exercise.title : `Ejercicio ${index + 1}`}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-                
-                {/* Contenido de ejercicio activo */}
-                {exercises.map(exercise => (
-                  <div
-                    key={exercise.id}
-                    className={`pt-4 ${activeExerciseTab === exercise.id ? 'block' : 'hidden'}`}
-                  >
-                    <div className="flex justify-between mb-4">
-                      <h4 className="text-md font-medium text-gray-900">
-                        {exercise.title ? exercise.title : 'Nuevo ejercicio'}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => removeExercise(exercise.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {/* Título del ejercicio */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título del ejercicio*
-                        </label>
-                        <input
-                          type="text"
-                          value={exercise.title}
-                          onChange={(e) => updateExercise(exercise.id, { title: e.target.value })}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Título del ejercicio"
-                        />
-                      </div>
-                      
-                      {/* Descripción del ejercicio */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descripción
-                        </label>
-                        <textarea
-                          value={exercise.description}
-                          onChange={(e) => updateExercise(exercise.id, { description: e.target.value })}
-                          rows={3}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Describe de qué trata este ejercicio"
-                        />
-                      </div>
-                      
-                      {/* Estado del PDF */}
-                      {exercise.fileData && (
-                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
-                          <p className="text-sm text-green-700">
-                            <span className="font-medium">✓ PDF existente</span> - Ya está subido y listo para descargar.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-          
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-3">Orden de aparición en el curso</h3>
-            <p className="text-sm text-gray-500 mb-4">Arrastrá para reordenar/intercalar videos y ejercicios. Así se verá el curso para los alumnos.</p>
-            <ul>
-              {courseItems.map((item, idx) => {
-                let label = '';
-                if (item.type === 'video') {
-                  const v = videos.find(v => v.id === item.id);
-                  label = `Video ${idx + 1}: ${v?.title || ''}`;
-                } else {
-                  const ex = exercises.find(e => e.id === item.id);
-                  label = `Ejercicio ${idx + 1}: ${ex?.title || ''}`;
-                }
-                return (
-                  <li
-                    key={item.type + '-' + item.id}
-                    draggable
-                    onDragStart={() => handleDragStart(idx)}
-                    onDragEnter={() => handleDragEnter(idx)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={e => e.preventDefault()}
-                    className="mb-2 p-3 bg-gray-100 border border-gray-300 rounded-md cursor-move flex items-center gap-2"
-                  >
-                    <span className="font-semibold">{label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <Link
-              href="/admin/cursos"
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          <div className="flex justify-end space-x-3 pt-6">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/cursos')}
+              className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded-md"
             >
               Cancelar
-            </Link>
+            </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400 flex items-center"
+              className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-md flex items-center"
             >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Actualizando...
-                </>
-              ) : (
-                'Guardar cambios'
-              )}
+              {isSubmitting ? 'Actualizando...' : 'Guardar cambios'}
             </button>
           </div>
         </form>
