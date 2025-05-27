@@ -204,7 +204,7 @@ export default function NewCoursePage() {
         method: 'POST',
       });
       
-      console.log('Respuesta de la API de carga directa:', directUploadResponse.status);
+      console.log('Respuesta de la API de carga directa::', directUploadResponse.status);
       
       if (!directUploadResponse.ok) {
         const errorData = await directUploadResponse.json();
