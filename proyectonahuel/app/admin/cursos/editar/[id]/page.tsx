@@ -425,7 +425,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
     setExercises(updatedExercises);
     try {
       const formData = new FormData();
-      formData.append('file', pdfFile);
+      formData.append('pdf', pdfFile);
       const response = await fetch('/api/upload-pdf', {
         method: 'POST',
         body: formData
@@ -788,7 +788,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
                     )}
                     {exercise.fileData && (
                       <div className="mt-2 bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm">
-                        ✓ PDF existente - Ya está subido y listo para descargar.
+                        ✓ Ejercicio existente - Ya está subido y listo para descargar.
                       </div>
                     )}
                   </div>
@@ -803,24 +803,15 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               </button>
             </div>
           </div>
-          <div className="flex justify-end space-x-3 pt-6">
-            <button
-              type="button"
-              onClick={() => router.push('/admin/cursos')}
-              className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-white rounded-md"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-md flex items-center"
-            >
-              {isSubmitting ? 'Actualizando...' : 'Guardar cambios'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-md px-4 py-2 mt-6"
+          >
+            {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
+          </button>
         </form>
       </div>
     </div>
   );
-} 
+}
