@@ -75,25 +75,25 @@ export default function NuevoPackPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del pack</label>
-            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} required className="w-full border rounded px-3 py-2" />
+            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} required className="w-full border rounded px-3 py-2 text-black bg-white" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} required className="w-full border rounded px-3 py-2" />
+            <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} required className="w-full border rounded px-3 py-2 text-black bg-white" />
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Precio promocional ($)</label>
-              <input type="number" value={precio} onChange={e => setPrecio(e.target.value)} required min={0} className="w-full border rounded px-3 py-2" />
+              <input type="number" value={precio} onChange={e => setPrecio(e.target.value)} required min={0} className="w-full border rounded px-3 py-2 text-black bg-white" />
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">Precio original ($)</label>
-              <input type="number" value={precioOriginal} onChange={e => setPrecioOriginal(e.target.value)} required min={0} className="w-full border rounded px-3 py-2" />
+              <input type="number" value={precioOriginal} onChange={e => setPrecioOriginal(e.target.value)} required min={0} className="w-full border rounded px-3 py-2 text-black bg-white" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Imagen (URL)</label>
-            <input type="text" value={imagen} onChange={e => setImagen(e.target.value)} className="w-full border rounded px-3 py-2" />
+            <input type="text" value={imagen} onChange={e => setImagen(e.target.value)} className="w-full border rounded px-3 py-2 text-black bg-white" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Cursos incluidos</label>

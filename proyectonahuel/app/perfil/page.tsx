@@ -448,7 +448,7 @@ export default function PerfilPage() {
               <div className="flex flex-wrap gap-4 mt-3">
                 <div className="flex items-center text-sm">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    session?.user?.role === 'admin' ? 'bg-green-500 bg-opacity-20 text-green-400' : 'bg-blue-500 bg-opacity-20 text-blue-400'
+                    session?.user?.role === 'admin' ? 'bg-green-500 bg-opacity-20 text-white-400' : 'bg-blue-500 bg-opacity-20 text-blue-400'
                   }`}>
                     {session?.user?.role === 'admin' ? 'Administrador' : 'Estudiante'}
                   </span>
@@ -458,7 +458,7 @@ export default function PerfilPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Miembro desde: {formatDate(profileData.registrationDate)}
+                  : {formatDate(profileData.registrationDate)}
                 </div>
                 
                 <div className="flex items-center text-sm text-[#B4B4C0]">
