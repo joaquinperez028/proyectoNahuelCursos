@@ -803,6 +803,35 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               </button>
             </div>
           </div>
+          <div className="border-t border-neutral-700 mt-8 pt-8">
+            <h3 className="text-lg font-semibold text-white mb-4">Orden de aparición en el curso</h3>
+            <p className="text-sm text-neutral-400 mb-4">Arrastrá para reordenar/intercalar videos y ejercicios. Así se verá el curso para los alumnos.</p>
+            <ul>
+              {courseItems.map((item, idx) => {
+                let label = '';
+                if (item.type === 'video') {
+                  const v = videos.find(v => v.id === item.id);
+                  label = `Video ${idx + 1}: ${v?.title || ''}`;
+                } else {
+                  const ex = exercises.find(e => e.id === item.id);
+                  label = `Ejercicio ${idx + 1}: ${ex?.title || ''}`;
+                }
+                return (
+                  <li
+                    key={item.type + '-' + item.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnter={() => handleDragEnter(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={e => e.preventDefault()}
+                    className="mb-2 p-3 bg-neutral-800 border border-neutral-700 rounded-md cursor-move flex items-center gap-2"
+                  >
+                    <span className="font-semibold text-white/90">{label}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
           <button
             type="submit"
             disabled={isSubmitting}
