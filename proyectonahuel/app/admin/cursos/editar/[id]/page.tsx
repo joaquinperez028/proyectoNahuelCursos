@@ -426,7 +426,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
     try {
       const formData = new FormData();
       formData.append('file', pdfFile);
-      const response = await fetch('/api/upload-exercise', {
+      const response = await fetch('/api/upload-pdf', {
         method: 'POST',
         body: formData
       });
