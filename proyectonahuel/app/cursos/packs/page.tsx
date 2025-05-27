@@ -193,13 +193,15 @@ export default function PacksPage() {
                       
                       {/* Menú desplegable con nuevo posicionamiento */}
                       <div 
-                        className="absolute left-0 right-0 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300"
+                        className="fixed left-1/2 transform -translate-x-1/2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300"
                         style={{
-                          top: 'calc(100% + 0.5rem)',
-                          zIndex: 1000,
-                          minWidth: '100%',
-                          transformOrigin: 'top center',
-                          transform: 'translateY(0)',
+                          top: 'auto',
+                          bottom: '100%',
+                          marginBottom: '0.5rem',
+                          zIndex: 9999,
+                          minWidth: '200px',
+                          maxWidth: '90vw',
+                          transformOrigin: 'bottom center',
                         }}
                       >
                         <div className="relative bg-neutral-800/95 backdrop-blur-md rounded-xl shadow-xl border border-neutral-700 overflow-hidden">
@@ -333,7 +335,17 @@ export default function PacksPage() {
                 </button>
                 
                 {/* Menú desplegable en el modal */}
-                <div className="absolute z-50 w-full mt-2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300">
+                <div className="fixed left-1/2 transform -translate-x-1/2 invisible opacity-0 group-hover/menu:visible group-hover/menu:opacity-100 transition-all duration-300"
+                  style={{
+                    top: 'auto',
+                    bottom: '100%',
+                    marginBottom: '0.5rem',
+                    zIndex: 9999,
+                    minWidth: '200px',
+                    maxWidth: '90vw',
+                    transformOrigin: 'bottom center',
+                  }}
+                >
                   <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 overflow-hidden">
                     <button
                       onClick={() => selectedPack && handleBuyPack(selectedPack._id)}
