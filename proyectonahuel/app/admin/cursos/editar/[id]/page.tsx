@@ -278,6 +278,181 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
     }
   };
 
+  // 1. Lógica de subida de video a Mux
+  const uploadVideoFile = async (id: string) => {
+    const videoIndex = videos.findIndex(v => v.id === id);
+    if (videoIndex === -1 || !videos[videoIndex].videoFile) return;
+    const videoFile = videos[videoIndex].videoFile;
+    const updatedVideos = [...videos];
+    updatedVideos[videoIndex] = {
+      ...updatedVideos[videoIndex],
+      isUploading: true,
+      uploadProgress: 0,
+      error: null
+    };
+    setVideos(updatedVideos);
+    try {
+      // 1. Solicitar una URL de carga directa a MUX
+      const directUploadResponse = await fetch('/api/mux-direct-upload', { method: 'POST' });
+      if (!directUploadResponse.ok) {
+        const errorData = await directUploadResponse.json();
+        throw new Error(errorData.error || 'Error al obtener URL de carga');
+      }
+      const directUploadData = await directUploadResponse.json();
+      const uploadId = directUploadData.uploadId;
+      // 2. Subir el archivo a MUX
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = 10 + Math.round((event.loaded / event.total) * 60);
+            const progressVideos = [...videos];
+            const idx = progressVideos.findIndex(v => v.id === id);
+            if (idx !== -1) {
+              progressVideos[idx] = {
+                ...progressVideos[idx],
+                uploadProgress: progress
+              };
+              setVideos(progressVideos);
+            }
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const successVideos = [...videos];
+            const idx = successVideos.findIndex(v => v.id === id);
+            if (idx !== -1) {
+              successVideos[idx] = {
+                ...successVideos[idx],
+                uploadProgress: 70,
+                uploadStatus: 'waiting'
+              };
+              setVideos(successVideos);
+            }
+            resolve();
+          } else {
+            reject(new Error(`Error al subir archivo: ${xhr.status} ${xhr.statusText}`));
+          }
+        };
+        xhr.onerror = () => reject(new Error('Error de red al intentar subir el archivo'));
+        xhr.onabort = () => reject(new Error('Carga abortada'));
+        xhr.open('PUT', directUploadData.uploadUrl, true);
+        if (videoFile) {
+          xhr.setRequestHeader('Content-Type', videoFile.type);
+          xhr.send(videoFile);
+        } else {
+          reject(new Error('No se encontró el archivo de video'));
+        }
+      });
+      // 3. Verificar estado
+      checkVideoUploadStatusWithId(id, uploadId);
+    } catch (error) {
+      const errorVideos = [...videos];
+      const idx = errorVideos.findIndex(v => v.id === id);
+      if (idx !== -1) {
+        errorVideos[idx] = {
+          ...errorVideos[idx],
+          error: error instanceof Error ? error.message : 'Error al subir el video',
+          isUploading: false
+        };
+        setVideos(errorVideos);
+      }
+    }
+  };
+  // 2. Lógica de verificación de estado de video
+  const checkVideoUploadStatusWithId = async (id: string, uploadId: string) => {
+    const videoIndex = videos.findIndex(v => v.id === id);
+    if (videoIndex === -1) return;
+    let attempts = 0;
+    const maxAttempts = 40;
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        const response = await fetch(`/api/mux-asset-status?uploadId=${uploadId}`);
+        if (!response.ok) throw new Error('Error al verificar el estado de la carga');
+        const data = await response.json();
+        const currentVideos = [...videos];
+        const currentVideoIndex = currentVideos.findIndex(v => v.id === id);
+        if (currentVideoIndex === -1) return true;
+        let updates: Partial<VideoItem> = { uploadStatus: data.status };
+        if (data.assetId) updates.videoId = data.assetId;
+        if (data.playbackId) {
+          updates.playbackId = data.playbackId;
+          updates.uploadProgress = 100;
+          updates.isUploading = false;
+          const updatedVideos = [...currentVideos];
+          updatedVideos[currentVideoIndex] = { ...updatedVideos[currentVideoIndex], ...updates };
+          setVideos(updatedVideos);
+          return true;
+        } else if (data.status === 'asset_created') {
+          updates.uploadProgress = 90;
+        } else if (data.status === 'preparing') {
+          updates.uploadProgress = 80;
+        } else if (data.status === 'ready') {
+          updates.uploadProgress = 70;
+        }
+        const updatedVideos = [...currentVideos];
+        updatedVideos[currentVideoIndex] = { ...updatedVideos[currentVideoIndex], ...updates };
+        setVideos(updatedVideos);
+        if (attempts >= maxAttempts) {
+          const errorVideos = [...updatedVideos];
+          errorVideos[currentVideoIndex] = {
+            ...errorVideos[currentVideoIndex],
+            error: 'Tiempo de espera agotado para la creación del asset',
+            isUploading: false
+          };
+          setVideos(errorVideos);
+          return true;
+        }
+        setTimeout(checkStatus, 3000);
+      } catch {
+        // Ignorar errores de polling
+      }
+    };
+    checkStatus();
+  };
+  // 3. Lógica de subida de PDF para ejercicios
+  const uploadPdfFile = async (id: string) => {
+    const exerciseIndex = exercises.findIndex(e => e.id === id);
+    if (exerciseIndex === -1 || !exercises[exerciseIndex].pdfFile) return;
+    const pdfFile = exercises[exerciseIndex].pdfFile;
+    const updatedExercises = [...exercises];
+    updatedExercises[exerciseIndex] = {
+      ...updatedExercises[exerciseIndex],
+      isUploading: true,
+      error: null
+    };
+    setExercises(updatedExercises);
+    try {
+      const formData = new FormData();
+      formData.append('file', pdfFile);
+      const response = await fetch('/api/upload-exercise', {
+        method: 'POST',
+        body: formData
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al subir el PDF');
+      }
+      const data = await response.json();
+      const updated = [...exercises];
+      updated[exerciseIndex] = {
+        ...updated[exerciseIndex],
+        fileData: data.fileData,
+        isUploading: false
+      };
+      setExercises(updated);
+    } catch (error) {
+      const errorExercises = [...exercises];
+      errorExercises[exerciseIndex] = {
+        ...errorExercises[exerciseIndex],
+        error: error instanceof Error ? error.message : 'Error al subir el PDF',
+        isUploading: false
+      };
+      setExercises(errorExercises);
+    }
+  };
+
   // Manejar envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -486,6 +661,42 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
                         placeholder="Describe de qué trata este video"
                       />
                     </div>
+                    {!video.playbackId && (
+                      <div>
+                        <label className="block text-sm text-neutral-400 uppercase mb-1">Archivo de video*</label>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="file"
+                            id={`video-file-${video.id}`}
+                            onChange={(e) => updateVideo(video.id, { videoFile: e.target.files?.[0] || null })}
+                            accept="video/*"
+                            className="sr-only"
+                            disabled={video.isUploading}
+                          />
+                          <label
+                            htmlFor={`video-file-${video.id}`}
+                            className={`relative cursor-pointer bg-neutral-800 py-2 px-3 border border-neutral-700 rounded-md shadow-sm text-sm font-medium ${video.isUploading ? 'bg-neutral-700 text-neutral-400' : 'text-neutral-100 hover:bg-neutral-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                          >
+                            <span>{video.videoFile ? 'Archivo seleccionado' : 'Seleccionar archivo'}</span>
+                          </label>
+                          <span className="text-sm text-neutral-400">
+                            {video.videoFile ? video.videoFile.name : 'Ningún archivo seleccionado'}
+                          </span>
+                          {video.videoFile && !video.isUploading && (
+                            <button
+                              type="button"
+                              onClick={() => uploadVideoFile(video.id)}
+                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-500"
+                            >
+                              Subir ahora
+                            </button>
+                          )}
+                          {video.isUploading && (
+                            <span className="text-xs text-blue-400 ml-2">Subiendo...</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {video.playbackId && (
                       <div className="mt-2 bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm">
                         ✓ Video existente - Ya está subido y listo para reproducirse.
@@ -539,6 +750,42 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
                         placeholder="Describe de qué trata este ejercicio"
                       />
                     </div>
+                    {!exercise.fileData && (
+                      <div>
+                        <label className="block text-sm text-neutral-400 uppercase mb-1">Archivo PDF*</label>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="file"
+                            id={`pdf-file-${exercise.id}`}
+                            onChange={(e) => updateExercise(exercise.id, { pdfFile: e.target.files?.[0] || null })}
+                            accept="application/pdf"
+                            className="sr-only"
+                            disabled={exercise.isUploading}
+                          />
+                          <label
+                            htmlFor={`pdf-file-${exercise.id}`}
+                            className={`relative cursor-pointer bg-neutral-800 py-2 px-3 border border-neutral-700 rounded-md shadow-sm text-sm font-medium ${exercise.isUploading ? 'bg-neutral-700 text-neutral-400' : 'text-neutral-100 hover:bg-neutral-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                          >
+                            <span>{exercise.pdfFile ? 'Archivo seleccionado' : 'Seleccionar archivo'}</span>
+                          </label>
+                          <span className="text-sm text-neutral-400">
+                            {exercise.pdfFile ? exercise.pdfFile.name : 'Ningún archivo seleccionado'}
+                          </span>
+                          {exercise.pdfFile && !exercise.isUploading && (
+                            <button
+                              type="button"
+                              onClick={() => uploadPdfFile(exercise.id)}
+                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-500"
+                            >
+                              Subir ahora
+                            </button>
+                          )}
+                          {exercise.isUploading && (
+                            <span className="text-xs text-blue-400 ml-2">Subiendo...</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {exercise.fileData && (
                       <div className="mt-2 bg-green-900 text-green-300 border border-green-700 rounded-lg px-3 py-2 text-sm">
                         ✓ PDF existente - Ya está subido y listo para descargar.
