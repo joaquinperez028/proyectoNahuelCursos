@@ -627,6 +627,25 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
           </div>
           <div className="border-t border-neutral-700 mt-6 pt-6 space-y-6">
             <h3 className="text-lg font-semibold text-white">Videos del curso</h3>
+            {/* Tabs de videos */}
+            {videos.length > 0 && (
+              <div className="mb-4 flex space-x-2 border-b border-neutral-700">
+                {videos.map((video, idx) => (
+                  <button
+                    key={video.id}
+                    type="button"
+                    onClick={() => setActiveVideoTab(video.id)}
+                    className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                      activeVideoTab === video.id
+                        ? 'border-blue-500 text-blue-400'
+                        : 'border-transparent text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {video.title?.trim() ? video.title : `Video ${idx + 1}`}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="space-y-4">
               {videos.map(video => (
                 <div key={video.id} className={`bg-neutral-800 border border-neutral-700 rounded-lg p-4 ${activeVideoTab === video.id ? 'block' : 'hidden'}`}>
@@ -716,9 +735,28 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
           </div>
           <div className="border-t border-neutral-700 mt-6 pt-6 space-y-6">
             <h3 className="text-lg font-semibold text-white">Ejercicios del curso</h3>
+            {/* Tabs de ejercicios */}
+            {exercises.length > 0 && (
+              <div className="mb-4 flex space-x-2 border-b border-neutral-700">
+                {exercises.map((exercise, idx) => (
+                  <button
+                    key={exercise.id}
+                    type="button"
+                    onClick={() => setActiveExerciseTab(exercise.id)}
+                    className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                      activeExerciseTab === exercise.id
+                        ? 'border-blue-500 text-blue-400'
+                        : 'border-transparent text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {exercise.title?.trim() ? exercise.title : `Ejercicio ${idx + 1}`}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="space-y-4">
               {exercises.map(exercise => (
-                <div key={exercise.id} className="bg-neutral-800 border border-neutral-700 rounded-lg p-4">
+                <div key={exercise.id} className={`bg-neutral-800 border border-neutral-700 rounded-lg p-4 ${activeExerciseTab === exercise.id ? 'block' : 'hidden'}`}>
                   <div className="flex justify-between mb-4">
                     <h4 className="text-md font-semibold text-white">{exercise.title ? exercise.title : 'Nuevo ejercicio'}</h4>
                     <button
