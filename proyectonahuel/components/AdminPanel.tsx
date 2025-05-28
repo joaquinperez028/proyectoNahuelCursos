@@ -167,7 +167,7 @@ export default function AdminPanel({
               <div>
                 <h3 className="text-lg font-semibold text-white mb-4">Herramientas de Video</h3>
                 <div className="space-y-3">
-                  <button
+                  {/* <button
                     onClick={onCheckMuxConnection}
                     disabled={isMuxLoading}
                     className="w-full flex items-center justify-center px-4 py-3 bg-[#007bff] hover:bg-[#0069d9] text-white rounded-md transition-colors duration-200 disabled:bg-blue-400"
@@ -193,7 +193,7 @@ export default function AdminPanel({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     Actualizar IDs de Videos
-                  </Link>
+                  </Link> */}
                   <Link
                     href="/admin/herramientas-mux"
                     className="w-full flex items-center justify-center px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-200"
