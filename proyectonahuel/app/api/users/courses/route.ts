@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       duration: course.duration || 0,
       createdBy: course.createdBy ? {
         _id: course.createdBy._id ? course.createdBy._id.toString() : '',
-        name: course.createdBy.name || 'Desconocido'
+        name: course.createdBy.name || 'Desconocido.'
       } : null,
       createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString()
