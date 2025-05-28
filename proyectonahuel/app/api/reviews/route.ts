@@ -110,8 +110,13 @@ export async function POST(request: NextRequest) {
 export async function GET(request: Request) {
   try {
     await connectToDatabase();
-    // ... existing code ...
+    const reviews = await Review.find({})
+      .populate({ path: 'userId', select: 'name image' })
+      .populate({ path: 'courseId', select: 'title' })
+      .sort({ createdAt: -1 });
+    return NextResponse.json({ reviews });
   } catch (error) {
-    // ... existing code ...
+    console.error('Error al obtener reseñas:', error);
+    return NextResponse.json({ error: 'Error al obtener reseñas' }, { status: 500 });
   }
 } 
