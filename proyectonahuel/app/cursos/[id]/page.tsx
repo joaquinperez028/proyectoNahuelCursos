@@ -297,10 +297,10 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               {userHasCourse ? (
                 // Usuario tiene acceso al curso - usar CourseViewer con video principal
                 (() => {
-                  // CORRECCIÓN: usar el mismo video que en el preview
-                  // Si hay introPlaybackId, usarlo; si no, usar playbackId
-                  const mainPlaybackId = course.introPlaybackId || course.playbackId;
-                  const mainVideoId = course.introVideoId || course.videoId;
+                  // CORRECCIÓN: Usuarios con acceso ven el VIDEO PRINCIPAL del curso
+                  // Si hay playbackId (video principal), usarlo; si no, usar introPlaybackId como fallback
+                  const mainPlaybackId = course.playbackId || course.introPlaybackId;
+                  const mainVideoId = course.videoId || course.introVideoId;
                   
                   return mainPlaybackId ? (
                     <CourseViewer 
@@ -315,7 +315,7 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                   );
                 })()
               ) : (
-                // Usuario NO tiene acceso - mostrar preview o placeholder
+                // Usuario NO tiene acceso - mostrar preview (video de introducción)
                 course.introPlaybackId ? (
                   <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
                     <MuxPlayer
