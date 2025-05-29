@@ -251,10 +251,10 @@ export default function PerfilPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-6 text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
+                className={`py-4 px-6 text-sm font-medium transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'border-b-2 border-[#4CAF50] text-[#4CAF50] bg-[#4CAF50] bg-opacity-10'
-                    : 'text-[#B4B4C0] hover:text-white border-b-2 border-transparent hover:border-[#8A8A9A]'
+                    ? 'border-b-2 border-[#4CAF50] text-white bg-[#4CAF50] bg-opacity-20 hover:bg-opacity-30'
+                    : 'text-[#B4B4C0] hover:text-white border-b-2 border-transparent hover:border-[#8A8A9A] hover:scale-105 transform'
                 }`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
