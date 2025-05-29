@@ -71,6 +71,19 @@ export default function CourseContentPagination({
     }
   }, [courseId, userHasCourse]);
 
+  // Escuchar eventos de actualización de progreso
+  useEffect(() => {
+    const handleProgressUpdate = (event: any) => {
+      if (event.detail.courseId === courseId) {
+        console.log('📊 Paginación: Actualizando progreso por evento');
+        fetchCourseProgress();
+      }
+    };
+
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate);
+    return () => window.removeEventListener('courseProgressUpdated', handleProgressUpdate);
+  }, [courseId]);
+
   const fetchCourseProgress = async () => {
     try {
       const response = await fetch(`/api/progress/check?courseId=${courseId}`);

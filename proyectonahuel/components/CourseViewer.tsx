@@ -83,6 +83,11 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
         console.error('❌ Error al actualizar progreso:', data);
       } else {
         console.log('✅ Progreso actualizado exitosamente:', data);
+        
+        // Emitir evento personalizado para que otros componentes se actualicen
+        window.dispatchEvent(new CustomEvent('courseProgressUpdated', {
+          detail: { courseId, videoId, progress: data.progress }
+        }));
       }
     } catch (error) {
       console.error('❌ Error de red al actualizar progreso:', error);
@@ -181,16 +186,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   return (
     <div className="space-y-3">
-      {/* DEBUG INFO - TEMPORAL */}
-      <div className="bg-yellow-900 text-yellow-200 p-3 rounded text-xs">
-        <p><strong>DEBUG INFO:</strong></p>
-        <p>CourseID: {courseId}</p>
-        <p>VideoID: {videoId}</p>
-        <p>PlaybackID: {playbackId}</p>
-        <p>Progress: {Math.round(progress)}s / {Math.round(duration)}s</p>
-        <p>Percentage: {Math.round(progressPercentage)}%</p>
-      </div>
-      
       <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
         <MuxPlayer
           ref={playerRef}

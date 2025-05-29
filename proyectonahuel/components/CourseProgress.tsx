@@ -22,18 +22,53 @@ const CourseProgress = ({ courseId, userHasCourse }: CourseProgressProps) => {
   useEffect(() => {
     if (userHasCourse && courseId) {
       fetchProgress();
+      
+      // Configurar polling cada 10 segundos para actualizar el progreso
+      const interval = setInterval(() => {
+        fetchProgress();
+      }, 10000); // 10 segundos
+      
+      return () => clearInterval(interval);
     } else {
       setLoading(false);
     }
   }, [courseId, userHasCourse]);
 
+  // Escuchar eventos de visibilidad para refrescar cuando el usuario vuelve a la pestaña
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userHasCourse && courseId) {
+        fetchProgress();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [courseId, userHasCourse]);
+
+  // Escuchar eventos de actualización de progreso desde CourseViewer
+  useEffect(() => {
+    const handleProgressUpdate = (event: any) => {
+      if (event.detail.courseId === courseId) {
+        console.log('🎯 Evento de progreso recibido, refrescando...', event.detail);
+        fetchProgress();
+      }
+    };
+
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate);
+    return () => window.removeEventListener('courseProgressUpdated', handleProgressUpdate);
+  }, [courseId]);
+
   const fetchProgress = async () => {
+    if (!userHasCourse || !courseId) return;
+    
     try {
       const response = await fetch(`/api/progress/check?courseId=${courseId}`);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
           setProgress(data.progress);
+          console.log('🔄 CourseProgress actualizado:', data.progress.totalProgress + '%');
         }
       }
     } catch (error) {
