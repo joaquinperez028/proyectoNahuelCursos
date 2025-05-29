@@ -261,6 +261,12 @@ export async function POST(request: NextRequest) {
       }
     });
     
+    console.log('📤 [API] Respuesta final enviada:', {
+      totalProgress: result.totalProgress,
+      isCompleted: result.isCompleted,
+      videoProgress: result.videoProgress?.length || 0
+    });
+    
   } catch (error) {
     console.error('Error al actualizar progreso:', error);
     return NextResponse.json(

@@ -20,6 +20,13 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   useEffect(() => {
     setIsClient(true);
+    
+    console.log('🎯 CourseViewer montado con IDs:', {
+      courseId,
+      videoId,
+      playbackId
+    });
+    
     // Cargar progreso inicial cuando el componente se monta
     loadInitialProgress();
   }, [courseId, videoId]);
