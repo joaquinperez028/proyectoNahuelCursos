@@ -134,7 +134,7 @@ export default function PerfilPage() {
           // Si tiene certificado, añadirlo a la lista de certificados
           if (progress.certificateIssued && progress.certificateUrl) {
             certificates.push({
-              id: course._id,
+              id: progress.certificateId || course._id,
               courseTitle: course.title,
               issueDate: progress.completedAt || course.updatedAt,
               certificateUrl: progress.certificateUrl
@@ -280,13 +280,13 @@ export default function PerfilPage() {
             id: 'cert1',
             courseTitle: 'Programación Python',
             issueDate: '2023-07-10',
-            certificateUrl: '/certificados/python.pdf',
+            certificateUrl: '/certificados/ver/cert1',
           },
           {
             id: 'cert2',
             courseTitle: 'Desarrollo de Aplicaciones Móviles',
             issueDate: '2023-05-20',
-            certificateUrl: '/certificados/mobile.pdf',
+            certificateUrl: '/certificados/ver/cert2',
           },
         ],
         purchases: [
@@ -367,13 +367,11 @@ export default function PerfilPage() {
     // Buscar el certificado por ID
     const certificate = profileData.certificates.find(cert => cert.id === certificateId);
     if (certificate?.certificateUrl) {
-      // Si es una URL externa, abrir en nueva pestaña
-      if (certificate.certificateUrl.startsWith('http')) {
-        window.open(certificate.certificateUrl, '_blank');
-      } else {
-        // Si es una ruta interna, redireccionar a la página de certificado
-        window.open(`/certificados/ver/${certificateId}`, '_blank');
-      }
+      // Abrir directamente la URL del certificado
+      window.open(certificate.certificateUrl, '_blank');
+    } else {
+      console.error('Certificado no encontrado o URL no disponible');
+      alert('Error: No se pudo encontrar la URL del certificado. Por favor, contacta al soporte.');
     }
   };
 
