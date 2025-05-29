@@ -294,40 +294,60 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
           <div className="lg:col-span-2 space-y-12">
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
-              {(course.playbackId || course.introPlaybackId) ? (
-                <CourseViewer 
-                  playbackId={course.playbackId || course.introPlaybackId || ''}
-                  videoId={course.videoId || course.introVideoId || ''}
-                  courseId={course._id}
-                  token={mainToken} 
-                />
+              {userHasCourse ? (
+                // Usuario tiene acceso al curso - usar CourseViewer con video principal
+                (course.playbackId || course.introPlaybackId) ? (
+                  <CourseViewer 
+                    playbackId={course.playbackId || course.introPlaybackId || ''}
+                    videoId={course.videoId || course.introVideoId || ''}
+                    courseId={course._id}
+                    token={mainToken} 
+                  />
+                ) : (
+                  <div className="aspect-video bg-[var(--neutral-900)] flex items-center justify-center">
+                    <p className="text-[var(--neutral-300)]">Video no disponible</p>
+                  </div>
+                )
               ) : (
-                <div className="relative">
-                  <div className="aspect-video w-full bg-[var(--neutral-900)]">
-                    {course.hasThumbnailImage ? (
-                      <img 
-                        src={`/api/course-image?id=${course._id}`}
-                        alt={course.title} 
-                        className="w-full h-full object-cover opacity-70"
-                      />
-                    ) : course.thumbnailUrl ? (
-                      <img 
-                        src={course.thumbnailUrl} 
-                        alt={course.title} 
-                        className="w-full h-full object-cover opacity-70"
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
-                      <div className="text-center text-white p-6 max-w-lg">
-                        <svg className="w-16 h-16 mx-auto mb-4 text-[var(--primary-light)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                        </svg>
-                        <p className="text-2xl font-bold mb-2 text-[var(--neutral-100)]">Vista previa no disponible</p>
-                        <p className="text-[var(--neutral-300)] mb-6">Compra este curso para acceder al contenido completo</p>
+                // Usuario NO tiene acceso - mostrar preview o placeholder
+                course.introPlaybackId ? (
+                  <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
+                    <MuxPlayer
+                      playbackId={course.introPlaybackId}
+                      streamType="on-demand"
+                      style={{ height: '100%', width: '100%' }}
+                      autoPlay={false}
+                      muted={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="aspect-video w-full bg-[var(--neutral-900)]">
+                      {course.hasThumbnailImage ? (
+                        <img 
+                          src={`/api/course-image?id=${course._id}`}
+                          alt={course.title} 
+                          className="w-full h-full object-cover opacity-70"
+                        />
+                      ) : course.thumbnailUrl ? (
+                        <img 
+                          src={course.thumbnailUrl} 
+                          alt={course.title} 
+                          className="w-full h-full object-cover opacity-70"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm">
+                        <div className="text-center text-white p-6 max-w-lg">
+                          <svg className="w-16 h-16 mx-auto mb-4 text-[var(--primary-light)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                          </svg>
+                          <p className="text-2xl font-bold mb-2 text-[var(--neutral-100)]">Vista previa no disponible</p>
+                          <p className="text-[var(--neutral-300)] mb-6">Compra este curso para acceder al contenido completo</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )
               )}
             </div>
             <hr className="border-[var(--border)] my-8" />

@@ -416,31 +416,15 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
             <MuxPlayer
               ref={playerRef}
               playbackId={playbackId}
-              // No pasar tokens, siempre público
-              metadata={{
-                video_title: 'Video del curso',
-                viewer_user_id: 'usuario',
-                video_id: videoId,
-                course_id: courseId
-              }}
               streamType="on-demand"
               style={{ height: '100%', width: '100%' }}
               className="aspect-video"
-              thumbnailTime={0}
               autoPlay={false}
               muted={false}
               onError={handleError}
               onLoadedMetadata={handleVideoReady}
               onEnded={handleVideoEnded}
               onTimeUpdate={handleVideoTimeUpdate}
-              debug={true}
-              defaultHiddenCaptions={true}
-              playbackRates={[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]}
-              themeProps={{
-                keyColorInactive: "var(--accent)",
-                keyColorActive: "var(--accent)",
-                colorsDark: true
-              }}
             />
           </div>
           
