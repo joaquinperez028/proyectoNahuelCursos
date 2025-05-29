@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import CourseProgressCard from '@/components/CourseProgressCard';
 import CertificateCard from '@/components/CertificateCard';
-import PurchaseHistory from '@/components/PurchaseHistory';
-import UserStats from '@/components/UserStats';
-import AdminPanel from '@/components/AdminPanel';
+
+// Lazy loading para componentes pesados
+const PurchaseHistory = lazy(() => import('@/components/PurchaseHistory'));
+const UserStats = lazy(() => import('@/components/UserStats'));
+const AdminPanel = lazy(() => import('@/components/AdminPanel'));
 
 // Tipo para los datos de progreso de curso
 type CourseProgress = {
@@ -40,6 +42,8 @@ type Purchase = {
 export default function PerfilPage() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState('informacion');
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   // Estado para almacenar los datos del perfil
   const [profileData, setProfileData] = useState<{
     activeCourses: CourseProgress[];
@@ -89,6 +93,16 @@ export default function PerfilPage() {
     error: null
   });
 
+  // Memoizar datos computados para evitar recálculos
+  const memoizedStats = useMemo(() => ({
+    totalCourses: profileData.activeCourses.length,
+    completedCourses: profileData.certificates.length,
+    certificatesEarned: profileData.certificates.length,
+    totalHoursLearned: Math.round(
+      profileData.activeCourses.reduce((acc, course) => acc + (course.progress / 100) * 20, 0)
+    )
+  }), [profileData.activeCourses, profileData.certificates]);
+
   // Cargar datos del perfil
   useEffect(() => {
     if (status === 'authenticated') {
@@ -96,104 +110,93 @@ export default function PerfilPage() {
     }
   }, [status]);
 
-  // Función para cargar datos del perfil con datos reales
-  const fetchProfileData = async () => {
+  // Función optimizada para cargar datos del perfil con llamadas paralelas
+  const fetchProfileData = useCallback(async () => {
+    if (dataLoaded) return; // Evitar múltiples cargas
+    
+    setLoading(true);
     try {
-      // Obtener los cursos del usuario
-      const coursesResponse = await fetch('/api/users/courses');
-      const coursesData = await coursesResponse.json();
+      // Hacer todas las llamadas API en paralelo
+      const [
+        coursesResponse,
+        statsResponse,
+        userInfoResponse
+      ] = await Promise.allSettled([
+        fetch('/api/users/courses'),
+        fetch('/api/stats'),
+        fetch('/api/users/profile')
+      ]);
       
-      if (!coursesResponse.ok) {
-        throw new Error(coursesData.error || 'Error al cargar los cursos');
+      // Procesar cursos del usuario
+      let userCourses = [];
+      if (coursesResponse.status === 'fulfilled' && coursesResponse.value.ok) {
+        const coursesData = await coursesResponse.value.json();
+        userCourses = coursesData.courses || [];
       }
       
-      const userCourses = coursesData.courses || [];
-      
-      // Obtener progreso para cada curso
+      // Procesar progreso de cursos en paralelo (solo si hay cursos)
       const activeCourses: CourseProgress[] = [];
       const certificates: Certificate[] = [];
       
-      for (const course of userCourses) {
-        // Obtener el progreso del curso
-        const progressResponse = await fetch(`/api/progress/check?courseId=${course._id}`);
-        const progressData = await progressResponse.json();
-        
-        if (progressResponse.ok) {
-          const progress = progressData.progress;
-          
-          // Añadir a cursos activos
-          activeCourses.push({
-            id: course._id,
-            title: course.title,
-            progress: progress.totalProgress || 0,
-            startDate: course.createdAt,
-            lastUpdate: progress.updatedAt || course.updatedAt,
-            thumbnailUrl: course.thumbnailUrl
-          });
-          
-          // Si tiene certificado, añadirlo a la lista de certificados
-          if (progress.certificateIssued && progress.certificateUrl) {
-            certificates.push({
-              id: progress.certificateId || course._id,
-              courseTitle: course.title,
-              issueDate: progress.completedAt || course.updatedAt,
-              certificateUrl: progress.certificateUrl
-            });
+      if (userCourses.length > 0) {
+        const progressPromises = userCourses.map(async (course: any) => {
+          try {
+            const progressResponse = await fetch(`/api/progress/check?courseId=${course._id}`);
+            if (progressResponse.ok) {
+              const progressData = await progressResponse.json();
+              return { course, progress: progressData.progress };
+            }
+          } catch (error) {
+            console.error(`Error al cargar progreso del curso ${course._id}:`, error);
           }
-        }
-      }
-      
-      // Obtener estadísticas globales
-      const statsResponse = await fetch('/api/stats');
-      const statsData = await statsResponse.json();
-      
-      // Obtener historial de compras (si existe el endpoint)
-      const purchases: Purchase[] = [];
-      try {
-        const purchasesResponse = await fetch('/api/users/purchases');
-        if (purchasesResponse.ok) {
-          const purchasesData = await purchasesResponse.json();
-          purchasesData.purchases.forEach((purchase: any) => {
-            purchases.push({
-              id: purchase._id || purchase.id,
-              courseTitle: purchase.courseTitle || purchase.course?.title || 'Curso',
-              date: purchase.date,
-              paymentMethod: purchase.paymentMethod || 'No especificado',
-              amount: purchase.amount || purchase.price || 0,
-              invoiceUrl: purchase.invoiceUrl
+          return { course, progress: null };
+        });
+        
+        const progressResults = await Promise.allSettled(progressPromises);
+        
+        progressResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value) {
+            const { course, progress } = result.value;
+            
+            activeCourses.push({
+              id: course._id,
+              title: course.title,
+              progress: progress?.totalProgress || 0,
+              startDate: course.createdAt,
+              lastUpdate: progress?.updatedAt || course.updatedAt,
+              thumbnailUrl: course.thumbnailUrl
             });
-          });
-        }
-      } catch (error) {
-        console.error('Error al cargar compras:', error);
-        // Si no hay endpoint de compras, usar los cursos como compras
-        userCourses.forEach((course: any) => {
-          purchases.push({
-            id: course._id,
-            courseTitle: course.title,
-            date: course.createdAt,
-            paymentMethod: 'Compra en plataforma',
-            amount: course.price || 0
-          });
+            
+            if (progress?.certificateIssued && progress?.certificateUrl) {
+              certificates.push({
+                id: progress.certificateId || course._id,
+                courseTitle: course.title,
+                issueDate: progress.completedAt || course.updatedAt,
+                certificateUrl: progress.certificateUrl
+              });
+            }
+          }
         });
       }
       
-      // Obtener información del usuario (fecha de registro, último acceso)
-      const userInfoResponse = await fetch('/api/users/profile');
-      let registrationDate = '';
-      let lastLogin = '';
-      
-      if (userInfoResponse.ok) {
-        const userInfo = await userInfoResponse.json();
-        registrationDate = userInfo.createdAt || '';
-        lastLogin = userInfo.lastLogin || '';
-      } else {
-        // Usar fechas actuales si no hay información
-        registrationDate = new Date().toISOString();
-        lastLogin = new Date().toISOString();
+      // Procesar estadísticas globales
+      let statsData = { students: 0, courses: 0 };
+      if (statsResponse.status === 'fulfilled' && statsResponse.value.ok) {
+        statsData = await statsResponse.value.json();
       }
       
-      // Obtener estadísticas de admin (solo para administradores)
+      // Procesar información del usuario
+      let registrationDate = new Date().toISOString();
+      let lastLogin = new Date().toISOString();
+      
+      if (userInfoResponse.status === 'fulfilled' && userInfoResponse.value.ok) {
+        const userInfo = await userInfoResponse.value.json();
+        registrationDate = userInfo.createdAt || registrationDate;
+        lastLogin = userInfo.lastLogin || lastLogin;
+      }
+      
+      // Cargar datos pesados de forma lazy (compras y estadísticas admin)
+      const purchases: Purchase[] = [];
       let adminStats = {
         totalUsers: 0,
         totalCourses: 0,
@@ -201,31 +204,16 @@ export default function PerfilPage() {
         monthlySales: 0
       };
       
-      if (session?.user?.role === 'admin') {
-        try {
-          const adminStatsResponse = await fetch('/api/admin/stats');
-          if (adminStatsResponse.ok) {
-            const adminStatsData = await adminStatsResponse.json();
-            adminStats = {
-              totalUsers: adminStatsData.users || statsData.students || 0,
-              totalCourses: adminStatsData.courses || statsData.courses || 0,
-              totalSales: adminStatsData.totalSales || 0,
-              monthlySales: adminStatsData.monthlySales || 0
-            };
-          }
-        } catch (error) {
-          console.error('Error al cargar estadísticas de admin:', error);
-          // Usar estadísticas globales como fallback
-          adminStats = {
-            totalUsers: statsData.students || 0,
-            totalCourses: statsData.courses || 0,
-            totalSales: 0,
-            monthlySales: 0
-          };
-        }
+      // Solo cargar compras y estadísticas admin si es necesario
+      if (activeTab === 'compras') {
+        loadPurchases(purchases, userCourses);
       }
       
-      // Actualizar el estado con todos los datos reales
+      if (session?.user?.role === 'admin' && activeTab === 'admin') {
+        loadAdminStats(adminStats, statsData);
+      }
+      
+      // Actualizar estado con datos básicos inmediatamente
       setProfileData({
         activeCourses,
         certificates,
@@ -236,101 +224,106 @@ export default function PerfilPage() {
           certificatesEarned: certificates.length,
           totalHoursLearned: Math.round(activeCourses.reduce(
             (acc, course) => acc + (course.progress / 100) * 20, 0
-          )) // Estimación de horas basada en progreso (20h por curso)
+          ))
         },
         adminStats,
         lastLogin,
         registrationDate
       });
       
+      setDataLoaded(true);
+      
     } catch (error) {
       console.error('Error al cargar datos del perfil:', error);
-      
-      // Cargar datos de respaldo en caso de error
-      // Para demostración, usar datos simulados como fallback
-      setProfileData({
-        activeCourses: [
-          {
-            id: 'curso1',
-            title: 'Desarrollo Web Fullstack',
-            progress: 75,
-            startDate: '2023-08-15',
-            lastUpdate: '2023-09-28',
-            thumbnailUrl: 'https://placehold.co/80x80/4CAF50/FFFFFF.png?text=Web',
-          },
-          {
-            id: 'curso2',
-            title: 'Diseño UX/UI Avanzado',
-            progress: 45,
-            startDate: '2023-09-05',
-            lastUpdate: '2023-09-30',
-            thumbnailUrl: 'https://placehold.co/80x80/2196F3/FFFFFF.png?text=UX',
-          },
-          {
-            id: 'curso3',
-            title: 'Marketing Digital',
-            progress: 22,
-            startDate: '2023-09-20',
-            lastUpdate: '2023-09-25',
-            thumbnailUrl: 'https://placehold.co/80x80/FF9800/FFFFFF.png?text=MKT',
-          },
-        ],
-        certificates: [
-          {
-            id: 'cert1',
-            courseTitle: 'Programación Python',
-            issueDate: '2023-07-10',
-            certificateUrl: '/certificados/ver/cert1',
-          },
-          {
-            id: 'cert2',
-            courseTitle: 'Desarrollo de Aplicaciones Móviles',
-            issueDate: '2023-05-20',
-            certificateUrl: '/certificados/ver/cert2',
-          },
-        ],
-        purchases: [
-          {
-            id: 'compra1',
-            courseTitle: 'Desarrollo Web Fullstack',
-            date: '2023-08-15',
-            paymentMethod: 'MercadoPago',
-            amount: 24999,
-            invoiceUrl: '/facturas/factura1.pdf',
-          },
-          {
-            id: 'compra2',
-            courseTitle: 'Diseño UX/UI Avanzado',
-            date: '2023-09-05',
-            paymentMethod: 'PayPal',
-            amount: 18999,
-            invoiceUrl: '/facturas/factura2.pdf',
-          },
-          {
-            id: 'compra3',
-            courseTitle: 'Marketing Digital',
-            date: '2023-09-20',
-            paymentMethod: 'Transferencia',
-            amount: 15999,
-          },
-        ],
+      // Usar datos de fallback mínimos
+      setProfileData(prev => ({
+        ...prev,
+        activeCourses: [],
+        certificates: [],
+        purchases: [],
         stats: {
-          totalCourses: 5,
-          completedCourses: 2,
-          certificatesEarned: 2,
-          totalHoursLearned: 78,
-        },
-        adminStats: {
-          totalUsers: 325,
-          totalCourses: 42,
-          totalSales: 2850000,
-          monthlySales: 350000,
+          totalCourses: 0,
+          completedCourses: 0,
+          certificatesEarned: 0,
+          totalHoursLearned: 0,
         },
         lastLogin: new Date().toISOString(),
-        registrationDate: '2023-01-15T10:20:00Z',
+        registrationDate: new Date().toISOString(),
+      }));
+    } finally {
+      setLoading(false);
+    }
+  }, [dataLoaded]);
+
+  // Función para cargar compras de forma lazy
+  const loadPurchases = async (purchases: Purchase[], userCourses: any[]) => {
+    try {
+      const purchasesResponse = await fetch('/api/users/purchases');
+      if (purchasesResponse.ok) {
+        const purchasesData = await purchasesResponse.json();
+        purchasesData.purchases.forEach((purchase: any) => {
+          purchases.push({
+            id: purchase._id || purchase.id,
+            courseTitle: purchase.courseTitle || purchase.course?.title || 'Curso',
+            date: purchase.date,
+            paymentMethod: purchase.paymentMethod || 'No especificado',
+            amount: purchase.amount || purchase.price || 0,
+            invoiceUrl: purchase.invoiceUrl
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error al cargar compras:', error);
+      // Fallback usando cursos como compras
+      userCourses.forEach((course: any) => {
+        purchases.push({
+          id: course._id,
+          courseTitle: course.title,
+          date: course.createdAt,
+          paymentMethod: 'Compra en plataforma',
+          amount: course.price || 0
+        });
       });
     }
   };
+
+  // Función para cargar estadísticas admin de forma lazy
+  const loadAdminStats = async (adminStats: any, statsData: any) => {
+    if (session?.user?.role === 'admin') {
+      try {
+        const adminStatsResponse = await fetch('/api/admin/stats');
+        if (adminStatsResponse.ok) {
+          const adminStatsData = await adminStatsResponse.json();
+          Object.assign(adminStats, {
+            totalUsers: adminStatsData.users || statsData.students || 0,
+            totalCourses: adminStatsData.courses || statsData.courses || 0,
+            totalSales: adminStatsData.totalSales || 0,
+            monthlySales: adminStatsData.monthlySales || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error al cargar estadísticas de admin:', error);
+        Object.assign(adminStats, {
+          totalUsers: statsData.students || 0,
+          totalCourses: statsData.courses || 0,
+          totalSales: 0,
+          monthlySales: 0
+        });
+      }
+    }
+  };
+
+  // Cargar datos adicionales cuando cambie de tab
+  useEffect(() => {
+    if (status === 'authenticated' && profileData.activeCourses.length > 0) {
+      if (activeTab === 'compras' && profileData.purchases.length === 0) {
+        loadPurchases(profileData.purchases, []);
+      }
+      if (activeTab === 'admin' && session?.user?.role === 'admin') {
+        loadAdminStats(profileData.adminStats, {});
+      }
+    }
+  }, [activeTab, status]);
 
   // Función para verificar la conexión con MUX
   const verificarMux = async () => {
@@ -394,28 +387,36 @@ export default function PerfilPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4CAF50]"></div>
+      <div className="min-h-screen flex justify-center items-center bg-[#1E1E2F]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#4CAF50] mx-auto"></div>
+          <p className="text-white mt-4">Cargando perfil...</p>
+        </div>
       </div>
     );
   }
 
   if (status === 'unauthenticated') {
     return (
-      <div className="min-h-screen flex justify-center items-center">
-        <div className="bg-[#2A2A3C] p-8 rounded-lg shadow-xl">
-          <h2 className="text-2xl font-bold text-white mb-4">Acceso Restringido</h2>
-          <p className="text-[#B4B4C0] mb-6">Debes iniciar sesión para ver tu perfil.</p>
-          <button 
-            onClick={() => window.location.href = '/api/auth/signin'}
-            className="px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200"
-          >
+      <div className="min-h-screen flex justify-center items-center bg-[#1E1E2F]">
+        <div className="text-center">
+          <p className="text-white text-xl">Debes iniciar sesión para ver tu perfil</p>
+          <a href="/login" className="mt-4 px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200 inline-block">
             Iniciar Sesión
-          </button>
+          </a>
         </div>
       </div>
     );
   }
+
+  // Skeleton loader component
+  const SkeletonLoader = ({ rows = 3 }: { rows?: number }) => (
+    <div className="animate-pulse">
+      {[...Array(rows)].map((_, i) => (
+        <div key={i} className="bg-[#3A3A4C] h-4 rounded mb-2"></div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="py-10 min-h-screen bg-[#1E1E2F]">
@@ -472,11 +473,24 @@ export default function PerfilPage() {
         
         {/* Estadísticas del usuario */}
         <div className="mt-6">
-          <UserStats 
-            totalCourses={profileData.stats.totalCourses}
-            completedCourses={profileData.stats.completedCourses}
-            certificatesEarned={profileData.stats.certificatesEarned}
-          />
+          <Suspense fallback={
+            <div className="bg-[#2A2A3C] rounded-lg shadow-lg p-6 animate-pulse">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="text-center">
+                    <div className="h-8 bg-[#3A3A4C] rounded mb-2"></div>
+                    <div className="h-4 bg-[#3A3A4C] rounded"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          }>
+            <UserStats 
+              totalCourses={memoizedStats.totalCourses}
+              completedCourses={memoizedStats.completedCourses}
+              certificatesEarned={memoizedStats.certificatesEarned}
+            />
+          </Suspense>
         </div>
         
         {/* Navegación por pestañas */}
@@ -596,7 +610,21 @@ export default function PerfilPage() {
               <h2 className="text-xl font-semibold text-white mb-6">Cursos Activos</h2>
               
               <div className="space-y-4">
-                {profileData.activeCourses.length > 0 ? (
+                {loading && !dataLoaded ? (
+                  // Skeleton loader para cursos
+                  [...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-[#3A3A4C] p-4 rounded-lg animate-pulse">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-[#4A4A5C] rounded"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-[#4A4A5C] rounded mb-2"></div>
+                          <div className="h-3 bg-[#4A4A5C] rounded mb-2 w-3/4"></div>
+                          <div className="h-2 bg-[#4A4A5C] rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : profileData.activeCourses.length > 0 ? (
                   profileData.activeCourses.map(course => (
                     <CourseProgressCard
                       key={course.id}
@@ -610,7 +638,13 @@ export default function PerfilPage() {
                   ))
                 ) : (
                   <div className="text-center py-10">
-                    <p className="text-[#B4B4C0]">No tienes cursos activos actualmente.</p>
+                    <div className="w-16 h-16 mx-auto mb-4 bg-[#3A3A4C] rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-[#B4B4C0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <p className="text-[#B4B4C0] text-lg">No tienes cursos activos actualmente.</p>
+                    <p className="text-[#8A8A9A] text-sm mt-1">¡Comienza tu aprendizaje explorando nuestros cursos!</p>
                     <a href="/cursos" className="mt-4 px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200 inline-block">
                       Explorar Cursos
                     </a>
@@ -652,21 +686,25 @@ export default function PerfilPage() {
             <div className="bg-[#2A2A3C] rounded-lg shadow-lg p-6">
               <h2 className="text-xl font-semibold text-white mb-6">Historial de Compras</h2>
               
-              <PurchaseHistory purchases={profileData.purchases} />
+              <Suspense fallback={<div>Cargando...</div>}>
+                <PurchaseHistory purchases={profileData.purchases} />
+              </Suspense>
             </div>
           )}
           
           {/* Panel de Administrador */}
           {activeTab === 'admin' && session?.user?.role === 'admin' && (
-            <AdminPanel
-              totalUsers={profileData.adminStats.totalUsers}
-              totalCourses={profileData.adminStats.totalCourses}
-              totalSales={profileData.adminStats.totalSales}
-              monthlySales={profileData.adminStats.monthlySales}
-              onCheckMuxConnection={verificarMux}
-              isMuxLoading={muxStatus.loading}
-              muxStatus={muxStatus}
-            />
+            <Suspense fallback={<div>Cargando...</div>}>
+              <AdminPanel
+                totalUsers={profileData.adminStats.totalUsers}
+                totalCourses={profileData.adminStats.totalCourses}
+                totalSales={profileData.adminStats.totalSales}
+                monthlySales={profileData.adminStats.monthlySales}
+                onCheckMuxConnection={verificarMux}
+                isMuxLoading={muxStatus.loading}
+                muxStatus={muxStatus}
+              />
+            </Suspense>
           )}
         </div>
       </div>
