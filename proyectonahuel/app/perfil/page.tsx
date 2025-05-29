@@ -163,25 +163,6 @@ export default function PerfilPage() {
 
   return (
     <div className="py-10 min-h-screen bg-[#1E1E2F]">
-      {/* Indicador de carga instantánea */}
-      {isFromCache && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-3 py-2 rounded-md text-sm font-medium animate-pulse">
-          ⚡ Carga instantánea
-        </div>
-      )}
-
-      {/* Botón temporal para limpiar caché (solo para admin) */}
-      {profileData.user.role === 'admin' && (
-        <div className="fixed top-4 left-4 z-50">
-          <button
-            onClick={clearCacheAndReload}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors duration-200"
-          >
-            🔄 Actualizar Ventas
-          </button>
-        </div>
-      )}
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-300">
         {/* Header del perfil */}
         <div className="bg-[#2A2A3C] rounded-t-lg shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
