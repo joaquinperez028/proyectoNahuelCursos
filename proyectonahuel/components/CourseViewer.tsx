@@ -15,6 +15,7 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [lastPosition, setLastPosition] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
   const playerRef = useRef<any>(null);
   const progressSaveTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -44,9 +45,11 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
         if (data.success && data.progress) {
           setLastPosition(data.progress.lastPosition || 0);
           setProgress(data.progress.watchedSeconds || 0);
+          setIsCompleted(data.progress.completed || false);
           console.log('✅ Progreso inicial establecido:', {
             lastPosition: data.progress.lastPosition,
-            watchedSeconds: data.progress.watchedSeconds
+            watchedSeconds: data.progress.watchedSeconds,
+            completed: data.progress.completed
           });
         }
       } else {
@@ -91,6 +94,11 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
       } else {
         console.log('✅ Progreso actualizado exitosamente:', data);
         
+        // Actualizar estado local si se marca como completado
+        if (completed) {
+          setIsCompleted(true);
+        }
+        
         // Emitir evento personalizado para que otros componentes se actualicen
         window.dispatchEvent(new CustomEvent('courseProgressUpdated', {
           detail: { courseId, videoId, progress: data.progress }
@@ -103,12 +111,23 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   // Función para guardar progreso con debouncing
   const saveProgressWithDebounce = (currentTime: number, videoDuration: number) => {
+    // No actualizar progreso si el video ya está completado
+    if (isCompleted) {
+      console.log('🚫 Video ya completado, no actualizando progreso');
+      return;
+    }
+    
     if (progressSaveTimeout.current) {
       clearTimeout(progressSaveTimeout.current);
     }
 
     progressSaveTimeout.current = setTimeout(() => {
-      updateProgress(currentTime, videoDuration);
+      // No sobrescribir si el video ya está completado
+      // Solo actualizar la posición si no está marcado como terminado
+      const isNearEnd = currentTime >= videoDuration - 5; // Últimos 5 segundos
+      if (!isNearEnd) {
+        updateProgress(currentTime, videoDuration, false);
+      }
     }, 2000); // Guardar cada 2 segundos
   };
 
@@ -154,9 +173,19 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     const player = playerRef.current;
     console.log('🎬 Video terminado');
     
-    if (player) {
+    if (player && !isCompleted) {
       const videoDuration = player.duration;
       console.log('✅ Marcando video como completado:', videoDuration);
+      
+      // Marcar como completado localmente primero
+      setIsCompleted(true);
+      
+      // Limpiar cualquier timeout pendiente para evitar conflictos
+      if (progressSaveTimeout.current) {
+        clearTimeout(progressSaveTimeout.current);
+        progressSaveTimeout.current = null;
+      }
+      
       // Marcar como completado cuando termine el video
       updateProgress(videoDuration, videoDuration, true);
     }

@@ -23,16 +23,21 @@ const CourseProgress = ({ courseId, userHasCourse }: CourseProgressProps) => {
     if (userHasCourse && courseId) {
       fetchProgress();
       
-      // Configurar polling cada 10 segundos para actualizar el progreso
+      // Configurar polling más inteligente: menos frecuente si ya hay progreso
       const interval = setInterval(() => {
+        // Si ya hay progreso considerable, hacer polling menos frecuente
+        if (progress && progress.totalProgress > 80) {
+          // Solo cada 30 segundos si ya está cerca de completar
+          return;
+        }
         fetchProgress();
-      }, 10000); // 10 segundos
+      }, 30000); // 30 segundos en lugar de 10
       
       return () => clearInterval(interval);
     } else {
       setLoading(false);
     }
-  }, [courseId, userHasCourse]);
+  }, [courseId, userHasCourse, progress?.totalProgress]);
 
   // Escuchar eventos de visibilidad para refrescar cuando el usuario vuelve a la pestaña
   useEffect(() => {

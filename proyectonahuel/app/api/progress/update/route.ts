@@ -153,10 +153,21 @@ export async function POST(request: NextRequest) {
         
         if (videoProgressIndex >= 0) {
           // Actualizar video existente
-          existingProgress.videoProgress[videoProgressIndex].completed = videoCompleted;
-          existingProgress.videoProgress[videoProgressIndex].watchedSeconds = watchedSeconds;
-          existingProgress.videoProgress[videoProgressIndex].lastPosition = lastPosition;
-          existingProgress.videoProgress[videoProgressIndex].updatedAt = new Date();
+          const existingVideoProgress = existingProgress.videoProgress[videoProgressIndex];
+          
+          // Si el video ya está completado, no lo sobrescribir con un estado no completado
+          if (existingVideoProgress.completed && !videoCompleted) {
+            console.log('🚫 Video ya completado, no sobrescribiendo con estado no completado');
+            // Solo actualizar la posición si no está completado
+            existingProgress.videoProgress[videoProgressIndex].lastPosition = lastPosition;
+            existingProgress.videoProgress[videoProgressIndex].updatedAt = new Date();
+          } else {
+            // Actualizar normalmente si no está completado o si el nuevo estado también es completado
+            existingProgress.videoProgress[videoProgressIndex].completed = videoCompleted;
+            existingProgress.videoProgress[videoProgressIndex].watchedSeconds = watchedSeconds;
+            existingProgress.videoProgress[videoProgressIndex].lastPosition = lastPosition;
+            existingProgress.videoProgress[videoProgressIndex].updatedAt = new Date();
+          }
         } else {
           // Añadir nuevo video al progreso
           existingProgress.videoProgress.push({
