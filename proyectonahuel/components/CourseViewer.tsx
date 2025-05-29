@@ -26,24 +26,42 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   // Función para cargar el progreso inicial del video
   const loadInitialProgress = async () => {
+    console.log('📥 Cargando progreso inicial para:', { courseId, videoId });
+    
     try {
       const response = await fetch(`/api/progress/video?courseId=${courseId}&videoId=${videoId}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Progreso inicial recibido:', data);
+        
         if (data.success && data.progress) {
           setLastPosition(data.progress.lastPosition || 0);
           setProgress(data.progress.watchedSeconds || 0);
+          console.log('✅ Progreso inicial establecido:', {
+            lastPosition: data.progress.lastPosition,
+            watchedSeconds: data.progress.watchedSeconds
+          });
         }
+      } else {
+        console.warn('⚠️ No se pudo cargar progreso inicial:', response.status);
       }
     } catch (error) {
-      console.error('Error al cargar progreso inicial:', error);
+      console.error('❌ Error al cargar progreso inicial:', error);
     }
   };
 
   // Función para actualizar el progreso en el servidor
   const updateProgress = async (currentTime: number, videoDuration: number, completed: boolean = false) => {
+    console.log('🔄 Actualizando progreso:', {
+      courseId,
+      videoId,
+      currentTime,
+      videoDuration,
+      completed
+    });
+    
     try {
-      await fetch('/api/progress/update', {
+      const response = await fetch('/api/progress/update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,8 +75,17 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
           duration: videoDuration
         }),
       });
+      
+      const data = await response.json();
+      console.log('📊 Respuesta del servidor:', response.status, data);
+      
+      if (!response.ok) {
+        console.error('❌ Error al actualizar progreso:', data);
+      } else {
+        console.log('✅ Progreso actualizado exitosamente:', data);
+      }
     } catch (error) {
-      console.error('Error al actualizar progreso:', error);
+      console.error('❌ Error de red al actualizar progreso:', error);
     }
   };
 
@@ -76,9 +103,12 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   // Manejar eventos del reproductor MUX
   const handleLoadedMetadata = () => {
     const player = playerRef.current;
+    console.log('📹 Video metadata cargado');
+    
     if (player && lastPosition > 0) {
       // Restaurar la posición anterior si existe
       player.currentTime = lastPosition;
+      console.log('⏩ Restaurando posición anterior:', lastPosition);
     }
   };
 
@@ -92,6 +122,15 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
       setDuration(videoDuration);
       setLastPosition(currentTime);
 
+      // Solo imprimir log cada 10 segundos para no saturar
+      if (Math.floor(currentTime) % 10 === 0) {
+        console.log('⏱️ Progreso del video:', {
+          currentTime: Math.floor(currentTime),
+          duration: Math.floor(videoDuration),
+          percentage: Math.round((currentTime / videoDuration) * 100)
+        });
+      }
+
       // Guardar progreso cada cierto tiempo
       if (videoDuration > 0) {
         saveProgressWithDebounce(currentTime, videoDuration);
@@ -101,8 +140,11 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   const handleEnded = () => {
     const player = playerRef.current;
+    console.log('🎬 Video terminado');
+    
     if (player) {
       const videoDuration = player.duration;
+      console.log('✅ Marcando video como completado:', videoDuration);
       // Marcar como completado cuando termine el video
       updateProgress(videoDuration, videoDuration, true);
     }
@@ -139,6 +181,16 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   return (
     <div className="space-y-3">
+      {/* DEBUG INFO - TEMPORAL */}
+      <div className="bg-yellow-900 text-yellow-200 p-3 rounded text-xs">
+        <p><strong>DEBUG INFO:</strong></p>
+        <p>CourseID: {courseId}</p>
+        <p>VideoID: {videoId}</p>
+        <p>PlaybackID: {playbackId}</p>
+        <p>Progress: {Math.round(progress)}s / {Math.round(duration)}s</p>
+        <p>Percentage: {Math.round(progressPercentage)}%</p>
+      </div>
+      
       <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
         <MuxPlayer
           ref={playerRef}

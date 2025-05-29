@@ -13,32 +13,42 @@ interface MongoError extends Error {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🔄 [API] Recibida solicitud de actualización de progreso');
+  
   try {
     const session = await getServerSession(authOptions);
     
     // Verificar si el usuario está autenticado
     if (!session?.user?.email) {
+      console.log('❌ [API] Usuario no autenticado');
       return NextResponse.json(
         { error: 'No autorizado' },
         { status: 401 }
       );
     }
     
+    console.log('✅ [API] Usuario autenticado:', session.user.email);
+    
     await connectToDatabase();
     
     const user = await User.findOne({ email: session.user.email });
     
     if (!user) {
+      console.log('❌ [API] Usuario no encontrado en BD:', session.user.email);
       return NextResponse.json(
         { error: 'Usuario no encontrado' },
         { status: 404 }
       );
     }
     
+    console.log('✅ [API] Usuario encontrado:', user._id);
+    
     const data = await request.json();
+    console.log('📊 [API] Datos recibidos:', data);
     
     // Validar datos requeridos
     if (!data.courseId || !data.videoId) {
+      console.log('❌ [API] Faltan datos requeridos:', { courseId: data.courseId, videoId: data.videoId });
       return NextResponse.json(
         { error: 'Faltan datos requeridos (courseId, videoId)' },
         { status: 400 }
@@ -50,7 +60,14 @@ export async function POST(request: NextRequest) {
       (id: mongoose.Types.ObjectId) => id.toString() === data.courseId
     );
     
+    console.log('🔍 [API] Verificando acceso al curso:', {
+      courseId: data.courseId,
+      userCourses: user.courses?.map((id: mongoose.Types.ObjectId) => id.toString()),
+      hasAccess
+    });
+    
     if (!hasAccess) {
+      console.log('❌ [API] Usuario no tiene acceso al curso');
       return NextResponse.json(
         { error: 'No tienes acceso a este curso' },
         { status: 403 }
@@ -60,11 +77,19 @@ export async function POST(request: NextRequest) {
     // Obtener el curso para validar que el video existe
     const course = await Course.findById(data.courseId);
     if (!course) {
+      console.log('❌ [API] Curso no encontrado:', data.courseId);
       return NextResponse.json(
         { error: 'Curso no encontrado' },
         { status: 404 }
       );
     }
+    
+    console.log('✅ [API] Curso encontrado:', {
+      courseId: course._id,
+      courseTitle: course.title,
+      mainVideoId: course.videoId,
+      additionalVideos: course.videos?.length || 0
+    });
     
     // Verificar si el video pertenece al curso (video principal o videos adicionales)
     const isMainVideo = course.videoId === data.videoId;
@@ -72,7 +97,16 @@ export async function POST(request: NextRequest) {
       video.videoId === data.videoId
     );
     
+    console.log('🎬 [API] Verificando video:', {
+      receivedVideoId: data.videoId,
+      isMainVideo,
+      isAdditionalVideo,
+      mainVideoId: course.videoId,
+      additionalVideoIds: course.videos?.map((v: any) => v.videoId) || []
+    });
+    
     if (!isMainVideo && !isAdditionalVideo) {
+      console.log('❌ [API] Video no pertenece al curso');
       return NextResponse.json(
         { error: 'El video no pertenece a este curso' },
         { status: 400 }
