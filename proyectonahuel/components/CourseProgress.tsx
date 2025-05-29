@@ -55,7 +55,6 @@ const CourseProgress = ({ courseId, userHasCourse }: CourseProgressProps) => {
   useEffect(() => {
     const handleProgressUpdate = (event: any) => {
       if (event.detail.courseId === courseId) {
-        console.log('🎯 Evento de progreso recibido, refrescando...', event.detail);
         fetchProgress();
       }
     };
@@ -73,7 +72,6 @@ const CourseProgress = ({ courseId, userHasCourse }: CourseProgressProps) => {
         const data = await response.json();
         if (data.success) {
           setProgress(data.progress);
-          console.log('🔄 CourseProgress actualizado:', data.progress.totalProgress + '%');
         }
       }
     } catch (error) {

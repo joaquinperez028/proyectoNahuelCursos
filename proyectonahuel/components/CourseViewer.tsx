@@ -22,38 +22,22 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   useEffect(() => {
     setIsClient(true);
     
-    console.log('🎯 CourseViewer montado con IDs:', {
-      courseId,
-      videoId,
-      playbackId
-    });
-    
     // Cargar progreso inicial cuando el componente se monta
     loadInitialProgress();
   }, [courseId, videoId]);
 
   // Función para cargar el progreso inicial del video
   const loadInitialProgress = async () => {
-    console.log('📥 Cargando progreso inicial para:', { courseId, videoId });
-    
     try {
       const response = await fetch(`/api/progress/video?courseId=${courseId}&videoId=${videoId}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Progreso inicial recibido:', data);
         
         if (data.success && data.progress) {
           setLastPosition(data.progress.lastPosition || 0);
           setProgress(data.progress.watchedSeconds || 0);
           setIsCompleted(data.progress.completed || false);
-          console.log('✅ Progreso inicial establecido:', {
-            lastPosition: data.progress.lastPosition,
-            watchedSeconds: data.progress.watchedSeconds,
-            completed: data.progress.completed
-          });
         }
-      } else {
-        console.warn('⚠️ No se pudo cargar progreso inicial:', response.status);
       }
     } catch (error) {
       console.error('❌ Error al cargar progreso inicial:', error);
@@ -62,14 +46,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   // Función para actualizar el progreso en el servidor
   const updateProgress = async (currentTime: number, videoDuration: number, completed: boolean = false) => {
-    console.log('🔄 Actualizando progreso:', {
-      courseId,
-      videoId,
-      currentTime,
-      videoDuration,
-      completed
-    });
-    
     try {
       const response = await fetch('/api/progress/update', {
         method: 'POST',
@@ -87,13 +63,8 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
       });
       
       const data = await response.json();
-      console.log('📊 Respuesta del servidor:', response.status, data);
       
-      if (!response.ok) {
-        console.error('❌ Error al actualizar progreso:', data);
-      } else {
-        console.log('✅ Progreso actualizado exitosamente:', data);
-        
+      if (response.ok) {
         // Actualizar estado local si se marca como completado
         if (completed) {
           setIsCompleted(true);
@@ -113,7 +84,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   const saveProgressWithDebounce = (currentTime: number, videoDuration: number) => {
     // No actualizar progreso si el video ya está completado
     if (isCompleted) {
-      console.log('🚫 Video ya completado, no actualizando progreso');
       return;
     }
     
@@ -134,12 +104,10 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
   // Manejar eventos del reproductor MUX
   const handleLoadedMetadata = () => {
     const player = playerRef.current;
-    console.log('📹 Video metadata cargado');
     
     if (player && lastPosition > 0) {
       // Restaurar la posición anterior si existe
       player.currentTime = lastPosition;
-      console.log('⏩ Restaurando posición anterior:', lastPosition);
     }
   };
 
@@ -153,15 +121,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
       setDuration(videoDuration);
       setLastPosition(currentTime);
 
-      // Solo imprimir log cada 10 segundos para no saturar
-      if (Math.floor(currentTime) % 10 === 0) {
-        console.log('⏱️ Progreso del video:', {
-          currentTime: Math.floor(currentTime),
-          duration: Math.floor(videoDuration),
-          percentage: Math.round((currentTime / videoDuration) * 100)
-        });
-      }
-
       // Guardar progreso cada cierto tiempo
       if (videoDuration > 0) {
         saveProgressWithDebounce(currentTime, videoDuration);
@@ -171,11 +130,9 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
 
   const handleEnded = () => {
     const player = playerRef.current;
-    console.log('🎬 Video terminado');
     
     if (player && !isCompleted) {
       const videoDuration = player.duration;
-      console.log('✅ Marcando video como completado:', videoDuration);
       
       // Marcar como completado localmente primero
       setIsCompleted(true);
@@ -218,8 +175,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
     );
   }
 
-  const progressPercentage = duration > 0 ? (progress / duration) * 100 : 0;
-
   return (
     <div className="space-y-3">
       <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
@@ -235,26 +190,6 @@ const CourseViewer = ({ playbackId, videoId, courseId, token }: CourseViewerProp
           onEnded={handleEnded}
         />
       </div>
-      
-      {/* Barra de progreso */}
-      {duration > 0 && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-[var(--neutral-400)]">
-            <span>Progreso del video</span>
-            <span>{Math.round(progressPercentage)}%</span>
-          </div>
-          <div className="w-full bg-[var(--neutral-800)] rounded-full h-2">
-            <div 
-              className="bg-[var(--primary)] h-2 rounded-full transition-all duration-300 ease-out"
-              style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs text-[var(--neutral-500)]">
-            <span>{formatTime(progress)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

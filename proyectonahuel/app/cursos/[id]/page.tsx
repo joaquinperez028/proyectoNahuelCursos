@@ -296,19 +296,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
           <div className="lg:col-span-2 space-y-12">
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
-              {/* DEBUG INFO - TEMPORAL */}
-              <div className="bg-red-900 text-red-200 p-3 text-xs border-b border-red-700">
-                <p><strong>DEBUG - IDs del Curso:</strong></p>
-                <p>course.videoId: {course.videoId || 'undefined'}</p>
-                <p>course.introVideoId: {course.introVideoId || 'undefined'}</p>
-                <p>course.playbackId: {course.playbackId || 'undefined'}</p>
-                <p>course.introPlaybackId: {course.introPlaybackId || 'undefined'}</p>
-                <p>Videos adicionales: {course.videos?.length || 0}</p>
-                {course.videos?.map((v, i) => (
-                  <p key={i}>- Video {i+1}: videoId={v.videoId}, playbackId={v.playbackId}</p>
-                ))}
-              </div>
-              
               {userHasCourse ? (
                 // Usuario tiene acceso al curso - usar CourseViewer con video principal
                 (() => {
