@@ -22,6 +22,7 @@ import MuxPlayer from "@mux/mux-player-react";
 import BuyButton from '@/app/components/BuyButton';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
+import CourseContentPagination from '@/components/CourseContentPagination';
 
 export const dynamic = 'force-dynamic';
 
@@ -377,56 +378,13 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             </section>
             {/* Lecciones y ejercicios en orden */}
             {userHasCourse && itemsOrdenados.length > 0 && (
-              <section>
-                <hr className="border-[var(--border)] my-8" />
-                <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Contenido del curso</h2>
-                <div className="space-y-4">
-                  {itemsOrdenados.map((item, index) => (
-                    <div key={item._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-start">
-                          <div className={`w-8 h-8 rounded-full ${item.tipo === 'video' ? 'bg-[var(--primary-dark)]' : 'bg-[var(--secondary-dark)]'} text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-[var(--neutral-100)]">
-                              {item.tipo === 'video' ? `Video: ${item.title}` : `Ejercicio: ${item.title}`}
-                            </h3>
-                            {item.description && (
-                              <p className="text-[var(--neutral-400)] mt-1 text-sm">{item.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        {/* Botón de descarga solo para ejercicios */}
-                        {item.tipo === 'ejercicio' && userHasCourse && (
-                          <a 
-                            href={`/api/course-exercise?id=${item._id}`} 
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-lg text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors duration-300 shadow-sm"
-                          >
-                            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Descargar PDF
-                          </a>
-                        )}
-                      </div>
-                      {/* Render de video o mensaje de ejercicio */}
-                      {item.tipo === 'video' ? (
-                        <div className="mt-4">
-                          <CourseViewer 
-                            playbackId={item.playbackId || ''} 
-                            videoId={item.videoId || ''}
-                            courseId={course._id}
-                            token={videoTokens[item.playbackId] || ''} 
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <CourseContentPagination 
+                items={itemsOrdenados}
+                courseId={course._id}
+                videoTokens={videoTokens}
+                userHasCourse={userHasCourse}
+                itemsPerPage={10}
+              />
             )}
             {/* Reseñas */}
             <section>
