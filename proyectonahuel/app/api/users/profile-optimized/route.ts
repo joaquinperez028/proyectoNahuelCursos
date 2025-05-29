@@ -25,17 +25,9 @@ export async function GET(request: NextRequest) {
       {
         $lookup: {
           from: 'courses',
-          localField: 'enrolledCourses',
+          localField: 'courses',
           foreignField: '_id',
           as: 'enrolledCoursesData'
-        }
-      },
-      {
-        $lookup: {
-          from: 'courses',
-          localField: 'coursesCompleted',
-          foreignField: '_id',
-          as: 'completedCoursesData'
         }
       },
       {
@@ -60,6 +52,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    console.log('📊 DEBUG - Profile Result:', {
+      email: profileResult.email,
+      coursesCount: profileResult.courses?.length || 0,
+      enrolledCoursesDataCount: profileResult.enrolledCoursesData?.length || 0,
+      progressDataCount: profileResult.progressData?.length || 0,
+      certificatesDataCount: profileResult.certificatesData?.length || 0
+    });
+
     // Process active courses with progress
     const activeCourses = profileResult.enrolledCoursesData.map((course: any) => {
       const progress = profileResult.progressData.find((p: any) => 
@@ -69,12 +69,13 @@ export async function GET(request: NextRequest) {
       return {
         id: course._id.toString(),
         title: course.title,
-        progress: progress ? progress.progressPercentage : 0,
+        progress: progress ? progress.totalProgress : 0,
         startDate: progress?.startDate || course.createdAt,
         lastUpdate: progress?.lastUpdate || progress?.updatedAt || course.updatedAt,
         thumbnailUrl: course.thumbnailUrl,
-        totalLessons: course.lessons?.length || 0,
-        completedLessons: progress?.completedLessons?.length || 0
+        totalLessons: course.videos?.length || 0,
+        completedLessons: progress?.videoProgress?.filter((v: any) => v.completed)?.length || 0,
+        isCompleted: progress?.isCompleted || false
       };
     });
 
@@ -92,10 +93,12 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Calculate stats
+    // Calculate stats - count completed courses from progress data
+    const completedCourses = profileResult.progressData.filter((p: any) => p.isCompleted).length;
+    
     const stats = {
       totalCourses: profileResult.enrolledCoursesData.length,
-      completedCourses: profileResult.completedCoursesData.length,
+      completedCourses: completedCourses,
       certificatesEarned: certificates.length,
       totalHoursLearned: activeCourses.reduce((total: number, course: any) => {
         const hours = Math.floor((course.progress / 100) * (course.totalLessons * 0.5));
@@ -169,6 +172,14 @@ export async function GET(request: NextRequest) {
       adminStats,
       timestamp: Date.now() // For caching
     };
+
+    console.log('📤 DEBUG - Final Response:', {
+      userEmail: response.user.email,
+      activeCoursesCount: response.activeCourses.length,
+      certificatesCount: response.certificates.length,
+      purchasesCount: response.purchases.length,
+      stats: response.stats
+    });
 
     // Set aggressive caching headers
     return new NextResponse(JSON.stringify(response), {
