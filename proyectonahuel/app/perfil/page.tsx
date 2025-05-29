@@ -368,8 +368,8 @@ export default function PerfilPage() {
     const certificate = profileData.certificates.find(cert => cert.id === certificateId);
     if (certificate?.certificateUrl) {
       // Abrir directamente la URL del certificado
-      window.open(certificate.certificateUrl, '_blank');
-    } else {
+        window.open(certificate.certificateUrl, '_blank');
+      } else {
       console.error('Certificado no encontrado o URL no disponible');
       alert('Error: No se pudo encontrar la URL del certificado. Por favor, contacta al soporte.');
     }
