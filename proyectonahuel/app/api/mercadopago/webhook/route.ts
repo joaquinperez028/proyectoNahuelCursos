@@ -6,7 +6,7 @@ import User from '@/models/User';
 import Progress from '@/models/Progress';
 import Payment from '@/models/Payment';
 import Pack from '@/models/Pack';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, getUserConfirmationTemplate } from '@/lib/email';
 
 // Configurar MercadoPago con la clave de acceso
 const client = new MercadoPagoConfig({ 
@@ -58,21 +58,12 @@ async function processCourseAccess(courseId: string, userId: string, approved: b
 /**
  * Envía un correo de confirmación de compra
  */
-async function sendConfirmationEmail(email: string, name: string, itemName: string) {
+async function sendConfirmationEmail(email: string, name: string, itemName: string, isPackage: boolean = false) {
   try {
-    const htmlContent = `
-      <h1>¡Gracias por tu compra!</h1>
-      <p>Hola ${name},</p>
-      <p>Tu compra de "${itemName}" ha sido confirmada.</p>
-      <p>Ya puedes acceder a tu contenido desde la plataforma.</p>
-      <p>¡Que disfrutes aprendiendo!</p>
-    `;
+    const subject = `🎉 ¡Compra confirmada! - ${itemName}`;
+    const htmlContent = getUserConfirmationTemplate(name, itemName, isPackage);
     
-    await sendEmail(
-      email,
-      '¡Compra confirmada!',
-      htmlContent
-    );
+    await sendEmail(email, subject, htmlContent);
   } catch (error) {
     console.error('Error al enviar correo de confirmación:', error);
   }
@@ -177,7 +168,7 @@ export async function POST(request: Request) {
           // Enviar correo de confirmación de pack
           const user = await User.findById(userId);
           if (user && user.email && pack) {
-            await sendConfirmationEmail(user.email, user.name || 'Usuario', `Pack: ${pack.name}`);
+            await sendConfirmationEmail(user.email, user.name || 'Usuario', pack.name, true);
           }
         } else {
           // Pago de curso individual aprobado
@@ -187,7 +178,7 @@ export async function POST(request: Request) {
           const user = await User.findById(userId);
           const course = await Course.findById(itemId);
           if (user && user.email && course) {
-            await sendConfirmationEmail(user.email, user.name || 'Usuario', course.title);
+            await sendConfirmationEmail(user.email, user.name || 'Usuario', course.title, false);
           }
         }
 

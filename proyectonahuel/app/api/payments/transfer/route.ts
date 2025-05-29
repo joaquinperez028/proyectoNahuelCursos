@@ -8,7 +8,7 @@ import User from '@/models/User';
 import Payment from '@/models/Payment';
 import Progress from '@/models/Progress';
 import { v4 as uuidv4 } from 'uuid';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, getAdminNotificationTemplate } from '@/lib/email';
 
 // Función para enviar email al administrador
 async function sendAdminNotification(payment: any, user: any, item: any) {
@@ -21,23 +21,16 @@ async function sendAdminNotification(payment: any, user: any, item: any) {
   const itemType = payment.packId ? 'pack' : 'curso';
   const itemTitle = payment.packId ? item.name : item.title;
   const amount = payment.amount;
+  const isPackage = payment.packId ? true : false;
 
-  const subject = `Nuevo pago por transferencia - ${itemType}: ${itemTitle}`;
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h1 style="color: #2563eb;">Nuevo pago por transferencia recibido</h1>
-      <p><strong>Usuario:</strong> ${user.name} (${user.email})</p>
-      <p><strong>Item:</strong> ${itemType.toUpperCase()} - ${itemTitle}</p>
-      <p><strong>Monto:</strong> $${amount}</p>
-      <p><strong>Fecha:</strong> ${new Date().toLocaleString('es-AR')}</p>
-      <div style="margin: 30px 0;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/transferencias" 
-           style="background-color: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px;">
-          Ver detalles del pago
-        </a>
-      </div>
-    </div>
-  `;
+  const subject = `🔔 Nuevo pago por transferencia - ${itemType}: ${itemTitle}`;
+  const htmlContent = getAdminNotificationTemplate(
+    user.name || 'Usuario sin nombre',
+    user.email,
+    itemTitle,
+    amount,
+    isPackage
+  );
 
   try {
     await sendEmail(adminEmail, subject, htmlContent);

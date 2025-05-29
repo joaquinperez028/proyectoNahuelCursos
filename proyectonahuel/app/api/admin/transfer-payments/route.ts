@@ -6,7 +6,7 @@ import Payment from '@/models/Payment';
 import User from '@/models/User';
 import Course from '@/models/Course';
 import Progress from '@/models/Progress';
-import { sendEmail } from '@/lib/email';
+import { sendEmail, getUserConfirmationTemplate, getRejectionTemplate } from '@/lib/email';
 import Pack from '@/models/Pack';
 
 // Función para convertir ObjectId de MongoDB a string de forma segura
@@ -339,20 +339,7 @@ async function processCourseAccess(courseId: string | null, userId: string, paym
 // Función para enviar correo de confirmación
 async function sendConfirmationEmail(email: string, name: string, courseTitle: string) {
   const subject = `¡Compra exitosa! Acceso a ${courseTitle}`;
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
-      <h1 style="color: #4CAF50;">¡Felicitaciones, ${name}!</h1>
-      <p>Tu pago por transferencia para el curso <strong>${courseTitle}</strong> ha sido aprobado.</p>
-      <p>Ya puedes acceder a todo el contenido del curso desde tu perfil en nuestra plataforma.</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/mis-cursos" style="background-color: #4CAF50; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          VER MIS CURSOS
-        </a>
-      </div>
-      <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
-      <p>¡Esperamos que disfrutes tu experiencia de aprendizaje!</p>
-    </div>
-  `;
+  const htmlContent = getUserConfirmationTemplate(name, courseTitle);
   
   try {
     await sendEmail(email, subject, htmlContent);
@@ -363,22 +350,8 @@ async function sendConfirmationEmail(email: string, name: string, courseTitle: s
 
 // Función para enviar correo de rechazo
 async function sendRejectionEmail(email: string, name: string, courseTitle: string, reason: string) {
-  const subject = `Información sobre tu pago para ${courseTitle}`;
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
-      <h1 style="color: #e74c3c;">Información de pago</h1>
-      <p>Hola ${name},</p>
-      <p>Lamentamos informarte que tu pago por transferencia para el curso <strong>${courseTitle}</strong> no ha sido aprobado.</p>
-      <p><strong>Motivo:</strong> ${reason}</p>
-      <p>Si crees que esto es un error o necesitas ayuda adicional, por favor contáctanos respondiendo este correo.</p>
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/contacto" style="background-color: #3498db; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          CONTACTAR SOPORTE
-        </a>
-      </div>
-      <p>Puedes intentar nuevamente con otro método de pago o una nueva transferencia.</p>
-    </div>
-  `;
+  const subject = `ℹ️ Información sobre tu pago para ${courseTitle}`;
+  const htmlContent = getRejectionTemplate(name, courseTitle, reason);
   
   try {
     await sendEmail(email, subject, htmlContent);
