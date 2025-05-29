@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 import { connectToDatabase } from '@/lib/mongodb';
 import User from '@/models/User';
 import Course from '@/models/Course';
 import Progress from '@/models/Progress';
+import Payment from '@/models/Payment';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -15,72 +17,51 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase();
 
-    // Single aggregation query to get ALL profile data at once
-    const profilePipeline = [
-      {
-        $match: { email: session.user.email }
+    // Single optimized query with aggregation pipeline
+    const [profileResult] = await User.aggregate([
+      { 
+        $match: { email: session.user.email } 
       },
       {
         $lookup: {
           from: 'courses',
-          localField: 'courses',
+          localField: 'enrolledCourses',
           foreignField: '_id',
-          as: 'enrolledCourses',
-          pipeline: [
-            {
-              $project: {
-                title: 1,
-                thumbnailUrl: 1,
-                price: 1,
-                createdAt: 1,
-                updatedAt: 1
-              }
-            }
-          ]
+          as: 'enrolledCoursesData'
+        }
+      },
+      {
+        $lookup: {
+          from: 'courses',
+          localField: 'coursesCompleted',
+          foreignField: '_id',
+          as: 'completedCoursesData'
         }
       },
       {
         $lookup: {
           from: 'progresses',
-          let: { userId: '$_id', courseIds: '$courses' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$userId', '$$userId'] },
-                    { $in: ['$courseId', '$$courseIds'] }
-                  ]
-                }
-              }
-            }
-          ],
+          localField: '_id',
+          foreignField: 'userId',
           as: 'progressData'
         }
       },
       {
-        $project: {
-          name: 1,
-          email: 1,
-          image: 1,
-          role: 1,
-          createdAt: 1,
-          lastLogin: 1,
-          updatedAt: 1,
-          enrolledCourses: 1,
-          progressData: 1
+        $lookup: {
+          from: 'certificates',
+          localField: '_id',
+          foreignField: 'userId',
+          as: 'certificatesData'
         }
       }
-    ];
+    ]);
 
-    const [profileResult] = await User.aggregate(profilePipeline);
-    
     if (!profileResult) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Process courses and progress in memory (super fast)
-    const activeCourses = profileResult.enrolledCourses.map((course: any) => {
+    // Process active courses with progress
+    const activeCourses = profileResult.enrolledCoursesData.map((course: any) => {
       const progress = profileResult.progressData.find((p: any) => 
         p.courseId.toString() === course._id.toString()
       );
@@ -88,64 +69,83 @@ export async function GET(request: NextRequest) {
       return {
         id: course._id.toString(),
         title: course.title,
-        progress: progress?.totalProgress || 0,
-        startDate: course.createdAt,
-        lastUpdate: progress?.updatedAt || course.updatedAt,
-        thumbnailUrl: course.thumbnailUrl
+        progress: progress ? progress.progressPercentage : 0,
+        startDate: progress?.startDate || course.createdAt,
+        lastUpdate: progress?.lastUpdate || progress?.updatedAt || course.updatedAt,
+        thumbnailUrl: course.thumbnailUrl,
+        totalLessons: course.lessons?.length || 0,
+        completedLessons: progress?.completedLessons?.length || 0
       };
     });
 
     // Process certificates
-    const certificates = profileResult.progressData
-      .filter((p: any) => p.certificateIssued && p.certificateUrl)
-      .map((p: any) => {
-        const course = profileResult.enrolledCourses.find((c: any) => 
-          c._id.toString() === p.courseId.toString()
-        );
-        return {
-          id: p.certificateId || p.courseId.toString(),
-          courseTitle: course?.title || 'Curso',
-          issueDate: p.completedAt || p.updatedAt,
-          certificateUrl: p.certificateUrl
-        };
-      });
+    const certificates = profileResult.certificatesData.map((cert: any) => {
+      const course = profileResult.enrolledCoursesData.find((c: any) => 
+        c._id.toString() === cert.courseId.toString()
+      );
+      
+      return {
+        id: cert._id.toString(),
+        courseTitle: course?.title || 'Curso no encontrado',
+        issueDate: cert.issueDate,
+        certificateUrl: cert.certificateUrl
+      };
+    });
 
     // Calculate stats
     const stats = {
-      totalCourses: activeCourses.length,
-      completedCourses: certificates.length,
+      totalCourses: profileResult.enrolledCoursesData.length,
+      completedCourses: profileResult.completedCoursesData.length,
       certificatesEarned: certificates.length,
-      totalHoursLearned: Math.round(
-        activeCourses.reduce((acc: number, course: any) => acc + (course.progress / 100) * 20, 0)
-      )
+      totalHoursLearned: activeCourses.reduce((total: number, course: any) => {
+        const hours = Math.floor((course.progress / 100) * (course.totalLessons * 0.5));
+        return total + hours;
+      }, 0)
     };
 
-    // Get admin stats only if needed (single aggregation)
+    // Admin stats with REAL sales data
     let adminStats = null;
     if (profileResult.role === 'admin') {
-      const [adminData] = await User.aggregate([
+      // Get real sales data from Payment model
+      const [salesData] = await Payment.aggregate([
         {
           $facet: {
-            userCount: [{ $count: "total" }],
-            courseCount: [
-              { $lookup: { from: 'courses', pipeline: [{ $count: "total" }], as: 'courses' } },
-              { $unwind: '$courses' },
-              { $replaceRoot: { newRoot: '$courses' } }
+            totalSalesData: [
+              { $match: { status: 'approved' } },
+              { $group: { _id: null, total: { $sum: '$amount' } } }
+            ],
+            monthlySalesData: [
+              {
+                $match: {
+                  status: 'approved',
+                  paymentDate: {
+                    $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                    $lte: new Date()
+                  }
+                }
+              },
+              { $group: { _id: null, total: { $sum: '$amount' } } }
             ]
           }
         }
       ]);
 
+      // Get user and course counts
+      const [userCount, courseCount] = await Promise.all([
+        User.countDocuments(),
+        Course.countDocuments()
+      ]);
+
       adminStats = {
-        totalUsers: adminData.userCount[0]?.total || 0,
-        totalCourses: adminData.courseCount[0]?.total || 0,
-        totalSales: 0, // Implementar según modelo de ventas
-        monthlySales: 0
+        totalUsers: userCount,
+        totalCourses: courseCount,
+        totalSales: salesData.totalSalesData[0]?.total || 0,
+        monthlySales: salesData.monthlySalesData[0]?.total || 0
       };
     }
 
     // Create purchases from course data (no additional query needed)
-    const purchases = profileResult.enrolledCourses.map((course: any) => ({
+    const purchases = profileResult.enrolledCoursesData.map((course: any) => ({
       id: course._id.toString(),
       courseTitle: course.title,
       date: course.createdAt,
@@ -180,10 +180,10 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error en profile-optimized API:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
-    );
+    console.error('Error in profile-optimized API:', error);
+    return NextResponse.json({ 
+      error: 'Error interno del servidor',
+      details: error instanceof Error ? error.message : 'Error desconocido'
+    }, { status: 500 });
   }
 } 

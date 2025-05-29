@@ -43,7 +43,7 @@ type Purchase = {
 
 export default function PerfilPage() {
   const { data: session, status } = useSession();
-  const { data: profileData, loading, error, isFromCache } = useProfileData();
+  const { data: profileData, loading, error, isFromCache, clearCacheAndReload } = useProfileData();
   const [activeTab, setActiveTab] = useState('informacion');
   const [muxStatus, setMuxStatus] = useState({
     loading: false,
@@ -167,6 +167,18 @@ export default function PerfilPage() {
       {isFromCache && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-3 py-2 rounded-md text-sm font-medium animate-pulse">
           ⚡ Carga instantánea
+        </div>
+      )}
+
+      {/* Botón temporal para limpiar caché (solo para admin) */}
+      {profileData.user.role === 'admin' && (
+        <div className="fixed top-4 left-4 z-50">
+          <button
+            onClick={clearCacheAndReload}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-md text-xs font-medium transition-colors duration-200"
+          >
+            🔄 Actualizar Ventas
+          </button>
         </div>
       )}
       

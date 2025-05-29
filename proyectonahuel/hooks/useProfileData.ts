@@ -104,7 +104,7 @@ export function useProfileData() {
     }
   }, [status, session?.user?.email, loadFromCache, fetchFreshData, preloadData]);
 
-  // Invalidar caché
+  // Invalidar caché y forzar recarga (útil cuando sabemos que datos cambiaron)
   const invalidateCache = useCallback(async () => {
     if (session?.user?.email) {
       await profileCache.invalidate(session.user.email);
@@ -117,12 +117,22 @@ export function useProfileData() {
     await fetchFreshData(false);
   }, [fetchFreshData]);
 
+  // Función para limpiar caché forzadamente (cuando datos están obsoletos)
+  const clearCacheAndReload = useCallback(async () => {
+    if (session?.user?.email) {
+      await profileCache.invalidate(session.user.email);
+      setData(null); // Limpiar estado actual
+      await fetchFreshData(false);
+    }
+  }, [session?.user?.email, fetchFreshData]);
+
   return {
     data,
     loading: loading && !data, // Solo mostrar loading si no hay datos cacheados
     error,
     refetch,
     invalidateCache,
+    clearCacheAndReload, // Nueva función para forzar limpieza
     isFromCache: !!data && !loading, // Indica si los datos vienen del caché
   };
 } 
