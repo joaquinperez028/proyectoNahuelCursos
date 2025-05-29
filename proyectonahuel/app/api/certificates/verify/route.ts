@@ -4,6 +4,9 @@ import Progress from '@/models/Progress';
 import Course from '@/models/Course';
 import User from '@/models/User';
 
+// Hacer el endpoint dinámico para evitar ejecución en build time
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase();

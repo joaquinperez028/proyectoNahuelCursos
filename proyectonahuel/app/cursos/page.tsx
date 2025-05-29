@@ -9,7 +9,8 @@ import Link from "next/link";
 import type { NextPage } from 'next';
 import CategoryDropdown from './components/CategoryDropdown';
 
-export const dynamic = 'force-dynamic';
+// Cambiar a ISR para mejor rendimiento
+export const revalidate = 300; // Revalidar cada 5 minutos
 
 interface ReviewType {
   _id: mongoose.Types.ObjectId;
@@ -51,11 +52,19 @@ interface CategoryCount {
   [key: string]: number;
 }
 
-// Función para obtener la categoría de la URL
-async function getCourses(categoria?: string): Promise<CourseType[]> {
+interface PaginatedResult {
+  courses: CourseType[];
+  totalPages: number;
+  currentPage: number;
+  totalCourses: number;
+}
+
+const COURSES_PER_PAGE = 12; // 12 cursos por página para mejor rendimiento
+
+// Función optimizada para obtener cursos con paginación
+async function getCourses(categoria?: string, page: number = 1): Promise<PaginatedResult> {
   try {
     await connectToDatabase();
-    console.log('Modelos registrados:', Object.keys(mongoose.models).join(', '));
     
     // Crear consulta base
     let query = {};
@@ -65,36 +74,52 @@ async function getCourses(categoria?: string): Promise<CourseType[]> {
       query = { category: categoria };
     }
     
-    // Obtener cursos con el creador
+    // Calcular skip para paginación
+    const skip = (page - 1) * COURSES_PER_PAGE;
+    
+    // Obtener total de cursos para paginación
+    const totalCourses = await Course.countDocuments(query);
+    const totalPages = Math.ceil(totalCourses / COURSES_PER_PAGE);
+    
+    // Obtener cursos con paginación - optimización: solo campos necesarios
     const courses = await Course.find(query)
+      .select('title description price category thumbnailUrl playbackId introPlaybackId videoId onSale discountPercentage discountedPrice createdAt updatedAt createdBy')
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(COURSES_PER_PAGE)
       .populate('createdBy', 'name')
       .lean();
     
-    // Obtener todas las reseñas para los cursos encontrados
+    // Obtener reseñas solo para los cursos de esta página
     const courseIds = courses.map(course => course._id);
     const allReviews = await Review.find({ courseId: { $in: courseIds } })
-      .populate('userId', 'name image')
+      .select('rating courseId') // Solo campos necesarios para calcular promedio
       .lean();
     
-    // Agrupar las reseñas por courseId para facilitar el mapeo
-    const reviewsByCoursesId: Record<string, any[]> = {};
+    // Agrupar las reseñas por courseId y calcular promedio
+    const reviewsByCoursesId: Record<string, { average: number; count: number }> = {};
     
-    // Procesar las reseñas y agruparlas por ID de curso
+    // Procesar las reseñas de manera más eficiente
     allReviews.forEach(review => {
       const courseId = review.courseId.toString();
       if (!reviewsByCoursesId[courseId]) {
-        reviewsByCoursesId[courseId] = [];
+        reviewsByCoursesId[courseId] = { average: 0, count: 0 };
       }
-      reviewsByCoursesId[courseId].push(review);
+      reviewsByCoursesId[courseId].average += review.rating;
+      reviewsByCoursesId[courseId].count += 1;
     });
     
-    return courses.map((course: any) => {
+    // Calcular promedios
+    Object.keys(reviewsByCoursesId).forEach(courseId => {
+      const data = reviewsByCoursesId[courseId];
+      data.average = data.average / data.count;
+    });
+    
+    const processedCourses = courses.map((course: any) => {
       const courseId = course._id.toString();
-      const courseReviews = reviewsByCoursesId[courseId] || [];
+      const courseReviews = reviewsByCoursesId[courseId] || { average: 0, count: 0 };
       
       return {
-        ...course,
         _id: courseId,
         title: course.title || '',
         description: course.description || '',
@@ -108,28 +133,34 @@ async function getCourses(categoria?: string): Promise<CourseType[]> {
         discountPercentage: course.discountPercentage || 0,
         discountedPrice: course.discountedPrice || null,
         createdBy: {
-          ...course.createdBy,
           _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
           name: course.createdBy?.name || ''
         },
-        reviews: courseReviews.map((review: any) => ({
-          _id: review._id.toString(),
-          rating: review.rating || 0,
-          comment: review.comment || '',
-          userId: {
-            _id: review.userId?._id ? review.userId._id.toString() : '',
-            name: review.userId?.name || '',
-            image: review.userId?.image || ''
-          },
-          createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString()
+        // Simplificar reviews a solo lo necesario
+        reviews: Array(courseReviews.count).fill({}).map((_, index) => ({
+          rating: courseReviews.average
         })),
+        averageRating: courseReviews.average,
+        reviewCount: courseReviews.count,
         createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString(),
       };
     });
+    
+    return {
+      courses: processedCourses,
+      totalPages,
+      currentPage: page,
+      totalCourses
+    };
   } catch (error) {
     console.error('Error al obtener cursos:', error);
-    return [];
+    return {
+      courses: [],
+      totalPages: 0,
+      currentPage: 1,
+      totalCourses: 0
+    };
   }
 }
 
@@ -173,7 +204,9 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
   // Podemos acceder a ellos de forma síncrona por compatibilidad o con await
   const searchParamsResolved = await searchParams;
   const categoria = typeof searchParamsResolved?.categoria === 'string' ? searchParamsResolved.categoria : undefined;
-  const courses = await getCourses(categoria);
+  const page = typeof searchParamsResolved?.page === 'string' ? parseInt(searchParamsResolved.page) : 1;
+  
+  const courses = await getCourses(categoria, page);
   const categoryCounts = await getCategoryCounts();
   
   return (
@@ -193,10 +226,13 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
         {/* Indicador de resultados */}
         <div className="mb-6 flex items-center justify-between">
           <p className="text-[var(--neutral-300)]">
-            {courses.length > 0 ? (
+            {courses.totalCourses > 0 ? (
               <>
-                <span className="font-medium">{courses.length}</span> {courses.length === 1 ? 'curso encontrado' : 'cursos encontrados'}
+                <span className="font-medium">{courses.totalCourses}</span> {courses.totalCourses === 1 ? 'curso encontrado' : 'cursos encontrados'}
                 {categoria && <span> en <span className="text-[var(--accent)]">{categoria}</span></span>}
+                {courses.totalPages > 1 && (
+                  <span className="text-sm"> • Página {courses.currentPage} de {courses.totalPages}</span>
+                )}
               </>
             ) : (
               'No se encontraron cursos'
@@ -216,7 +252,7 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
           )}
         </div>
         
-        {courses.length === 0 ? (
+        {courses.courses.length === 0 ? (
           <div className="text-center py-10 bg-[var(--neutral-900)] rounded-lg border border-[var(--border)] shadow-md">
             <svg className="w-16 h-16 mx-auto text-[var(--neutral-500)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -239,11 +275,77 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {courses.map((course) => (
-              <CourseCard key={course._id} course={course} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {courses.courses.map((course) => (
+                <CourseCard key={course._id} course={course} />
+              ))}
+            </div>
+            
+            {/* Paginación */}
+            {courses.totalPages > 1 && (
+              <div className="mt-12 flex justify-center">
+                <nav className="flex items-center space-x-2">
+                  {/* Botón Anterior */}
+                  {courses.currentPage > 1 ? (
+                    <Link
+                      href={`/cursos?${new URLSearchParams({ 
+                        ...(categoria && { categoria }), 
+                        page: String(courses.currentPage - 1) 
+                      }).toString()}`}
+                      className="px-3 py-2 rounded-md bg-[var(--card)] border border-[var(--border)] text-[var(--neutral-300)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+                    >
+                      Anterior
+                    </Link>
+                  ) : (
+                    <span className="px-3 py-2 rounded-md bg-[var(--neutral-800)] text-[var(--neutral-500)] cursor-not-allowed">
+                      Anterior
+                    </span>
+                  )}
+                  
+                  {/* Números de página */}
+                  {Array.from({ length: Math.min(5, courses.totalPages) }, (_, i) => {
+                    const pageNumber = Math.max(1, courses.currentPage - 2) + i;
+                    if (pageNumber > courses.totalPages) return null;
+                    
+                    return (
+                      <Link
+                        key={pageNumber}
+                        href={`/cursos?${new URLSearchParams({ 
+                          ...(categoria && { categoria }), 
+                          page: String(pageNumber) 
+                        }).toString()}`}
+                        className={`px-3 py-2 rounded-md border transition-colors ${
+                          pageNumber === courses.currentPage
+                            ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                            : 'bg-[var(--card)] border-[var(--border)] text-[var(--neutral-300)] hover:bg-[var(--accent)] hover:text-white'
+                        }`}
+                      >
+                        {pageNumber}
+                      </Link>
+                    );
+                  })}
+                  
+                  {/* Botón Siguiente */}
+                  {courses.currentPage < courses.totalPages ? (
+                    <Link
+                      href={`/cursos?${new URLSearchParams({ 
+                        ...(categoria && { categoria }), 
+                        page: String(courses.currentPage + 1) 
+                      }).toString()}`}
+                      className="px-3 py-2 rounded-md bg-[var(--card)] border border-[var(--border)] text-[var(--neutral-300)] hover:bg-[var(--accent)] hover:text-white transition-colors"
+                    >
+                      Siguiente
+                    </Link>
+                  ) : (
+                    <span className="px-3 py-2 rounded-md bg-[var(--neutral-800)] text-[var(--neutral-500)] cursor-not-allowed">
+                      Siguiente
+                    </span>
+                  )}
+                </nav>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

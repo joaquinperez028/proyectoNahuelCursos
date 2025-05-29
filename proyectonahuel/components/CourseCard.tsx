@@ -20,6 +20,8 @@ interface CourseCardProps {
       name: string;
     };
     reviews: any[];
+    averageRating?: number;
+    reviewCount?: number;
     onSale?: boolean;
     discountPercentage?: number;
     discountedPrice?: number;
@@ -31,12 +33,16 @@ const CourseCard = ({ course }: CourseCardProps) => {
   const isAdmin = session?.user?.role === 'admin';
   const [isHovered, setIsHovered] = useState(false);
   const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Calcular la puntuación media si hay reseñas
-  const averageRating = course.reviews && course.reviews.length > 0
-    ? course.reviews.reduce((acc, review: any) => acc + review.rating, 0) / course.reviews.length
-    : 0;
+  // Usar el promedio pre-calculado o calcularlo si no está disponible
+  const averageRating = course.averageRating || 
+    (course.reviews && course.reviews.length > 0
+      ? course.reviews.reduce((acc, review: any) => acc + review.rating, 0) / course.reviews.length
+      : 0);
+  
+  const reviewCount = course.reviewCount || course.reviews?.length || 0;
 
   // Formateamos el precio
   const formattedPrice = new Intl.NumberFormat('es-AR', {
@@ -56,10 +62,10 @@ const CourseCard = ({ course }: CourseCardProps) => {
 
   // Gestionar reproducción del video con delay al hacer hover
   useEffect(() => {
-    if (isHovered) {
+    if (isHovered && imageLoaded) {
       timerRef.current = setTimeout(() => {
         setShouldPlayVideo(true);
-      }, 300); // Reducir de 800ms a 300ms para una respuesta más rápida
+      }, 500); // Delay de 500ms
     } else {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -74,7 +80,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
         timerRef.current = null;
       }
     };
-  }, [isHovered]);
+  }, [isHovered, imageLoaded]);
 
   return (
     <div 
@@ -108,7 +114,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
           )}
         </div>
 
-        {/* Siempre mostrar la imagen de fondo */}
+        {/* Imagen con lazy loading optimizado */}
         {course.thumbnailUrl ? (
           <Image
             src={course.thumbnailUrl}
@@ -116,6 +122,9 @@ const CourseCard = ({ course }: CourseCardProps) => {
             fill
             className="object-cover transition-transform duration-500 ease-in-out hover:scale-105"
             style={{ opacity: shouldPlayVideo ? 0 : 1 }}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
           />
         ) : (
           <Image
@@ -124,20 +133,24 @@ const CourseCard = ({ course }: CourseCardProps) => {
             fill
             className="object-cover transition-transform duration-500 ease-in-out hover:scale-105"
             style={{ opacity: shouldPlayVideo ? 0 : 1 }}
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               // Si hay error al cargar la imagen, mostrar un placeholder
               const target = e.target as HTMLImageElement;
               target.onerror = null; // Prevenir bucle infinito
               target.src = '/images/placeholder.png'; // Usar la imagen PNG de respaldo
+              setImageLoaded(true);
             }}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
           />
         )}
 
         {/* Gradiente sobre la imagen */}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--neutral-900)] via-transparent to-transparent opacity-70"></div>
         
-        {/* Mostrar el video de introducción solo cuando se hace hover */}
-        {course.introPlaybackId && shouldPlayVideo && (
+        {/* Mostrar el video de introducción solo cuando se hace hover y la imagen está cargada */}
+        {course.introPlaybackId && shouldPlayVideo && imageLoaded && (
           <div className="absolute inset-0 w-full h-full">
             <MuxPlayer 
               playbackId={course.introPlaybackId} 
@@ -148,7 +161,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
         )}
         
         {/* Botón de reproducción, solo visible cuando no se está reproduciendo el video */}
-        {course.introPlaybackId && !shouldPlayVideo && (
+        {course.introPlaybackId && !shouldPlayVideo && imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-[var(--accent)] bg-opacity-80 rounded-full p-3 hover:bg-opacity-100 transition-all duration-200 transform hover:scale-110">
               <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -156,6 +169,11 @@ const CourseCard = ({ course }: CourseCardProps) => {
               </svg>
             </div>
           </div>
+        )}
+        
+        {/* Skeleton loader mientras carga la imagen */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-[var(--neutral-800)] animate-pulse"></div>
         )}
       </div>
       
@@ -183,7 +201,7 @@ const CourseCard = ({ course }: CourseCardProps) => {
               </svg>
             ))}
             <span className="text-xs text-[var(--neutral-400)] ml-1">
-              {averageRating ? `${averageRating.toFixed(1)} (${course.reviews.length})` : 'Sin valoraciones'}
+              {averageRating ? `${averageRating.toFixed(1)} (${reviewCount})` : 'Sin valoraciones'}
             </span>
           </div>
         </div>
@@ -198,41 +216,13 @@ const CourseCard = ({ course }: CourseCardProps) => {
         </div>
       </div>
       
-      <div className="px-6 pb-6">
-        <Link
+      <div className="p-6 pt-0">
+        <Link 
           href={`/cursos/${course._id}`}
-          className="block w-full bg-[var(--primary)] text-[var(--neutral-100)] text-center py-2.5 rounded-lg hover:bg-[var(--primary-dark)] transition-colors font-medium relative overflow-hidden group"
+          className="w-full flex items-center justify-center px-4 py-2 bg-[var(--accent)] text-white font-medium rounded-lg hover:bg-[var(--accent-dark)] transition-colors"
         >
-          <span className="relative z-10">Ver detalles</span>
-          <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--accent)] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+          Ver detalles
         </Link>
-        
-        {isAdmin && (
-          <div className="mt-2 flex space-x-2">
-            <Link
-              href={`/admin/cursos/editar/${course._id}`}
-              className="block flex-1 bg-[var(--card-hovered)] text-[var(--neutral-300)] text-center py-2 rounded-md hover:bg-[var(--neutral-700)] hover:text-[var(--neutral-100)] transition-colors text-sm font-medium border border-[var(--border)]"
-            >
-              <div className="flex items-center justify-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-                Editar
-              </div>
-            </Link>
-            <Link
-              href={`/admin/cursos/eliminar/${course._id}`}
-              className="block flex-1 bg-[rgba(220,38,38,0.1)] text-red-500 text-center py-2 rounded-md hover:bg-[rgba(220,38,38,0.2)] transition-colors text-sm font-medium border border-red-500/30"
-            >
-              <div className="flex items-center justify-center">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-                Eliminar
-              </div>
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );

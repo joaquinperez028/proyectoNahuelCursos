@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from '@/lib/mongodb';
 import Course from "@/models/Course";
 
+// Hacer el endpoint dinámico para evitar ejecución en build time
+export const dynamic = 'force-dynamic';
+
 // GET /api/courses/featured - Obtener cursos destacados
 export async function GET() {
   try {
