@@ -23,6 +23,7 @@ import BuyButton from '@/app/components/BuyButton';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import CourseContentPagination from '@/components/CourseContentPagination';
+import CourseProgress from '@/components/CourseProgress';
 
 export const dynamic = 'force-dynamic';
 
@@ -369,6 +370,10 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
               )}
             </div>
             <hr className="border-[var(--border)] my-8" />
+            
+            {/* Progreso del curso (solo si el usuario tiene acceso) */}
+            <CourseProgress courseId={course._id} userHasCourse={userHasCourse} />
+            
             {/* Descripción completa */}
             <section>
               <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Descripción del curso</h2>

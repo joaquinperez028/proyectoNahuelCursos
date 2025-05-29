@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CourseViewer from './CourseViewer';
 
 interface VideoType {
@@ -34,6 +34,19 @@ interface ItemType {
   playbackId?: string;
 }
 
+interface VideoProgressType {
+  videoId: string;
+  completed: boolean;
+  watchedSeconds: number;
+  lastPosition: number;
+}
+
+interface CourseProgressType {
+  totalProgress: number;
+  isCompleted: boolean;
+  videoProgress: VideoProgressType[];
+}
+
 interface CourseContentPaginationProps {
   items: ItemType[];
   courseId: string;
@@ -50,6 +63,39 @@ export default function CourseContentPagination({
   itemsPerPage = 10 
 }: CourseContentPaginationProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [courseProgress, setCourseProgress] = useState<CourseProgressType | null>(null);
+
+  useEffect(() => {
+    if (userHasCourse && courseId) {
+      fetchCourseProgress();
+    }
+  }, [courseId, userHasCourse]);
+
+  const fetchCourseProgress = async () => {
+    try {
+      const response = await fetch(`/api/progress/check?courseId=${courseId}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.progress) {
+          setCourseProgress(data.progress);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar progreso del curso:', error);
+    }
+  };
+
+  const isVideoCompleted = (videoId: string): boolean => {
+    if (!courseProgress?.videoProgress) return false;
+    const videoProgress = courseProgress.videoProgress.find(vp => vp.videoId === videoId);
+    return videoProgress?.completed || false;
+  };
+
+  const getVideoProgress = (videoId: string): number => {
+    if (!courseProgress?.videoProgress) return 0;
+    const videoProgress = courseProgress.videoProgress.find(vp => vp.videoId === videoId);
+    return videoProgress?.watchedSeconds || 0;
+  };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -67,17 +113,38 @@ export default function CourseContentPagination({
       <div className="space-y-4">
         {paginatedItems.map((item, index) => {
           const globalIndex = (currentPage - 1) * itemsPerPage + index;
+          const isCompleted = item.tipo === 'video' && item.videoId ? isVideoCompleted(item.videoId) : false;
+          
           return (
-            <div key={item._id} className="border border-[var(--border)] rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg">
+            <div key={item._id} className={`border rounded-xl p-4 bg-[var(--card)] transition-all duration-300 hover:border-[var(--primary)] hover:shadow-lg ${
+              isCompleted ? 'border-green-500/30' : 'border-[var(--border)]'
+            }`}>
               <div className="flex justify-between items-start">
                 <div className="flex items-start">
-                  <div className={`w-8 h-8 rounded-full ${item.tipo === 'video' ? 'bg-[var(--primary-dark)]' : 'bg-[var(--secondary-dark)]'} text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0`}>
+                  <div className={`w-8 h-8 rounded-full ${item.tipo === 'video' ? 'bg-[var(--primary-dark)]' : 'bg-[var(--secondary-dark)]'} text-[var(--neutral-100)] flex items-center justify-center font-medium mr-3 flex-shrink-0 relative`}>
                     {globalIndex + 1}
+                    {isCompleted && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--neutral-100)]">
-                      {item.tipo === 'video' ? `Video: ${item.title}` : `Ejercicio: ${item.title}`}
-                    </h3>
+                  <div className="flex-grow">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-lg font-semibold text-[var(--neutral-100)]">
+                        {item.tipo === 'video' ? `Video: ${item.title}` : `Ejercicio: ${item.title}`}
+                      </h3>
+                      {isCompleted && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          Completado
+                        </span>
+                      )}
+                    </div>
                     {item.description && (
                       <p className="text-[var(--neutral-400)] mt-1 text-sm">{item.description}</p>
                     )}
@@ -121,6 +188,11 @@ export default function CourseContentPagination({
             <span>
               Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, items.length)} de {items.length} elementos
             </span>
+            {courseProgress && (
+              <span className="ml-4 text-[var(--primary)]">
+                • Progreso total: {Math.round(courseProgress.totalProgress)}%
+              </span>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -227,6 +299,9 @@ export default function CourseContentPagination({
         <div className="mt-4 text-center">
           <p className="text-sm text-[var(--neutral-400)]">
             Página {currentPage} de {totalPages} • {items.length} elementos en total
+            {courseProgress && courseProgress.isCompleted && (
+              <span className="ml-2 text-green-500 font-medium">🎉 Curso completado</span>
+            )}
           </p>
         </div>
       )}

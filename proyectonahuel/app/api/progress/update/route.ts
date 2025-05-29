@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Usar save() en lugar de findOneAndUpdate para evitar errores de versión
-        result = await existingProgress.save({ new: true });
+        result = await existingProgress.save();
       }
     } catch (error) {
       // Convertir el error a un tipo más específico

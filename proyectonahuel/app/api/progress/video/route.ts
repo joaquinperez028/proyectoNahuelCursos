@@ -29,13 +29,14 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Obtener el ID del curso de los query parameters
+    // Obtener los parámetros de la URL
     const url = new URL(request.url);
     const courseId = url.searchParams.get('courseId');
+    const videoId = url.searchParams.get('videoId');
     
-    if (!courseId) {
+    if (!courseId || !videoId) {
       return NextResponse.json(
-        { error: 'Falta el ID del curso' },
+        { error: 'Faltan parámetros requeridos (courseId, videoId)' },
         { status: 400 }
       );
     }
@@ -63,31 +64,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         progress: {
-          totalProgress: 0,
-          isCompleted: false,
-          completedAt: null,
-          certificateIssued: false,
-          certificateUrl: null,
-          videoProgress: []
+          completed: false,
+          watchedSeconds: 0,
+          lastPosition: 0,
+          updatedAt: null
         }
       });
     }
     
-    // Devolver progreso
+    // Buscar el progreso específico de este video
+    const videoProgress = progress.videoProgress.find(
+      (vp: any) => vp.videoId === videoId
+    );
+    
+    if (!videoProgress) {
+      // No hay progreso para este video específico
+      return NextResponse.json({
+        success: true,
+        progress: {
+          completed: false,
+          watchedSeconds: 0,
+          lastPosition: 0,
+          updatedAt: null
+        }
+      });
+    }
+    
+    // Devolver progreso del video específico
     return NextResponse.json({
       success: true,
       progress: {
-        totalProgress: progress.totalProgress,
-        isCompleted: progress.isCompleted,
-        completedAt: progress.completedAt,
-        certificateIssued: progress.certificateIssued,
-        certificateUrl: progress.certificateUrl,
-        videoProgress: progress.videoProgress
+        completed: videoProgress.completed,
+        watchedSeconds: videoProgress.watchedSeconds,
+        lastPosition: videoProgress.lastPosition,
+        updatedAt: videoProgress.updatedAt
       }
     });
     
   } catch (error) {
-    console.error('Error al verificar progreso:', error);
+    console.error('Error al verificar progreso del video:', error);
     return NextResponse.json(
       { error: 'Error al procesar la solicitud' },
       { status: 500 }
