@@ -292,26 +292,20 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-12">
-            {/* DEBUG INFO - TEMPORAL */}
-            <div className="bg-red-900 text-white p-4 rounded mb-4 text-sm">
-              <p><strong>DEBUG:</strong></p>
-              <p>User has course: {userHasCourse ? 'YES' : 'NO'}</p>
-              <p>playbackId: {course.playbackId || 'undefined'}</p>
-              <p>introPlaybackId: {course.introPlaybackId || 'undefined'}</p>
-              <p>videoId: {course.videoId || 'undefined'}</p>
-              <p>introVideoId: {course.introVideoId || 'undefined'}</p>
-            </div>
-
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
               {userHasCourse ? (
                 // Usuario tiene acceso al curso - usar CourseViewer con video principal
                 (() => {
-                  const mainPlaybackId = course.playbackId || course.introPlaybackId;
+                  // CORRECCIÓN: usar el mismo video que en el preview
+                  // Si hay introPlaybackId, usarlo; si no, usar playbackId
+                  const mainPlaybackId = course.introPlaybackId || course.playbackId;
+                  const mainVideoId = course.introVideoId || course.videoId;
+                  
                   return mainPlaybackId ? (
                     <CourseViewer 
                       playbackId={mainPlaybackId}
-                      videoId={course.videoId || course.introVideoId || ''}
+                      videoId={mainVideoId || ''}
                       courseId={course._id}
                     />
                   ) : (
@@ -326,6 +320,17 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                   <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
                     <MuxPlayer
                       playbackId={course.introPlaybackId}
+                      streamType="on-demand"
+                      style={{ height: '100%', width: '100%' }}
+                      autoPlay={false}
+                      muted={false}
+                    />
+                  </div>
+                ) : course.playbackId ? (
+                  // FALLBACK: si no hay introPlaybackId pero sí playbackId, usar ese
+                  <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
+                    <MuxPlayer
+                      playbackId={course.playbackId}
                       streamType="on-demand"
                       style={{ height: '100%', width: '100%' }}
                       autoPlay={false}
