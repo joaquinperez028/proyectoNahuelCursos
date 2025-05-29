@@ -292,22 +292,34 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-12">
+            {/* DEBUG INFO - TEMPORAL */}
+            <div className="bg-red-900 text-white p-4 rounded mb-4 text-sm">
+              <p><strong>DEBUG:</strong></p>
+              <p>User has course: {userHasCourse ? 'YES' : 'NO'}</p>
+              <p>playbackId: {course.playbackId || 'undefined'}</p>
+              <p>introPlaybackId: {course.introPlaybackId || 'undefined'}</p>
+              <p>videoId: {course.videoId || 'undefined'}</p>
+              <p>introVideoId: {course.introVideoId || 'undefined'}</p>
+            </div>
+
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
               {userHasCourse ? (
                 // Usuario tiene acceso al curso - usar CourseViewer con video principal
-                (course.playbackId || course.introPlaybackId) ? (
-                  <CourseViewer 
-                    playbackId={course.playbackId || course.introPlaybackId || ''}
-                    videoId={course.videoId || course.introVideoId || ''}
-                    courseId={course._id}
-                    token={mainToken} 
-                  />
-                ) : (
-                  <div className="aspect-video bg-[var(--neutral-900)] flex items-center justify-center">
-                    <p className="text-[var(--neutral-300)]">Video no disponible</p>
-                  </div>
-                )
+                (() => {
+                  const mainPlaybackId = course.playbackId || course.introPlaybackId;
+                  return mainPlaybackId ? (
+                    <CourseViewer 
+                      playbackId={mainPlaybackId}
+                      videoId={course.videoId || course.introVideoId || ''}
+                      courseId={course._id}
+                    />
+                  ) : (
+                    <div className="aspect-video bg-[var(--neutral-900)] flex items-center justify-center">
+                      <p className="text-[var(--neutral-300)]">Video no disponible</p>
+                    </div>
+                  );
+                })()
               ) : (
                 // Usuario NO tiene acceso - mostrar preview o placeholder
                 course.introPlaybackId ? (
