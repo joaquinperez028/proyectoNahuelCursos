@@ -10,7 +10,6 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import Review from "@/models/Review";
 import User from "@/models/User";
-import { createMuxPlaybackToken } from "@/lib/mux";
 import CourseViewer from "@/components/CourseViewer";
 import ReviewSection from "@/components/ReviewSection";
 import EnrollSection from "@/components/EnrollSection";
@@ -238,23 +237,14 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const hasMuxCredentials = !!process.env.MUX_SIGNING_KEY && !!process.env.MUX_SIGNING_KEY_ID;
   
-  // Generar tokens para cada video si el usuario ha comprado el curso y estamos en producción o tenemos credenciales
-  const useTokens = userHasCourse && (!isDevelopment || hasMuxCredentials);
+  // Los videos siempre están en modo público, no necesitamos tokens JWT
+  const useTokens = false; // Cambio: siempre usar modo público
   
-  // Token para el video principal
-  const mainToken = useTokens && course.playbackId
-    ? createMuxPlaybackToken(course.playbackId)
-    : '';
+  // Token para el video principal (vacío porque usamos modo público)
+  const mainToken = '';
   
-  // Tokens para videos adicionales
-  const videoTokens = useTokens 
-    ? course.videos.reduce((tokens: Record<string, string>, video) => {
-        if (video.playbackId) {
-          tokens[video.playbackId] = createMuxPlaybackToken(video.playbackId);
-        }
-        return tokens;
-      }, {})
-    : {};
+  // Tokens para videos adicionales (vacíos porque usamos modo público)
+  const videoTokens: Record<string, string> = {};
   
   // Calcular la puntuación media para mostrar en el encabezado
   const averageRating = course.reviews && course.reviews.length > 0
@@ -304,23 +294,13 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
           <div className="lg:col-span-2 space-y-12">
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
-              {userHasCourse && course.playbackId ? (
+              {(course.playbackId || course.introPlaybackId) ? (
                 <CourseViewer 
-                  playbackId={course.playbackId}
-                  videoId={course.videoId || ''}
+                  playbackId={course.playbackId || course.introPlaybackId || ''}
+                  videoId={course.videoId || course.introVideoId || ''}
                   courseId={course._id}
                   token={mainToken} 
                 />
-              ) : course.introPlaybackId ? (
-                <div className="relative">
-                  <div className="aspect-video w-full bg-[var(--neutral-900)]">
-                    <MuxPlayer
-                      playbackId={course.introPlaybackId}
-                      title={`Introducción a ${course.title}`}
-                      autoPlay={false}
-                    />
-                  </div>
-                </div>
               ) : (
                 <div className="relative">
                   <div className="aspect-video w-full bg-[var(--neutral-900)]">
