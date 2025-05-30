@@ -53,9 +53,17 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     
     // Validar datos
-    if (!data.title || !data.description || !data.price || !data.videoUrl || !data.category) {
+    if (!data.title || !data.description || !data.videoUrl || !data.category) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos' },
+        { status: 400 }
+      );
+    }
+    
+    // Validar precio solo si no es gratuito
+    if (!data.isFree && (!data.price || data.price <= 0)) {
+      return NextResponse.json(
+        { error: 'El precio es requerido para cursos pagos' },
         { status: 400 }
       );
     }
@@ -95,7 +103,8 @@ export async function POST(request: NextRequest) {
     const courseData: any = {
       title: data.title,
       description: data.description,
-      price: data.price,
+      price: data.isFree ? 0 : data.price,
+      isFree: data.isFree || false,
       category: data.category,
       videoId: assetId,
       playbackId: playbackId,

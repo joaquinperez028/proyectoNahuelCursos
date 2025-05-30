@@ -1182,13 +1182,23 @@ export default function NewCoursePage() {
             <input
               type="number"
               id="price"
-              value={price}
+              value={isFree ? '0' : price}
               onChange={(e) => setPrice(e.target.value)}
               min="0"
               step="1"
-              className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
-              placeholder="Ej: 12000"
+              disabled={isFree}
+              className={`w-full border border-[var(--border)] rounded-md px-3 py-2 text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)] ${
+                isFree 
+                  ? 'bg-[var(--neutral-700)] cursor-not-allowed opacity-60' 
+                  : 'bg-[var(--neutral-800)]'
+              }`}
+              placeholder={isFree ? 'Gratis' : 'Ej: 12000'}
             />
+            {isFree && (
+              <p className="mt-1 text-xs text-[var(--neutral-400)]">
+                El precio se establece automáticamente en $0 para cursos gratuitos
+              </p>
+            )}
           </div>
 
           <div className="mb-6">

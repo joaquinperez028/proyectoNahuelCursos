@@ -585,12 +585,21 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               id="price"
               min="0"
               step="1"
-              value={price}
+              value={isFree ? 0 : price}
               onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Precio del curso en pesos"
+              disabled={isFree}
+              className={`w-full border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isFree 
+                  ? 'bg-neutral-700 cursor-not-allowed opacity-60' 
+                  : 'bg-neutral-800'
+              }`}
+              placeholder={isFree ? 'Gratis' : 'Precio del curso en pesos'}
             />
-            <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
+            {isFree ? (
+              <p className="mt-1 text-xs text-neutral-500">El precio se establece automáticamente en $0 para cursos gratuitos</p>
+            ) : (
+              <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <input
