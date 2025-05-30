@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import MakeAdminButton from '@/components/MakeAdminButton';
 
 export default function NuevaCategoriaPage() {
   const { data: session, status } = useSession();
@@ -14,6 +15,7 @@ export default function NuevaCategoriaPage() {
     description: '',
     icon: '',
     order: 0,
+    isActive: true,
   });
 
   const [iconPreview, setIconPreview] = useState('');

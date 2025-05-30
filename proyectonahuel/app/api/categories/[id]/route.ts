@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import Category from '@/models/Category';
 import Course from '@/models/Course';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/options';
 
 // GET /api/categories/[id] - Obtener una categoría por ID
 export async function GET(
