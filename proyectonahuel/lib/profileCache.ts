@@ -47,6 +47,14 @@ class ProfileCache {
     } catch (error) {
       console.warn('Error clearing localStorage:', error);
     }
+
+    // También limpiar sessionStorage
+    try {
+      sessionStorage.clear();
+      console.log('🗑️ SessionStorage limpiado');
+    } catch (error) {
+      console.warn('Error clearing sessionStorage:', error);
+    }
   }
 
   // Obtener datos del caché con validación estricta
@@ -177,6 +185,27 @@ class ProfileCache {
     console.log('👋 LIMPIEZA POR LOGOUT');
     this.clearAllCache();
     this.currentUserEmail = null;
+  }
+
+  // Limpieza nuclear completa - usar en casos extremos
+  clearNuclear(): void {
+    console.log('💥 LIMPIEZA NUCLEAR - ELIMINANDO TODO');
+    
+    this.cache.clear();
+    this.currentUserEmail = null;
+    
+    try {
+      // Limpiar localStorage completo
+      localStorage.clear();
+      console.log('🗑️ LocalStorage completamente limpiado');
+      
+      // Limpiar sessionStorage completo
+      sessionStorage.clear();
+      console.log('🗑️ SessionStorage completamente limpiado');
+      
+    } catch (error) {
+      console.warn('Error en limpieza nuclear:', error);
+    }
   }
 }
 

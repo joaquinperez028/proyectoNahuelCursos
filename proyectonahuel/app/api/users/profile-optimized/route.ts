@@ -186,12 +186,24 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ API Profile: Enviando respuesta para:', response.user.email);
 
-    // Set aggressive caching headers
+    // VALIDACIÓN FINAL: Asegurar que la respuesta corresponde al usuario de la sesión
+    if (response.user.email !== session.user.email) {
+      console.error('🚨 RESPUESTA CON EMAIL INCORRECTO:', {
+        sessionEmail: session.user.email,
+        responseEmail: response.user.email
+      });
+      return NextResponse.json({ error: 'Error crítico de datos de usuario' }, { status: 500 });
+    }
+
+    // Desactivar completamente el caché del navegador
     return new NextResponse(JSON.stringify(response), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=600', // 5min cache, 10min stale
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
       },
     });
     

@@ -87,10 +87,10 @@ export function useProfileData() {
           dataEmail: freshData.user?.email
         });
         
-        // LIMPIAR TODO EL CACHÉ inmediatamente
-        await profileCache.clear();
+        // LIMPIEZA NUCLEAR inmediatamente
+        await profileCache.clearNuclear();
         
-        throw new Error('Los datos recibidos no corresponden a tu usuario actual. El caché ha sido limpiado. Por favor, recarga la página.');
+        throw new Error('Los datos recibidos no corresponden a tu usuario actual. Se ha realizado una limpieza completa. Por favor, recarga la página.');
       }
       
       // Solo guardar si la validación pasó
@@ -141,15 +141,16 @@ export function useProfileData() {
     }
   }, [status, session?.user?.email, loadFromCache, fetchFreshData]);
 
-  // Función para limpiar caché y recargar
+  // Función para limpiar caché y recargar con limpieza nuclear
   const clearCacheAndReload = useCallback(async () => {
     if (session?.user?.email) {
-      await profileCache.clear();
+      await profileCache.clearNuclear();
       setData(null);
       setError(null);
-      await fetchFreshData(false);
+      // Recargar la página completamente para empezar limpio
+      window.location.reload();
     }
-  }, [session?.user?.email, fetchFreshData]);
+  }, [session?.user?.email]);
 
   // Refetch manual
   const refetch = useCallback(async () => {
