@@ -4,6 +4,7 @@ class ProfileCache {
   private cache: Map<string, any> = new Map();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
   private currentSessionId: string | null = null;
+  private lastKnownUser: string | null = null;
   
   static getInstance(): ProfileCache {
     if (!ProfileCache.instance) {
@@ -20,16 +21,57 @@ class ProfileCache {
   // Verificar si el usuario de la sesión cambió
   private hasSessionChanged(email: string): boolean {
     const storedSessionEmail = localStorage.getItem('current_user_email');
-    return storedSessionEmail !== email;
+    const hasChanged = storedSessionEmail !== email;
+    
+    // También verificar si cambió desde la última llamada
+    const userChanged = this.lastKnownUser !== null && this.lastKnownUser !== email;
+    
+    if (hasChanged || userChanged) {
+      console.log('🔄 Cambio de usuario detectado:', {
+        storedEmail: storedSessionEmail,
+        currentEmail: email,
+        lastKnownUser: this.lastKnownUser,
+        userChanged,
+        hasChanged
+      });
+      return true;
+    }
+    
+    return false;
   }
 
   // Limpiar caché si cambió el usuario
   private clearCacheIfUserChanged(email: string): void {
     if (this.hasSessionChanged(email)) {
-      console.log('Usuario cambió, limpiando caché...');
-      this.clear();
+      console.log('🧹 Usuario cambió, limpiando caché completo...');
+      this.clearAllUserData();
       localStorage.setItem('current_user_email', email);
       this.currentSessionId = this.generateSessionId(email);
+      this.lastKnownUser = email;
+    } else if (this.lastKnownUser === null) {
+      // Primera vez que se accede
+      this.lastKnownUser = email;
+    }
+  }
+
+  // Limpiar todos los datos de todos los usuarios
+  private clearAllUserData(): void {
+    // Limpiar memory cache
+    this.cache.clear();
+    
+    // Limpiar localStorage de todos los perfiles
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('profile_') || key === 'current_user_email')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log(`🗑️ Removidas ${keysToRemove.length} entradas de caché`);
+    } catch (error) {
+      console.warn('Error clearing user data:', error);
     }
   }
 
@@ -58,6 +100,7 @@ class ProfileCache {
         } else {
           // Datos expirados o de usuario incorrecto, remover
           localStorage.removeItem(cacheKey);
+          console.log('🗑️ Removidos datos de caché obsoletos para:', email);
         }
       }
     } catch (error) {
@@ -69,14 +112,22 @@ class ProfileCache {
 
   // Validar que los datos pertenecen al usuario correcto
   private isValidUser(cacheData: any, email: string): boolean {
-    return cacheData.email === email && cacheData.data?.user?.email === email;
+    const isValid = cacheData.email === email && cacheData.data?.user?.email === email;
+    if (!isValid) {
+      console.warn('❌ Datos de caché inválidos:', {
+        cacheEmail: cacheData.email,
+        dataEmail: cacheData.data?.user?.email,
+        expectedEmail: email
+      });
+    }
+    return isValid;
   }
 
   // Guardar en todos los niveles de caché con validación
   async set(email: string, data: any): Promise<void> {
     // Verificar que los datos pertenecen al usuario correcto
     if (data.user?.email !== email) {
-      console.error('Intento de guardar datos de usuario incorrecto en caché:', {
+      console.error('❌ Intento de guardar datos de usuario incorrecto en caché:', {
         cacheEmail: email,
         dataEmail: data.user?.email
       });
@@ -100,6 +151,7 @@ class ProfileCache {
     try {
       localStorage.setItem(cacheKey, JSON.stringify(cacheData));
       localStorage.setItem('current_user_email', email);
+      console.log('💾 Guardados datos en caché para:', email);
     } catch (error) {
       console.warn('Error saving to localStorage:', error);
       // Limpiar caché viejo si está lleno
@@ -156,6 +208,7 @@ class ProfileCache {
     this.cache.delete(cacheKey);
     try {
       localStorage.removeItem(cacheKey);
+      console.log('🗑️ Invalidado caché para:', email);
     } catch (error) {
       console.warn('Error removing from localStorage:', error);
     }
@@ -182,26 +235,16 @@ class ProfileCache {
 
   // Limpiar todo el caché
   clear(): void {
-    this.cache.clear();
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('profile_') || key === 'current_user_email')) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-    } catch (error) {
-      console.warn('Error clearing localStorage cache:', error);
-    }
+    console.log('🧹 Limpiando todo el caché...');
+    this.clearAllUserData();
+    this.currentSessionId = null;
+    this.lastKnownUser = null;
   }
 
   // Método para limpiar caché al hacer logout
   clearOnLogout(): void {
-    console.log('Limpiando caché por logout...');
+    console.log('👋 Limpiando caché por logout...');
     this.clear();
-    this.currentSessionId = null;
   }
 }
 
