@@ -52,9 +52,14 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
   const [isFree, setIsFree] = useState<boolean>(false);
+  const [category, setCategory] = useState<string>('');
   const [featured, setFeatured] = useState<boolean>(false);
   const [onSale, setOnSale] = useState<boolean>(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  
+  // Estados para las categorías dinámicas
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   
   // Estado para el manejo de videos
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -138,6 +143,29 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
     }
   }, [session, status, router]);
 
+  // Cargar categorías
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
+        } else {
+          console.error('Error fetching categories');
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
   // Cargar datos del curso cuando id esté disponible
   useEffect(() => {
     if (!id) return;
@@ -157,6 +185,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         setDescription(course.description || '');
         setPrice(course.price || 0);
         setIsFree(course.isFree || false);
+        setCategory(course.category || '');
         setFeatured(course.featured || false);
         setOnSale(course.onSale || false);
         setDiscountPercentage(course.discountPercentage || 0);
@@ -495,6 +524,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         description,
         price,
         isFree,
+        category,
         featured,
         onSale,
         discountPercentage,
@@ -577,6 +607,26 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe de qué trata el curso..."
             />
+          </div>
+          <div className="space-y-4">
+            <label htmlFor="category" className="block text-sm text-neutral-400 uppercase">Categoría</label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              disabled={loadingCategories}
+            >
+              <option value="" disabled>
+                {loadingCategories ? 'Cargando categorías...' : 'Selecciona una categoría'}
+              </option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.title}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <label htmlFor="price" className="block text-sm text-neutral-400 uppercase">Precio (ARS)</label>

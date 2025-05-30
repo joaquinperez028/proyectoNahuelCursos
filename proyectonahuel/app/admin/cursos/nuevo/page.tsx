@@ -1135,6 +1135,33 @@ export default function NewCoursePage() {
     return `Estado: ${introUploadStatus}`;
   };
   
+  // Cargar categorías al montar el componente
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      } else {
+        console.error('Error fetching categories');
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+  
+  // Estados para las categorías dinámicas
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  
   return (
     <div className="py-10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1229,12 +1256,16 @@ export default function NewCoursePage() {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               required
+              disabled={loadingCategories}
             >
-              <option value="" disabled>Selecciona una categoría</option>
-              <option value="Análisis Técnico">Análisis Técnico</option>
-              <option value="Análisis Fundamental">Análisis Fundamental</option>
-              <option value="Estrategias de Trading">Estrategias de Trading</option>
-              <option value="Finanzas Personales">Finanzas Personales</option>
+              <option value="" disabled>
+                {loadingCategories ? 'Cargando categorías...' : 'Selecciona una categoría'}
+              </option>
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.title}
+                </option>
+              ))}
             </select>
             <p className="mt-1 text-xs text-[var(--neutral-400)]">
               Esta categoría determinará dónde aparecerá tu curso en la página principal
