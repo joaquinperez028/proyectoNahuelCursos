@@ -30,17 +30,26 @@ export function useProfileData() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar datos desde caché súper rápido
+  // Validar que los datos corresponden al usuario actual
+  const validateUserData = useCallback((profileData: ProfileData, sessionEmail: string): boolean => {
+    return profileData?.user?.email === sessionEmail;
+  }, []);
+
+  // Cargar datos desde caché súper rápido con validación
   const loadFromCache = useCallback(async () => {
     if (!session?.user?.email) return false;
     
     const cachedData = await profileCache.get(session.user.email);
-    if (cachedData) {
+    if (cachedData && validateUserData(cachedData, session.user.email)) {
       setData(cachedData);
       return true;
+    } else if (cachedData) {
+      // Datos en caché pero de usuario incorrecto, limpiar
+      console.warn('Datos de caché no corresponden al usuario actual, limpiando...');
+      await profileCache.invalidate(session.user.email);
     }
     return false;
-  }, [session?.user?.email]);
+  }, [session?.user?.email, validateUserData]);
 
   // Fetch fresh data con caché automático
   const fetchFreshData = useCallback(async (silent = false) => {
@@ -63,6 +72,11 @@ export function useProfileData() {
 
       const freshData = await response.json();
       
+      // Validar que los datos recibidos corresponden al usuario actual
+      if (!validateUserData(freshData, session.user.email)) {
+        throw new Error('Los datos recibidos no corresponden al usuario actual');
+      }
+      
       // Guardar en caché automáticamente
       await profileCache.set(session.user.email, freshData);
       
@@ -72,10 +86,15 @@ export function useProfileData() {
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
+      
+      // Si hay error de validación, limpiar caché completamente
+      if (err instanceof Error && err.message.includes('no corresponden al usuario actual')) {
+        await profileCache.clear();
+      }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [status, session?.user?.email]);
+  }, [status, session?.user?.email, validateUserData]);
 
   // Precargar datos en background
   const preloadData = useCallback(async () => {
@@ -84,9 +103,23 @@ export function useProfileData() {
     }
   }, [session?.user?.email]);
 
+  // Limpiar caché cuando cambie el usuario
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      // Usuario se deslogueó, limpiar caché
+      profileCache.clearOnLogout();
+      setData(null);
+      setError(null);
+    }
+  }, [status]);
+
   // Load inicial súper optimizado
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
+      // Limpiar datos previos si cambió el usuario
+      setData(null);
+      setError(null);
+      
       // 1. Intentar cargar desde caché inmediatamente (0ms)
       loadFromCache().then(hasCache => {
         if (hasCache) {

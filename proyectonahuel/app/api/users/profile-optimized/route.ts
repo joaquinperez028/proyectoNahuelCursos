@@ -12,8 +12,11 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
+      console.log('❌ API Profile: No hay sesión o email');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+
+    console.log('🔍 API Profile: Sesión encontrada para email:', session.user.email);
 
     await connectToDatabase();
 
@@ -49,7 +52,23 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!profileResult) {
+      console.log('❌ API Profile: Usuario no encontrado para email:', session.user.email);
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    console.log('✅ API Profile: Usuario encontrado:', {
+      email: profileResult.email,
+      name: profileResult.name,
+      role: profileResult.role
+    });
+
+    // Validación adicional: asegurar que el email coincide
+    if (profileResult.email !== session.user.email) {
+      console.error('🚨 API Profile: MISMATCH DE EMAILS!', {
+        sessionEmail: session.user.email,
+        profileEmail: profileResult.email
+      });
+      return NextResponse.json({ error: 'Error de datos de usuario' }, { status: 500 });
     }
 
     // Process active courses with progress
@@ -165,6 +184,8 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now() // For caching
     };
 
+    console.log('✅ API Profile: Enviando respuesta para:', response.user.email);
+
     // Set aggressive caching headers
     return new NextResponse(JSON.stringify(response), {
       status: 200,
@@ -175,7 +196,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Error in profile-optimized API:', error);
+    console.error('❌ Error in profile-optimized API:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error instanceof Error ? error.message : 'Error desconocido'
