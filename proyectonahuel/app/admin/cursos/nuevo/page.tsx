@@ -63,6 +63,7 @@ export default function NewCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  const [isFree, setIsFree] = useState(false);
   
   // Estados para la imagen de miniatura
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -932,8 +933,9 @@ export default function NewCoursePage() {
       return;
     }
     
-    if (!price || isNaN(Number(price)) || Number(price) <= 0) {
-      setError('El precio debe ser un número mayor que cero');
+    // Validar precio solo si no es gratuito
+    if (!isFree && (!price || isNaN(Number(price)) || Number(price) <= 0)) {
+      setError('El precio debe ser un número mayor que cero o marcar el curso como gratuito');
       return;
     }
     
@@ -1083,7 +1085,8 @@ export default function NewCoursePage() {
         body: JSON.stringify({
           title,
           description,
-          price: Number(price),
+          price: isFree ? 0 : Number(price),
+          isFree,
           category,
           videoUrl: finalVideoUrl,
           videoId: videoIdToSend,
@@ -1186,6 +1189,24 @@ export default function NewCoursePage() {
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
               placeholder="Ej: 12000"
             />
+          </div>
+
+          <div className="mb-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isFree"
+                checked={isFree}
+                onChange={(e) => setIsFree(e.target.checked)}
+                className="h-4 w-4 text-[var(--accent)] focus:ring-[var(--accent)] border-[var(--border)] rounded bg-[var(--neutral-800)]"
+              />
+              <label htmlFor="isFree" className="ml-2 block text-sm text-[var(--neutral-300)]">
+                Este curso es gratuito
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-[var(--neutral-400)]">
+              {isFree ? 'Los usuarios podrán obtener este curso sin necesidad de pago' : 'Si está marcado, los usuarios no necesitarán pagar para acceder al curso'}
+            </p>
           </div>
 
           <div className="mb-6">

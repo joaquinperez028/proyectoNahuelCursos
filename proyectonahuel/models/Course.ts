@@ -56,6 +56,10 @@ const CourseSchema = new Schema({
     type: Number,
     required: true,
   },
+  isFree: {
+    type: Boolean,
+    default: false,
+  },
   category: {
     type: String,
     required: true,

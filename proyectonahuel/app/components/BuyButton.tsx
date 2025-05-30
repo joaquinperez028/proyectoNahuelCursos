@@ -9,6 +9,7 @@ import PaymentMethodModal from './PaymentMethodModal';
 interface BuyButtonProps {
   courseId: string;
   userHasCourse: boolean;
+  isFree?: boolean;
   className?: string;
   size?: 'md' | 'lg';
 }
@@ -16,6 +17,7 @@ interface BuyButtonProps {
 export default function BuyButton({
   courseId,
   userHasCourse,
+  isFree = false,
   className = '',
   size = 'md'
 }: BuyButtonProps) {
@@ -32,8 +34,42 @@ export default function BuyButton({
       return;
     }
     
-    // Si está autenticado, mostrar el modal de selección de método de pago
+    // Si es curso gratuito, obtenerlo directamente
+    if (isFree) {
+      handleFreeCourse();
+      return;
+    }
+    
+    // Si está autenticado y no es gratuito, mostrar el modal de selección de método de pago
     setShowPaymentModal(true);
+  };
+
+  const handleFreeCourse = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/api/courses/obtain-free', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ courseId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error al obtener el curso gratuito.');
+      }
+
+      // Recargar la página para actualizar el estado
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error al obtener el curso gratuito:', error);
+      alert('No se pudo obtener el curso. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMercadoPago = async () => {
@@ -113,9 +149,9 @@ export default function BuyButton({
         ) : (
           <div className="flex items-center space-x-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isFree ? "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" : "M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"}></path>
             </svg>
-            <span>Comprar curso</span>
+            <span>{isFree ? 'Obtener curso' : 'Comprar curso'}</span>
           </div>
         )}
       </button>

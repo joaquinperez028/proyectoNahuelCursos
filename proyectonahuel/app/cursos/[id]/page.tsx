@@ -95,6 +95,7 @@ interface CourseType {
   discountPercentage: number;
   discountedPrice?: number;
   duration?: number;
+  isFree: boolean;
 }
 
 async function getUserHasCourse(courseId: string): Promise<boolean> {
@@ -204,7 +205,8 @@ async function getCourse(id: string): Promise<CourseType | null> {
       onSale: courseDoc.onSale || false,
       discountPercentage: courseDoc.discountPercentage || 0,
       discountedPrice: courseDoc.discountedPrice || 0,
-      duration: courseDoc.duration || 0
+      duration: courseDoc.duration || 0,
+      isFree: courseDoc.isFree || false
     };
     
     return course;
@@ -254,20 +256,20 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
     : 0;
     
   // Formato de precio con Intl
-  const formattedPrice = new Intl.NumberFormat('es-AR', {
+  const formattedPrice = course.isFree ? 'Gratis' : new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
     minimumFractionDigits: 0,
   }).format(course.price);
 
   // Formato de precio con descuento
-  const formattedDiscountedPrice = course.onSale && course.discountPercentage && course.discountPercentage > 0
+  const formattedDiscountedPrice = course.isFree ? null : (course.onSale && course.discountPercentage && course.discountPercentage > 0
     ? new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS',
         minimumFractionDigits: 0,
       }).format(course.discountedPrice || course.price - (course.price * (course.discountPercentage / 100)))
-    : null;
+    : null);
   
   // Calcular duración total del curso
   const mainVideoDuration = course.duration || 0;
@@ -404,7 +406,13 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
           <aside className="lg:col-span-1">
             {/* Bloque de acción: botón, badges y estrellas */}
             <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl p-6 mb-8">
-              <BuyButton courseId={course._id} userHasCourse={userHasCourse} className="mx-auto w-full max-w-xs md:max-w-sm mb-6" size="lg" />
+              <BuyButton 
+                courseId={course._id} 
+                userHasCourse={userHasCourse} 
+                isFree={course.isFree}
+                className="mx-auto w-full max-w-xs md:max-w-sm mb-6" 
+                size="lg" 
+              />
               <div className="flex flex-wrap justify-center gap-4 mb-4">
                 <div className="px-4 py-1.5 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-full text-sm font-medium flex items-center">
                   <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

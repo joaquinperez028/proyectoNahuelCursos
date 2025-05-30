@@ -25,6 +25,7 @@ interface CourseCardProps {
     onSale?: boolean;
     discountPercentage?: number;
     discountedPrice?: number;
+    isFree?: boolean;
   };
 }
 
@@ -45,20 +46,20 @@ const CourseCard = ({ course }: CourseCardProps) => {
   const reviewCount = course.reviewCount || course.reviews?.length || 0;
 
   // Formateamos el precio
-  const formattedPrice = new Intl.NumberFormat('es-AR', {
+  const formattedPrice = course.isFree ? 'Gratis' : new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
     minimumFractionDigits: 0,
   }).format(course.price);
 
   // Formateamos el precio con descuento si está en oferta
-  const formattedDiscountedPrice = course.onSale && course.discountPercentage && course.discountPercentage > 0
+  const formattedDiscountedPrice = course.isFree ? null : (course.onSale && course.discountPercentage && course.discountPercentage > 0
     ? new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS',
         minimumFractionDigits: 0,
       }).format(course.discountedPrice || course.price - (course.price * (course.discountPercentage / 100)))
-    : null;
+    : null);
 
   // Gestionar reproducción del video con delay al hacer hover
   useEffect(() => {

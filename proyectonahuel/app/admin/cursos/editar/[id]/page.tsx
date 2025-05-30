@@ -51,6 +51,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
+  const [isFree, setIsFree] = useState<boolean>(false);
   const [featured, setFeatured] = useState<boolean>(false);
   const [onSale, setOnSale] = useState<boolean>(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
@@ -155,6 +156,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         setTitle(course.title || '');
         setDescription(course.description || '');
         setPrice(course.price || 0);
+        setIsFree(course.isFree || false);
         setFeatured(course.featured || false);
         setOnSale(course.onSale || false);
         setDiscountPercentage(course.discountPercentage || 0);
@@ -492,6 +494,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
         title,
         description,
         price,
+        isFree,
         featured,
         onSale,
         discountPercentage,
@@ -588,6 +591,16 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               placeholder="Precio del curso en pesos"
             />
             <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isFree"
+              checked={isFree}
+              onChange={(e) => setIsFree(e.target.checked)}
+              className="h-4 w-4 text-blue-500 focus:ring-blue-500 border-neutral-700 rounded bg-neutral-800"
+            />
+            <label htmlFor="isFree" className="text-sm text-neutral-400 uppercase">Curso gratuito</label>
           </div>
           <div className="flex items-center space-x-2">
             <input
