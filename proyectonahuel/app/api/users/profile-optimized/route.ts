@@ -37,14 +37,6 @@ export async function GET(request: NextRequest) {
           foreignField: 'userId',
           as: 'progressData'
         }
-      },
-      {
-        $lookup: {
-          from: 'certificates',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'certificatesData'
-        }
       }
     ]);
 
@@ -71,19 +63,21 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Process certificates
-    const certificates = profileResult.certificatesData.map((cert: any) => {
-      const course = profileResult.enrolledCoursesData.find((c: any) => 
-        c._id.toString() === cert.courseId.toString()
-      );
-      
-      return {
-        id: cert._id.toString(),
-        courseTitle: course?.title || 'Curso no encontrado',
-        issueDate: cert.issueDate,
-        certificateUrl: cert.certificateUrl
-      };
-    });
+    // Process certificates from Progress model (where they are actually stored)
+    const certificates = profileResult.progressData
+      .filter((progress: any) => progress.certificateIssued && progress.certificateId)
+      .map((progress: any) => {
+        const course = profileResult.enrolledCoursesData.find((c: any) => 
+          c._id.toString() === progress.courseId.toString()
+        );
+        
+        return {
+          id: progress.certificateId,
+          courseTitle: course?.title || 'Curso no encontrado',
+          issueDate: progress.updatedAt, // Fecha cuando se completó
+          certificateUrl: progress.certificateUrl
+        };
+      });
 
     // Calculate stats - count completed courses from progress data
     const completedCourses = profileResult.progressData.filter((p: any) => p.isCompleted).length;

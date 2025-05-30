@@ -191,7 +191,7 @@ export default function PerfilPage() {
               <div className="flex flex-wrap gap-4 mt-3 animate-in slide-in-from-left duration-500 delay-200">
                 <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
                   profileData.user.role === 'admin' 
-                    ? 'bg-green-500 bg-opacity-20 text-green-400 hover:bg-opacity-30' 
+                    ? 'bg-yellow-500 bg-opacity-20 text-yellow-300 hover:bg-opacity-30 border border-yellow-500 border-opacity-30' 
                     : 'bg-blue-500 bg-opacity-20 text-blue-400 hover:bg-opacity-30'
                 }`}>
                   {profileData.user.role === 'admin' ? '👑 Administrador' : '🎓 Estudiante'}
