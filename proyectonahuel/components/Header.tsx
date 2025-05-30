@@ -10,6 +10,7 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
+  const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
 
   // Efecto para detectar el scroll y cambiar el estilo del header
   useEffect(() => {
@@ -109,15 +110,65 @@ const Header = () => {
                   <span className="text-sm font-medium">{session.user.name}</span>
                 </Link>
                 {session?.user.role === 'admin' && (
-                  <Link 
-                    href="/admin/cursos/nuevo" 
-                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors"
+                  <div 
+                    className="relative"
+                    onMouseEnter={() => setCreateDropdownOpen(true)}
+                    onMouseLeave={() => setCreateDropdownOpen(false)}
                   >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    Crear Curso
-                  </Link>
+                    <button
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md transition-colors ${
+                        createDropdownOpen 
+                          ? 'text-[var(--neutral-100)] bg-[var(--secondary-dark)]' 
+                          : 'text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)]'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                      </svg>
+                      Crear
+                      <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {createDropdownOpen && (
+                      <div className="absolute right-0 mt-1 w-40 bg-[var(--neutral-900)] border border-[var(--border)] rounded-md shadow-lg z-50">
+                        <Link 
+                          href="/admin/cursos/nuevo" 
+                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Curso
+                          </div>
+                        </Link>
+                        <Link 
+                          href="/admin/packs/nuevo" 
+                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Pack
+                          </div>
+                        </Link>
+                        <button 
+                          disabled
+                          className="block w-full text-left px-4 py-2 text-sm text-[var(--neutral-500)] cursor-not-allowed"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            Categoría
+                            <span className="ml-auto text-xs">(Próximamente)</span>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={() => signOut()}
@@ -214,6 +265,68 @@ const Header = () => {
                 )}
               </div>
             )}
+            {session?.user.role === 'admin' && (
+              <div className="relative block sm:hidden">
+                <button
+                  className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium ${
+                    createDropdownOpen 
+                      ? 'text-[var(--neutral-100)] border-[var(--accent)]' 
+                      : 'text-[var(--neutral-300)]'
+                  } hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200`}
+                  onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
+                >
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Crear
+                    <svg className="ml-1 w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+                {createDropdownOpen && (
+                  <div className="pl-6 mt-1 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
+                    <Link 
+                      href="/admin/cursos/nuevo" 
+                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Curso
+                      </div>
+                    </Link>
+                    <Link 
+                      href="/admin/packs/nuevo" 
+                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        Pack
+                      </div>
+                    </Link>
+                    <button 
+                      disabled
+                      className="block w-full text-left px-4 py-2 text-sm text-[var(--neutral-500)] cursor-not-allowed rounded-b-md"
+                    >
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        Categoría
+                        <span className="ml-auto text-xs">(Próximamente)</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="pt-4 pb-3 border-t border-[var(--border)]">
             {session ? (
@@ -235,18 +348,67 @@ const Header = () => {
                   <div className="text-sm font-medium text-[var(--neutral-200)]">{session.user.name}</div>
                 </div>
                 {session?.user.role === 'admin' && (
-                  <Link
-                    href="/admin/cursos/nuevo"
-                    className="block w-full text-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
+                  <div 
+                    className="relative"
+                    onMouseEnter={() => setCreateDropdownOpen(true)}
+                    onMouseLeave={() => setCreateDropdownOpen(false)}
                   >
-                    <div className="flex items-center justify-center">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-                      </svg>
-                      Crear Curso
-                    </div>
-                  </Link>
+                    <button
+                      className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium ${
+                        createDropdownOpen 
+                          ? 'text-[var(--neutral-100)] border-[var(--accent)]' 
+                          : 'text-[var(--neutral-300)]'
+                      } hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200`}
+                    >
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Crear
+                        <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+                    {createDropdownOpen && (
+                      <div className="pl-6 mt-1 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
+                        <Link 
+                          href="/admin/cursos/nuevo" 
+                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Curso
+                          </div>
+                        </Link>
+                        <Link 
+                          href="/admin/packs/nuevo" 
+                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Pack
+                          </div>
+                        </Link>
+                        <button 
+                          disabled
+                          className="block w-full text-left px-4 py-2 text-sm text-[var(--neutral-500)] cursor-not-allowed"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            Categoría
+                            <span className="ml-auto text-xs">(Próximamente)</span>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={() => {
