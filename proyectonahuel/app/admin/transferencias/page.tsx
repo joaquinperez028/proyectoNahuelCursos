@@ -229,6 +229,11 @@ export default function TransferPaymentPage() {
       showNotification('Por favor, ingresa un motivo de rechazo', 'error');
       return;
     }
+
+    if (rejectionReason.trim().length < 10) {
+      showNotification('El motivo de rechazo debe tener al menos 10 caracteres', 'error');
+      return;
+    }
     
     setActionLoading(true);
     
@@ -241,7 +246,7 @@ export default function TransferPaymentPage() {
         body: JSON.stringify({
           paymentId: selectedPayment._id,
           action: 'reject',
-          rejectionReason
+          rejectionReason: rejectionReason.trim()
         }),
       });
       
@@ -253,6 +258,7 @@ export default function TransferPaymentPage() {
       // Actualizar la lista sin necesidad de recargar
       setPayments(payments.filter(p => p._id !== selectedPayment._id));
       setShowModal(false);
+      setRejectionReason(''); // Limpiar la razón
       
       // Mostrar mensaje de éxito con el hook global
       showNotification('Pago rechazado correctamente', 'success');
@@ -523,12 +529,15 @@ export default function TransferPaymentPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#2A2A3C] rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto relative">
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-[#2A2A3C] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative shadow-2xl border border-[#3A3A4C]">
             <div className="p-6">
               <button
-                onClick={() => setShowModal(false)}
-                className="absolute top-4 right-4 text-[#8A8A9A] hover:text-[#B4B4C0]"
+                onClick={() => {
+                  setShowModal(false);
+                  setRejectionReason('');
+                }}
+                className="absolute top-4 right-4 text-[#8A8A9A] hover:text-white transition-colors duration-200 p-1 rounded-lg hover:bg-[#3A3A4C]"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -549,7 +558,15 @@ export default function TransferPaymentPage() {
                       <svg className="w-12 h-12 text-[#8A8A9A] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      <p className="text-[#8A8A9A] text-center">No se pudo cargar el comprobante</p>
+                      <p className="text-[#8A8A9A] text-center">{previewError}</p>
+                    </div>
+                  ) : previewImage ? (
+                    <div className="border border-[#3A3A4C] rounded-lg overflow-hidden bg-[#1E1E2F]">
+                      <img 
+                        src={previewImage} 
+                        alt="Comprobante de pago"
+                        className="w-full h-auto max-h-96 object-contain"
+                      />
                     </div>
                   ) : (
                     <div className="border border-[#3A3A4C] rounded-lg overflow-hidden bg-[#1E1E2F]">
@@ -583,8 +600,94 @@ export default function TransferPaymentPage() {
                 </div>
               )}
 
+              {modalType === 'confirm' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-white">Confirmar Aprobación</h3>
+                  <div className="p-4 bg-[#1E1E2F] rounded-lg border border-[#3A3A4C]">
+                    <p className="text-[#B4B4C0] mb-2">
+                      ¿Estás seguro de que deseas aprobar este pago?
+                    </p>
+                    {selectedPayment && (
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-white">Usuario:</span> <span className="text-[#B4B4C0]">{selectedPayment.userName}</span></p>
+                        <p><span className="text-white">Producto:</span> <span className="text-[#B4B4C0]">{selectedPayment.courseTitle}</span></p>
+                        <p><span className="text-white">Monto:</span> <span className="text-[#B4B4C0]">{formatAmount(selectedPayment.amount)}</span></p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 bg-green-900 bg-opacity-20 border border-green-500 border-opacity-30 rounded-lg">
+                    <p className="text-green-400 text-sm">
+                      Al aprobar este pago, el usuario recibirá acceso inmediato al producto y se le enviará un correo de confirmación.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {modalType === 'reject' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-white">Rechazar Pago</h3>
+                  <div className="p-4 bg-[#1E1E2F] rounded-lg border border-[#3A3A4C]">
+                    <p className="text-[#B4B4C0] mb-2">
+                      ¿Estás seguro de que deseas rechazar este pago?
+                    </p>
+                    {selectedPayment && (
+                      <div className="space-y-2 text-sm">
+                        <p><span className="text-white">Usuario:</span> <span className="text-[#B4B4C0]">{selectedPayment.userName}</span></p>
+                        <p><span className="text-white">Producto:</span> <span className="text-[#B4B4C0]">{selectedPayment.courseTitle}</span></p>
+                        <p><span className="text-white">Monto:</span> <span className="text-[#B4B4C0]">{formatAmount(selectedPayment.amount)}</span></p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white">
+                      Motivo del rechazo <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        className={`w-full p-3 bg-[#1E1E2F] border rounded-lg text-white placeholder-[#8A8A9A] focus:outline-none resize-none transition-colors duration-200 ${
+                          rejectionReason.trim().length < 10 && rejectionReason.trim().length > 0
+                            ? 'border-red-500 focus:border-red-400'
+                            : rejectionReason.trim().length >= 10
+                            ? 'border-green-500 focus:border-green-400'
+                            : 'border-[#3A3A4C] focus:border-[#4CAF50]'
+                        }`}
+                        rows={4}
+                        placeholder="Explica el motivo del rechazo. Este mensaje será enviado al usuario por correo electrónico."
+                        maxLength={500}
+                        required
+                      />
+                      <div className="absolute bottom-2 right-2 text-xs text-[#8A8A9A]">
+                        <span className={rejectionReason.trim().length >= 10 ? 'text-green-400' : rejectionReason.trim().length > 0 ? 'text-red-400' : ''}>
+                          {rejectionReason.length}
+                        </span>
+                        /500
+                      </div>
+                    </div>
+                    <p className={`text-xs transition-colors duration-200 ${
+                      rejectionReason.trim().length >= 10 
+                        ? 'text-green-400' 
+                        : rejectionReason.trim().length > 0 
+                        ? 'text-red-400' 
+                        : 'text-[#B4B4C0]'
+                    }`}>
+                      {rejectionReason.trim().length >= 10 
+                        ? '✓ Motivo válido' 
+                        : `Mínimo 10 caracteres (${Math.max(0, 10 - rejectionReason.trim().length)} restantes). Sé específico para ayudar al usuario.`
+                      }
+                    </p>
+                  </div>
+                  <div className="p-3 bg-red-900 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg">
+                    <p className="text-red-400 text-sm">
+                      Al rechazar este pago, el usuario recibirá un correo electrónico con el motivo del rechazo.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Botones del modal */}
-              <div className="flex justify-end gap-2 mt-6">
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[#3A3A4C]">
                 {modalType === 'receipt' && (
                   <>
                     {selectedPayment?.paymentDetails.receiptData && !previewError && (
@@ -599,14 +702,17 @@ export default function TransferPaymentPage() {
                           link.click();
                           document.body.removeChild(link);
                         }}
-                        className="bg-[#4CAF50] hover:bg-[#45a049] text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+                        className="px-4 py-2 bg-[#4CAF50] hover:bg-[#45a049] text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                         Descargar
                       </button>
                     )}
                     <button
                       onClick={() => setShowModal(false)}
-                      className="bg-[#2A2A3C] hover:bg-[#3A3A4C] text-[#B4B4C0] py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+                      className="px-4 py-2 bg-[#3A3A4C] hover:bg-[#4A4A5C] text-[#B4B4C0] rounded-lg font-medium transition-all duration-200"
                     >
                       Cerrar
                     </button>
@@ -617,25 +723,32 @@ export default function TransferPaymentPage() {
                   <>
                     <button
                       onClick={() => setShowModal(false)}
-                      className="bg-[#2A2A3C] hover:bg-[#3A3A4C] text-[#B4B4C0] py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+                      className="px-4 py-2 bg-[#3A3A4C] hover:bg-[#4A4A5C] text-[#B4B4C0] rounded-lg font-medium transition-all duration-200"
                       disabled={actionLoading}
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleApprove}
-                      className="bg-[#4CAF50] hover:bg-[#45a049] text-white py-2 px-4 rounded-lg font-medium flex items-center transition-colors duration-200"
+                      className="px-4 py-2 bg-[#4CAF50] hover:bg-[#45a049] text-white rounded-lg font-medium flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={actionLoading}
                     >
                       {actionLoading ? (
                         <>
-                          <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Procesando...
                         </>
-                      ) : 'Aprobar Pago'}
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Aprobar Pago
+                        </>
+                      )}
                     </button>
                   </>
                 )}
@@ -643,26 +756,36 @@ export default function TransferPaymentPage() {
                 {modalType === 'reject' && (
                   <>
                     <button
-                      onClick={() => setShowModal(false)}
-                      className="bg-[#2A2A3C] hover:bg-[#3A3A4C] text-[#B4B4C0] py-2 px-4 rounded-lg font-medium transition-colors duration-200"
+                      onClick={() => {
+                        setShowModal(false);
+                        setRejectionReason('');
+                      }}
+                      className="px-4 py-2 bg-[#3A3A4C] hover:bg-[#4A4A5C] text-[#B4B4C0] rounded-lg font-medium transition-all duration-200"
                       disabled={actionLoading}
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleReject}
-                      className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-medium flex items-center transition-colors duration-200"
-                      disabled={actionLoading || !rejectionReason.trim()}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={actionLoading || !rejectionReason.trim() || rejectionReason.trim().length < 10}
                     >
                       {actionLoading ? (
                         <>
-                          <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Procesando...
                         </>
-                      ) : 'Rechazar Pago'}
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Rechazar Pago
+                        </>
+                      )}
                     </button>
                   </>
                 )}
