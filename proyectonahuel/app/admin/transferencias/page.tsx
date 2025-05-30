@@ -616,7 +616,7 @@ export default function TransferPaymentPage() {
                     )}
                   </div>
                   <div className="p-3 bg-green-900 bg-opacity-20 border border-green-500 border-opacity-30 rounded-lg">
-                    <p className="text-green-400 text-sm">
+                    <p className="text-green-100 text-sm">
                       Al aprobar este pago, el usuario recibirá acceso inmediato al producto y se le enviará un correo de confirmación.
                     </p>
                   </div>
@@ -679,7 +679,7 @@ export default function TransferPaymentPage() {
                     </p>
                   </div>
                   <div className="p-3 bg-red-900 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg">
-                    <p className="text-red-400 text-sm">
+                    <p className="text-red-100 text-sm">
                       Al rechazar este pago, el usuario recibirá un correo electrónico con el motivo del rechazo.
                     </p>
                   </div>

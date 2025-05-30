@@ -8,6 +8,7 @@ import { useProfileData } from '@/hooks/useProfileData';
 import { profileCache } from '@/lib/profileCache';
 import CourseProgressCard from '@/components/CourseProgressCard';
 import CertificateCard from '@/components/CertificateCard';
+import EditNameComponent from '@/components/EditNameComponent';
 
 // Lazy loading para componentes pesados
 import { lazy, Suspense } from 'react';
@@ -53,6 +54,23 @@ export default function PerfilPage() {
     result: null as any,
     error: null as string | null
   });
+  
+  // Estado local para el nombre del usuario actualizado
+  const [currentUserName, setCurrentUserName] = useState(profileData?.user.name || '');
+
+  // Actualizar el nombre local cuando se carga profileData
+  if (profileData?.user.name && currentUserName !== profileData.user.name) {
+    setCurrentUserName(profileData.user.name);
+  }
+
+  // Función para manejar la actualización del nombre
+  const handleNameUpdate = (newName: string) => {
+    setCurrentUserName(newName);
+    // Invalidar el cache para que se recargue con el nuevo nombre
+    if (session?.user?.email) {
+      profileCache.invalidate(session.user.email);
+    }
+  };
 
   // Memoizar stats para evitar recálculos
   const memoizedStats = useMemo(() => {
@@ -186,7 +204,7 @@ export default function PerfilPage() {
               {profileData.user.image ? (
                 <Image
                   src={profileData.user.image}
-                  alt={profileData.user.name || 'Usuario'}
+                  alt={currentUserName || profileData.user.name || 'Usuario'}
                   fill
                   className="object-cover transition-opacity duration-300"
                   sizes="(max-width: 768px) 96px, 128px"
@@ -194,13 +212,13 @@ export default function PerfilPage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#B4B4C0] text-4xl">
-                  {profileData.user.name?.[0]?.toUpperCase() || 'U'}
+                  {(currentUserName || profileData.user.name)?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
             </div>
             
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white animate-in slide-in-from-left duration-500">{profileData.user.name}</h1>
+              <h1 className="text-3xl font-bold text-white animate-in slide-in-from-left duration-500">{currentUserName || profileData.user.name}</h1>
               <p className="text-[#B4B4C0] mb-2 animate-in slide-in-from-left duration-500 delay-100">{profileData.user.email}</p>
               
               <div className="flex flex-wrap gap-4 mt-3 animate-in slide-in-from-left duration-500 delay-200">
@@ -270,14 +288,22 @@ export default function PerfilPage() {
                   <span className="mr-2">👤</span>
                   Información Personal
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Campo de nombre editable */}
+                  <div className="animate-in slide-in-from-left duration-300">
+                    <EditNameComponent 
+                      currentName={currentUserName || profileData.user.name}
+                      onNameUpdate={handleNameUpdate}
+                    />
+                  </div>
+                  
+                  {/* Campos de solo lectura */}
                   {[
-                    { label: 'Nombre', value: profileData.user.name },
                     { label: 'Email', value: profileData.user.email },
                     { label: 'Rol', value: profileData.user.role === 'admin' ? 'Administrador' : 'Estudiante' },
                     { label: 'Fecha de registro', value: formatDate(profileData.user.registrationDate) }
                   ].map((field, index) => (
-                    <div key={field.label} className="animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 100}ms` }}>
+                    <div key={field.label} className="animate-in slide-in-from-left duration-300" style={{ animationDelay: `${(index + 1) * 100}ms` }}>
                       <label className="block text-sm font-medium text-[#B4B4C0] mb-1">{field.label}</label>
                       <input 
                         value={field.value} 
