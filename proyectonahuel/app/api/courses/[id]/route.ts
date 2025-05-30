@@ -81,11 +81,28 @@ export async function PUT(request: NextRequest) {
     
     const data = await request.json();
     
+    // Si se está actualizando la categoría, validar que exista
+    if (data.category) {
+      const Category = (await import('@/models/Category')).default;
+      const categoryExists = await Category.findOne({ 
+        _id: data.category,
+        isActive: true 
+      });
+      
+      if (!categoryExists) {
+        return NextResponse.json(
+          { error: 'Categoría no válida o inactiva' },
+          { status: 400 }
+        );
+      }
+    }
+    
     // Actualizar los campos básicos del curso
     Object.assign(course, {
       title: data.title || course.title,
       description: data.description || course.description,
       price: data.price ?? course.price,
+      category: data.category || course.category,
       featured: typeof data.featured === 'boolean' ? data.featured : course.featured,
       onSale: typeof data.onSale === 'boolean' ? data.onSale : course.onSale,
       discountPercentage: data.discountPercentage != null ? data.discountPercentage : course.discountPercentage,

@@ -68,11 +68,16 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validar que la categoría sea una de las permitidas
-    const categoriasValidas = ['Análisis Técnico', 'Análisis Fundamental', 'Estrategias de Trading', 'Finanzas Personales'];
-    if (!categoriasValidas.includes(data.category)) {
+    // Validar que la categoría exista en la base de datos
+    const Category = (await import('@/models/Category')).default;
+    const categoryExists = await Category.findOne({ 
+      _id: data.category,
+      isActive: true 
+    });
+    
+    if (!categoryExists) {
       return NextResponse.json(
-        { error: 'Categoría no válida' },
+        { error: 'Categoría no válida o inactiva' },
         { status: 400 }
       );
     }
