@@ -52,7 +52,7 @@ export function useProfileData() {
     return false;
   }, [session?.user?.email, validateUserData]);
 
-  // Fetch fresh data simplificado
+  // Fetch fresh data con validación estricta
   const fetchFreshData = useCallback(async (silent = false) => {
     if (status !== 'authenticated' || !session?.user?.email) return;
 
@@ -80,25 +80,27 @@ export function useProfileData() {
         dataRole: freshData.user?.role
       });
       
-      // Validar que los datos recibidos corresponden al usuario actual
+      // Validación ESTRICTA que los datos corresponden al usuario actual
       if (!validateUserData(freshData, session.user.email)) {
-        console.error('❌ Datos recibidos no corresponden al usuario actual:', {
+        console.error('❌ DATOS INCORRECTOS RECIBIDOS:', {
           sessionEmail: session.user.email,
           dataEmail: freshData.user?.email
         });
-        // TEMPORAL: Comentar esta línea para debug
-        // throw new Error('Los datos recibidos no corresponden a tu usuario actual. Por favor, recarga la página.');
-        console.warn('⚠️ VALIDACIÓN DESHABILITADA TEMPORALMENTE PARA DEBUG');
+        
+        // LIMPIAR TODO EL CACHÉ inmediatamente
+        await profileCache.clear();
+        
+        throw new Error('Los datos recibidos no corresponden a tu usuario actual. El caché ha sido limpiado. Por favor, recarga la página.');
       }
       
-      // Guardar en caché
+      // Solo guardar si la validación pasó
       await profileCache.set(session.user.email, freshData);
       
       // Update state
       setData(freshData);
       
     } catch (err) {
-      console.error('Error fetching profile:', err);
+      console.error('❌ Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
     } finally {
       if (!silent) setLoading(false);
@@ -108,24 +110,32 @@ export function useProfileData() {
   // Limpiar cuando cambie el usuario o se desloguee
   useEffect(() => {
     if (status === 'unauthenticated') {
+      // Usuario se deslogueó, limpiar todo
+      console.log('👋 Usuario se deslogueó, limpiando caché');
       profileCache.clearOnLogout();
       setData(null);
       setError(null);
     }
   }, [status]);
 
-  // Load inicial
+  // Load inicial con detección de cambio de usuario
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      // Limpiar datos previos
+      console.log('🔐 Usuario autenticado:', session.user.email);
+      
+      // Limpiar datos previos siempre al cambiar de usuario
       setData(null);
       setError(null);
       
+      // El caché internamente detectará si cambió el usuario y limpiará automáticamente
       // Intentar cargar desde caché primero
       loadFromCache().then(hasCache => {
         if (!hasCache) {
           // No hay caché válido, fetch desde servidor
+          console.log('📡 No hay caché válido, cargando desde servidor');
           fetchFreshData(false);
+        } else {
+          console.log('📦 Datos cargados desde caché válido');
         }
       });
     }

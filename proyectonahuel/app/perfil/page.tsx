@@ -48,7 +48,6 @@ export default function PerfilPage() {
   const { data: profileData, loading, error, isFromCache, clearCacheAndReload } = useProfileData();
   const [activeTab, setActiveTab] = useState('informacion');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [debugSessionData, setDebugSessionData] = useState<any>(null);
   const [muxStatus, setMuxStatus] = useState({
     loading: false,
     result: null as any,
@@ -98,32 +97,6 @@ export default function PerfilPage() {
         result: null,
         error: error instanceof Error ? error.message : 'Error desconocido'
       });
-    }
-  };
-
-  const clearAllCacheAndReload = async () => {
-    try {
-      // Limpiar todo el caché
-      profileCache.clearOnLogout();
-      
-      // Limpiar localStorage manualmente
-      localStorage.clear();
-      
-      // Forzar recarga de la página para empezar completamente limpio
-      window.location.reload();
-    } catch (error) {
-      console.error('Error al limpiar caché:', error);
-    }
-  };
-
-  const testSession = async () => {
-    try {
-      const response = await fetch('/api/debug-session');
-      const data = await response.json();
-      setDebugSessionData(data);
-      console.log('🔍 Debug Session Data:', data);
-    } catch (error) {
-      console.error('Error testing session:', error);
     }
   };
 
@@ -208,61 +181,6 @@ export default function PerfilPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 animate-in fade-in duration-300">
         {/* Header del perfil */}
         <div className="bg-[#2A2A3C] rounded-t-lg shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
-          {/* Debug Info - Solo mostrar en development */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mb-4 p-3 bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-yellow-400 text-sm font-medium">🐛 Información de Debug</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowDebugInfo(!showDebugInfo)}
-                    className="text-yellow-400 text-xs hover:text-yellow-300"
-                  >
-                    {showDebugInfo ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                  <button
-                    onClick={clearAllCacheAndReload}
-                    className="text-red-400 text-xs hover:text-red-300"
-                  >
-                    Limpiar Caché
-                  </button>
-                  <button
-                    onClick={testSession}
-                    className="text-blue-400 text-xs hover:text-blue-300"
-                  >
-                    Test Sesión
-                  </button>
-                </div>
-              </div>
-              
-              {showDebugInfo && (
-                <div className="mt-2 text-xs text-yellow-200 space-y-1">
-                  <div><strong>Email de sesión:</strong> {session?.user?.email || 'No disponible'}</div>
-                  <div><strong>Email de perfil:</strong> {profileData?.user?.email || 'No disponible'}</div>
-                  <div><strong>Coinciden:</strong> {session?.user?.email === profileData?.user?.email ? '✅ Sí' : '❌ No'}</div>
-                  <div><strong>Datos desde caché:</strong> {isFromCache ? '✅ Sí' : '❌ No'}</div>
-                  <div><strong>Estado de loading:</strong> {loading ? '⏳ Cargando' : '✅ Completo'}</div>
-                  <div><strong>Timestamp:</strong> {profileData?.timestamp ? new Date(profileData.timestamp).toLocaleString() : 'No disponible'}</div>
-                  <div><strong>Rol:</strong> {profileData?.user?.role || 'No disponible'}</div>
-                  <div><strong>LocalStorage email:</strong> {typeof window !== 'undefined' ? localStorage.getItem('current_user_email') : 'No disponible'}</div>
-                  
-                  {debugSessionData && (
-                    <div className="mt-3 p-2 bg-blue-900 bg-opacity-30 rounded">
-                      <div><strong>🔍 Debug Session:</strong></div>
-                      <div><strong>DB User Found:</strong> {debugSessionData.dbUser ? '✅ Sí' : '❌ No'}</div>
-                      <div><strong>DB Email:</strong> {debugSessionData.dbUser?.email || 'No encontrado'}</div>
-                      <div><strong>DB Role:</strong> {debugSessionData.dbUser?.role || 'No encontrado'}</div>
-                      <div><strong>Emails Match:</strong> {debugSessionData.emailsMatch ? '✅ Sí' : '❌ No'}</div>
-                      <pre className="text-xs mt-1 bg-black bg-opacity-50 p-1 rounded overflow-x-auto">
-                        {JSON.stringify(debugSessionData, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden bg-[#3A3A4C] flex-shrink-0 transform transition-transform duration-300 hover:scale-105">
               {profileData.user.image ? (
