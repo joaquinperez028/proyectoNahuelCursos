@@ -30,6 +30,10 @@ interface PackType {
   originalPrice: number;
   courses: { _id: string; title: string; thumbnailUrl?: string }[];
   imageUrl?: string;
+  imageData?: {
+    data: string;
+    contentType: string;
+  };
   active: boolean;
 }
 
@@ -37,6 +41,14 @@ interface PackType {
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse bg-gray-600 ${className}`}></div>;
 }
+
+// Función helper para obtener la URL de la imagen
+const getPackImageSrc = (pack: PackType): string | undefined => {
+  if (pack.imageData && pack.imageData.data) {
+    return `data:${pack.imageData.contentType};base64,${pack.imageData.data}`;
+  }
+  return pack.imageUrl || undefined;
+};
 
 export default function PacksPage() {
   const [packs, setPacks] = useState<PackType[]>([]);
@@ -127,11 +139,11 @@ export default function PacksPage() {
               >
                 {/* Imagen con overlay al hover */}
                 <div className="relative overflow-hidden">
-                  {pack.imageUrl ? (
+                  {getPackImageSrc(pack) ? (
                     <>
                       <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
                       <img
-                        src={pack.imageUrl}
+                        src={getPackImageSrc(pack)}
                         alt={pack.name}
                         className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -287,9 +299,9 @@ export default function PacksPage() {
             
             <div className="relative overflow-hidden rounded-xl mb-6">
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
-              {selectedPack.imageUrl ? (
+              {getPackImageSrc(selectedPack) ? (
                 <img 
-                  src={selectedPack.imageUrl} 
+                  src={getPackImageSrc(selectedPack)} 
                   alt={selectedPack.name} 
                   className="w-full h-56 object-cover transition-transform duration-500 hover:scale-105"
                 />

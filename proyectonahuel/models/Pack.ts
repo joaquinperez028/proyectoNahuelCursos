@@ -7,6 +7,10 @@ const PackSchema = new Schema({
   originalPrice: { type: Number, required: true },
   courses: [{ type: Schema.Types.ObjectId, ref: 'Course', required: true }],
   imageUrl: { type: String },
+  imageData: {
+    data: { type: String },
+    contentType: { type: String }
+  },
   active: { type: Boolean, default: true },
 }, { timestamps: true });
 

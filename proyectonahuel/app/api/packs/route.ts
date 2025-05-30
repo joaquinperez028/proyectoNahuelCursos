@@ -39,17 +39,30 @@ export async function POST(request: NextRequest) {
     if (!data.name || !data.description || !data.price || !data.originalPrice || !Array.isArray(data.courses) || data.courses.length === 0) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
-    const newPack = await Pack.create({
+
+    // Preparar datos para crear el pack
+    const packData: any = {
       name: data.name,
       description: data.description,
       price: data.price,
       originalPrice: data.originalPrice,
       courses: data.courses,
-      imageUrl: data.imageUrl || '',
       active: true
-    });
+    };
+
+    // Agregar imagen según el método usado
+    if (data.imageData) {
+      // Si se subió un archivo
+      packData.imageData = data.imageData;
+    } else if (data.imageUrl) {
+      // Si se proporcionó una URL
+      packData.imageUrl = data.imageUrl;
+    }
+
+    const newPack = await Pack.create(packData);
     return NextResponse.json(newPack, { status: 201 });
   } catch (error) {
+    console.error('Error al crear pack:', error);
     return NextResponse.json({ error: 'Error al crear el pack' }, { status: 500 });
   }
 } 

@@ -21,6 +21,10 @@ interface Pack {
   price: number;
   originalPrice: number;
   imageUrl?: string;
+  imageData?: {
+    data: string;
+    contentType: string;
+  };
   courses: { _id: string; title: string }[];
 }
 
@@ -168,6 +172,14 @@ export default function TransferPaymentPage() {
     }
   };
 
+  // Función helper para obtener la URL de la imagen
+  const getPackImageSrc = (pack: Pack): string | undefined => {
+    if (pack.imageData && pack.imageData.data) {
+      return `data:${pack.imageData.contentType};base64,${pack.imageData.data}`;
+    }
+    return pack.imageUrl || undefined;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--neutral-50)] py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
@@ -212,7 +224,7 @@ export default function TransferPaymentPage() {
             <div className="flex flex-col md:flex-row">
               <div className="md:w-1/3 relative h-48 md:h-auto">
                 <Image 
-                  src={pack.imageUrl || '/placeholder-course.jpg'} 
+                  src={getPackImageSrc(pack) || '/placeholder-course.jpg'} 
                   alt={pack.name}
                   fill
                   className="object-cover"

@@ -12,6 +12,10 @@ interface PackType {
   originalPrice: number;
   courses: { _id: string; title: string }[];
   imageUrl?: string;
+  imageData?: {
+    data: string;
+    contentType: string;
+  };
   active: boolean;
 }
 
@@ -68,6 +72,14 @@ export default function AdminPacksPage() {
     }
   };
 
+  // Función helper para obtener la URL de la imagen
+  const getPackImageSrc = (pack: PackType): string | undefined => {
+    if (pack.imageData && pack.imageData.data) {
+      return `data:${pack.imageData.contentType};base64,${pack.imageData.data}`;
+    }
+    return pack.imageUrl || undefined;
+  };
+
   return (
     <div className="py-10">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -118,10 +130,10 @@ export default function AdminPacksPage() {
                   <tr key={pack._id}>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        {pack.imageUrl && (
+                        {getPackImageSrc(pack) && (
                           <img
                             className="h-10 w-10 rounded-lg object-cover mr-3"
-                            src={pack.imageUrl}
+                            src={getPackImageSrc(pack)}
                             alt={pack.name}
                           />
                         )}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 export default function NuevoPackPage() {
   const { data: session, status } = useSession();
@@ -18,6 +19,14 @@ export default function NuevoPackPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // Estados para upload de imagen
+  const [imageMethod, setImageMethod] = useState<'url' | 'file'>('url');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageData, setUploadedImageData] = useState<{ data: string, contentType: string } | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Redireccionar si no es administrador
   useEffect(() => {
@@ -48,6 +57,57 @@ export default function NuevoPackPage() {
     setCursos((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Crear una vista previa de la imagen
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    
+    setIsUploadingImage(true);
+    setError('');
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al subir la imagen');
+      }
+      
+      const data = await response.json();
+      setUploadedImageData(data.imageData);
+      setIsUploadingImage(false);
+      
+      return data.imageData;
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al subir la imagen');
+      }
+      setIsUploadingImage(false);
+      return null;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,6 +142,18 @@ export default function NuevoPackPage() {
 
     setLoading(true);
     try {
+      // Subir imagen si se seleccionó un archivo y no se ha subido aún
+      let finalImageData = null;
+      if (imageMethod === 'file' && imageFile && !uploadedImageData) {
+        finalImageData = await uploadImage();
+        if (!finalImageData) {
+          setLoading(false);
+          return;
+        }
+      } else if (imageMethod === 'file' && uploadedImageData) {
+        finalImageData = uploadedImageData;
+      }
+
       const res = await fetch("/api/packs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,7 +163,8 @@ export default function NuevoPackPage() {
           price: Number(precio),
           originalPrice: Number(precioOriginal),
           courses: cursos,
-          imageUrl: imagen
+          imageUrl: imageMethod === 'url' ? imagen : '',
+          imageData: finalImageData
         })
       });
       if (!res.ok) {
@@ -191,18 +264,148 @@ export default function NuevoPackPage() {
                     />
                   </div>
 
-                  {/* Imagen URL */}
+                  {/* Imagen */}
                   <div className="lg:col-span-2">
-                    <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
-                      URL de la Imagen
+                    <label className="block text-sm font-medium text-[#E0E0E0] mb-3">
+                      Imagen del Pack
                     </label>
-                    <input 
-                      type="url" 
-                      value={imagen} 
-                      onChange={e => setImagen(e.target.value)} 
-                      placeholder="https://ejemplo.com/imagen.jpg"
-                      className="w-full bg-[#1E1E2F] border border-[#3A3A4C] rounded-lg px-4 py-3 text-white placeholder-[#8A8A9A] focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all duration-200"
-                    />
+                    
+                    {/* Selector de método */}
+                    <div className="mb-4">
+                      <div className="flex gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setImageMethod('url')}
+                          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                            imageMethod === 'url'
+                              ? 'bg-[#4CAF50] text-white'
+                              : 'bg-[#2A2A3C] text-[#B4B4C0] border border-[#3A3A4C] hover:bg-[#3A3A4C]'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            URL
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageMethod('file')}
+                          className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                            imageMethod === 'file'
+                              ? 'bg-[#4CAF50] text-white'
+                              : 'bg-[#2A2A3C] text-[#B4B4C0] border border-[#3A3A4C] hover:bg-[#3A3A4C]'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Subir Archivo
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Input según método seleccionado */}
+                    {imageMethod === 'url' ? (
+                      <input 
+                        type="url" 
+                        value={imagen} 
+                        onChange={e => setImagen(e.target.value)} 
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                        className="w-full bg-[#1E1E2F] border border-[#3A3A4C] rounded-lg px-4 py-3 text-white placeholder-[#8A8A9A] focus:ring-2 focus:ring-[#4CAF50] focus:border-transparent transition-all duration-200"
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-grow">
+                            <input
+                              type="file"
+                              id="packImage"
+                              ref={imageInputRef}
+                              onChange={handleImageFileChange}
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              className="sr-only"
+                              disabled={isUploadingImage || !!uploadedImageData}
+                            />
+                            <label
+                              htmlFor="packImage"
+                              className={`relative cursor-pointer bg-[#1E1E2F] py-3 px-4 border border-[#3A3A4C] rounded-lg shadow-sm text-sm font-medium ${
+                                isUploadingImage || !!uploadedImageData 
+                                  ? 'bg-[#2A2A3C] text-[#8A8A9A] cursor-not-allowed' 
+                                  : 'text-white hover:bg-[#2A2A3C] border-dashed'
+                              } focus:outline-none focus:ring-2 focus:ring-[#4CAF50] transition-all duration-200 block w-full text-center`}
+                            >
+                              <div className="space-y-2">
+                                <svg className="mx-auto h-8 w-8 text-[#8A8A9A]" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <div>
+                                  <span className="text-[#4CAF50]">
+                                    {uploadedImageData ? 'Imagen lista' : 'Hacer clic para seleccionar'}
+                                  </span>
+                                  <span className="text-[#8A8A9A]"> o arrastra aquí</span>
+                                </div>
+                                <p className="text-xs text-[#8A8A9A]">PNG, JPG, GIF, WEBP hasta 5MB</p>
+                              </div>
+                            </label>
+                            
+                            {imageFile && (
+                              <p className="mt-2 text-sm text-[#B4B4C0]">
+                                Archivo seleccionado: {imageFile.name}
+                              </p>
+                            )}
+
+                            {imageFile && !uploadedImageData && !isUploadingImage && (
+                              <button
+                                type="button"
+                                onClick={uploadImage}
+                                className="mt-3 px-4 py-2 bg-[#4CAF50] text-white text-sm rounded-lg hover:bg-[#45a049] transition-colors duration-200"
+                              >
+                                Subir Imagen
+                              </button>
+                            )}
+                          </div>
+                          
+                          {imagePreview && (
+                            <div className="relative w-32 h-32 border border-[#3A3A4C] rounded-lg overflow-hidden shadow-sm flex-shrink-0">
+                              <Image
+                                src={imagePreview}
+                                alt="Vista previa de la imagen"
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {isUploadingImage && (
+                          <div className="bg-[#1E1E2F] border border-[#3A3A4C] rounded-lg p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="animate-spin h-5 w-5 border-2 border-[#4CAF50] border-t-transparent rounded-full"></div>
+                              <span className="text-[#B4B4C0]">Subiendo imagen...</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {uploadedImageData && (
+                          <div className="bg-[#4CAF50] bg-opacity-10 border border-[#4CAF50] border-opacity-30 rounded-lg p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-[#4CAF50] rounded-full flex items-center justify-center">
+                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              <p className="text-[#4CAF50] font-medium">
+                                ✓ Imagen subida correctamente y lista para usar
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
