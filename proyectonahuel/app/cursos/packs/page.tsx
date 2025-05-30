@@ -64,8 +64,18 @@ export default function PacksPage() {
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
   const [eligibilityMap, setEligibilityMap] = useState<{ [key: string]: EligibilityInfo }>({});
   const [checkingEligibility, setCheckingEligibility] = useState<{ [key: string]: boolean }>({});
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
   const { data: session } = useSession();
   const router = useRouter();
+
+  const showToast = (message: string) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 4000);
+  };
 
   useEffect(() => {
     const fetchPacks = async () => {
@@ -123,8 +133,8 @@ export default function PacksPage() {
 
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      // Mostrar alerta en lugar de abrir el modal
-      alert('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
+      // Mostrar notificación en lugar de alerta
+      showToast('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
       return;
     }
 
@@ -140,7 +150,7 @@ export default function PacksPage() {
     // Verificar elegibilidad antes de proceder con la compra
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      alert('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
+      showToast('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
       setShowPaymentModal(null);
       return;
     }
@@ -156,7 +166,7 @@ export default function PacksPage() {
       const data = await res.json();
       window.location.href = data.init_point;
     } catch (err) {
-      alert('No se pudo procesar la compra. Intenta nuevamente.');
+      showToast('No se pudo procesar la compra. Intenta nuevamente.');
     } finally {
       setBuyingPackId(null);
     }
@@ -504,6 +514,30 @@ export default function PacksPage() {
                 }`}
               >
                 <span>{isPackDisabled(selectedPack._id) ? 'No disponible para compra' : 'Comprar pack'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Notificación Toast */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 z-[60] max-w-sm w-full">
+          <div className="bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg border border-red-500 animate-slideIn">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-white mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-medium text-sm">{notificationMessage}</p>
+              </div>
+              <button
+                onClick={() => setShowNotification(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           </div>
