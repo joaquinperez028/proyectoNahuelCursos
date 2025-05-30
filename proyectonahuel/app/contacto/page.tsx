@@ -165,7 +165,7 @@ export default function ContactoPage() {
       }
 
       // Éxito
-      setSubmitStatus({ success: '¡Mensaje enviado correctamente! Nos pondremos en contacto contigo pronto.' });
+      setSubmitStatus({ success: '¡Mensaje enviado correctamente! Nos comunicaremos contigo pronto.' });
       setFormData({
         subject: '',
         message: '',
@@ -192,7 +192,7 @@ export default function ContactoPage() {
             Contacto
           </h1>
           <p className="mb-8 text-[var(--neutral-300)]">
-            Completa el formulario a continuación y nos pondremos en contacto contigo lo antes posible.
+            Completa el formulario a continuación y nos pondremos en comunicación contigo lo antes posible.
           </p>
 
           <div className="mb-6 p-3 bg-[var(--neutral-800)] rounded-md">
