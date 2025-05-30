@@ -1,42 +1,86 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import StatisticCounter from '../components/StatisticCounter';
 import DynamicTestimonials from '../components/DynamicTestimonials';
 import CategoriesSection from '../components/CategoriesSection';
 
 export default function Home() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.addEventListener('loadeddata', () => {
+        console.log('Video loaded successfully');
+        setVideoLoaded(true);
+      });
+      
+      video.addEventListener('error', (e) => {
+        console.error('Video error:', e);
+        setVideoError(true);
+      });
+
+      // Intentar reproducir el video
+      const playVideo = async () => {
+        try {
+          await video.play();
+          console.log('Video playing');
+        } catch (error) {
+          console.log('Autoplay prevented:', error);
+          // Autoplay fue bloqueado, el video seguirá visible pero paused
+        }
+      };
+
+      playVideo();
+    }
+  }, []);
+
   return (
     <div className="bg-black text-gray-200">
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-28">
+      <section className="relative overflow-hidden py-20 md:py-28 min-h-screen flex items-center">
         {/* Video Background */}
         <div className="absolute inset-0 z-0">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover opacity-60"
-          >
-            <source src="/images/grafico-156453.mp4" type="video/mp4" />
-          </video>
+          {!videoError ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-cover"
+              style={{ filter: 'brightness(0.4)' }}
+              onError={() => setVideoError(true)}
+            >
+              <source src="/images/grafico-156453.mp4" type="video/mp4" />
+            </video>
+          ) : (
+            // Fallback background con gradiente animado
+            <div className="w-full h-full bg-gradient-to-br from-blue-900 via-purple-900 to-green-900 animate-pulse"></div>
+          )}
+          
           {/* Overlay para mejor legibilidad del texto */}
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50"></div>
         </div>
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="text-center">
             <h1 className="text-4xl font-extrabold sm:text-5xl md:text-6xl bg-gradient-to-r from-[var(--primary-light)] to-[var(--accent)] bg-clip-text text-transparent pb-3 animate-fade-in">
               APRENDE A INVERTIR COMO UN PROFESIONAL
             </h1>
-            <p className="mt-6 text-xl max-w-3xl mx-auto text-gray-300">
+            <p className="mt-6 text-xl max-w-3xl mx-auto text-gray-200 drop-shadow-lg">
               Descubre las estrategias utilizadas por traders profesionales y maximiza tus probabilidades de éxito en los mercados financieros.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
               <Link
                 href="/cursos"
-                className="group relative px-8 py-4 rounded-lg overflow-hidden bg-green-600 text-white font-medium text-lg hover:bg-green-700 transition-colors duration-300 flex items-center justify-center"
+                className="group relative px-8 py-4 rounded-lg overflow-hidden bg-green-600 text-white font-medium text-lg hover:bg-green-700 transition-colors duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <span className="relative z-10">Explorar formaciones</span>
                 <span className="absolute bottom-0 left-0 h-1 w-full bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
@@ -44,7 +88,7 @@ export default function Home() {
               
               <Link
                 href="/cursos/packs"
-                className="group relative px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-700 transition-colors duration-300 flex items-center justify-center border border-gray-700"
+                className="group relative px-8 py-4 rounded-lg bg-gray-800/80 backdrop-blur-sm text-white font-medium text-lg hover:bg-gray-700/80 transition-colors duration-300 flex items-center justify-center border border-gray-600 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <span className="relative z-10">Packs completos</span>
                 <span className="absolute bottom-0 left-0 h-1 w-full bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
