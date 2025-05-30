@@ -52,14 +52,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    console.log('📊 DEBUG - Profile Result:', {
-      email: profileResult.email,
-      coursesCount: profileResult.courses?.length || 0,
-      enrolledCoursesDataCount: profileResult.enrolledCoursesData?.length || 0,
-      progressDataCount: profileResult.progressData?.length || 0,
-      certificatesDataCount: profileResult.certificatesData?.length || 0
-    });
-
     // Process active courses with progress
     const activeCourses = profileResult.enrolledCoursesData.map((course: any) => {
       const progress = profileResult.progressData.find((p: any) => 
@@ -172,14 +164,6 @@ export async function GET(request: NextRequest) {
       adminStats,
       timestamp: Date.now() // For caching
     };
-
-    console.log('📤 DEBUG - Final Response:', {
-      userEmail: response.user.email,
-      activeCoursesCount: response.activeCourses.length,
-      certificatesCount: response.certificates.length,
-      purchasesCount: response.purchases.length,
-      stats: response.stats
-    });
 
     // Set aggressive caching headers
     return new NextResponse(JSON.stringify(response), {
