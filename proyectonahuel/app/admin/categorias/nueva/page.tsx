@@ -25,11 +25,11 @@ export default function NuevaCategoriaPage() {
       router.push('/');
       return;
     }
-
-    if (session?.user.role !== 'admin') {
-      router.push('/');
-      return;
-    }
+    // Comentamos la redirección automática para permitir mostrar el botón MakeAdmin
+    // if (session?.user.role !== 'admin') {
+    //   router.push('/');
+    //   return;
+    // }
   }, [session, status, router]);
 
   useEffect(() => {
@@ -129,6 +129,19 @@ export default function NuevaCategoriaPage() {
             </p>
           </div>
         </div>
+
+        {/* Botón de admin si es necesario */}
+        {session && session.user.role !== 'admin' && (
+          <div className="mb-6 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-md">
+            <p className="text-yellow-200 text-sm mb-3">
+              ⚠️ Necesitas permisos de administrador para crear categorías.
+            </p>
+            <p className="text-[var(--neutral-400)] text-sm mb-3">
+              Usuario actual: {session.user.email} | Rol: {session.user.role || 'Sin rol'}
+            </p>
+            <MakeAdminButton />
+          </div>
+        )}
 
         <div className="bg-[var(--card)] rounded-lg shadow p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -249,6 +262,19 @@ export default function NuevaCategoriaPage() {
             </div>
           </form>
         </div>
+
+        {/* Show current user info for debugging */}
+        {session && (
+          <div className="mb-4 p-3 bg-blue-900/20 border border-blue-700/50 rounded-md text-sm">
+            <p className="text-blue-200">👤 Usuario: {session.user.email}</p>
+            <p className="text-blue-200">🔑 Rol: {session.user.role || 'Sin rol definido'}</p>
+            {session.user.role === 'admin' ? (
+              <p className="text-green-400">✅ Tienes permisos de administrador</p>
+            ) : (
+              <p className="text-yellow-400">⚠️ Necesitas permisos de administrador</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
