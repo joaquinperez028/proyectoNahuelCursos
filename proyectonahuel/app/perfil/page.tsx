@@ -45,7 +45,7 @@ type Purchase = {
 
 export default function PerfilPage() {
   const { data: session, status } = useSession();
-  const { data: profileData, loading, error, isFromCache, clearCacheAndReload, isRetrying } = useProfileData();
+  const { data: profileData, loading, error, isFromCache, clearCacheAndReload } = useProfileData();
   const [activeTab, setActiveTab] = useState('informacion');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [muxStatus, setMuxStatus] = useState({
@@ -140,8 +140,8 @@ export default function PerfilPage() {
     );
   }
 
-  // Error state con mejor manejo de reintentos
-  if (error && !isRetrying) {
+  // Error state simplificado
+  if (error) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-[#1E1E2F]">
         <div className="text-center max-w-md mx-auto p-6">
@@ -164,21 +164,6 @@ export default function PerfilPage() {
               🔃 Recargar página
             </button>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Estado de reintento
-  if (isRetrying) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-[#1E1E2F]">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto mb-4 bg-blue-900 bg-opacity-30 rounded-full flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-400"></div>
-          </div>
-          <p className="text-blue-400 text-xl mb-2">Actualizando datos del usuario...</p>
-          <p className="text-gray-400 text-sm">Detectamos un cambio de usuario, estamos sincronizando los datos</p>
         </div>
       </div>
     );
@@ -238,7 +223,6 @@ export default function PerfilPage() {
                   <div><strong>Email de perfil:</strong> {profileData?.user?.email || 'No disponible'}</div>
                   <div><strong>Coinciden:</strong> {session?.user?.email === profileData?.user?.email ? '✅ Sí' : '❌ No'}</div>
                   <div><strong>Datos desde caché:</strong> {isFromCache ? '✅ Sí' : '❌ No'}</div>
-                  <div><strong>Está reintentando:</strong> {isRetrying ? '🔄 Sí' : '❌ No'}</div>
                   <div><strong>Estado de loading:</strong> {loading ? '⏳ Cargando' : '✅ Completo'}</div>
                   <div><strong>Timestamp:</strong> {profileData?.timestamp ? new Date(profileData.timestamp).toLocaleString() : 'No disponible'}</div>
                   <div><strong>Rol:</strong> {profileData?.user?.role || 'No disponible'}</div>

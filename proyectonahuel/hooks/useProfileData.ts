@@ -29,44 +29,37 @@ export function useProfileData() {
   const [data, setData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
 
   // Validar que los datos corresponden al usuario actual
   const validateUserData = useCallback((profileData: ProfileData, sessionEmail: string): boolean => {
     return profileData?.user?.email === sessionEmail;
   }, []);
 
-  // Cargar datos desde caché súper rápido con validación
+  // Cargar datos desde caché con validación simple
   const loadFromCache = useCallback(async () => {
     if (!session?.user?.email) return false;
     
-    const cachedData = await profileCache.get(session.user.email);
-    if (cachedData && validateUserData(cachedData, session.user.email)) {
-      setData(cachedData);
-      setError(null); // Limpiar errores previos
-      return true;
-    } else if (cachedData) {
-      // Datos en caché pero de usuario incorrecto, limpiar
-      console.warn('Datos de caché no corresponden al usuario actual, limpiando...');
-      await profileCache.invalidate(session.user.email);
+    try {
+      const cachedData = await profileCache.get(session.user.email);
+      if (cachedData && validateUserData(cachedData, session.user.email)) {
+        setData(cachedData);
+        setError(null);
+        return true;
+      }
+    } catch (error) {
+      console.warn('Error loading from cache:', error);
     }
     return false;
   }, [session?.user?.email, validateUserData]);
 
-  // Fetch fresh data con caché automático y manejo mejorado de errores
-  const fetchFreshData = useCallback(async (silent = false, isRetry = false) => {
+  // Fetch fresh data simplificado
+  const fetchFreshData = useCallback(async (silent = false) => {
     if (status !== 'authenticated' || !session?.user?.email) return;
 
     if (!silent) setLoading(true);
     setError(null);
 
     try {
-      // Agregar un pequeño delay si es un retry para dar tiempo a que NextAuth actualice la sesión
-      if (isRetry) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
       const response = await fetch('/api/users/profile-optimized', {
         headers: {
           'Cache-Control': 'no-cache',
@@ -82,32 +75,14 @@ export function useProfileData() {
       
       // Validar que los datos recibidos corresponden al usuario actual
       if (!validateUserData(freshData, session.user.email)) {
-        console.error('Mismatch detectado:', {
+        console.error('Datos recibidos no corresponden al usuario actual:', {
           sessionEmail: session.user.email,
-          dataEmail: freshData.user?.email,
-          retryCount
+          dataEmail: freshData.user?.email
         });
-        
-        // Si es el primer intento, reintentar después de limpiar caché
-        if (retryCount < MAX_RETRIES) {
-          console.log(`Reintentando... (${retryCount + 1}/${MAX_RETRIES})`);
-          await profileCache.clear();
-          setRetryCount(prev => prev + 1);
-          
-          // Retry con delay
-          setTimeout(() => {
-            fetchFreshData(silent, true);
-          }, 1500);
-          return;
-        } else {
-          throw new Error('Los datos del servidor no corresponden a tu usuario actual. Por favor, recarga la página.');
-        }
+        throw new Error('Los datos recibidos no corresponden a tu usuario actual. Por favor, recarga la página.');
       }
       
-      // Datos válidos, reiniciar contador de reintentos
-      setRetryCount(0);
-      
-      // Guardar en caché automáticamente
+      // Guardar en caché
       await profileCache.set(session.user.email, freshData);
       
       // Update state
@@ -116,98 +91,58 @@ export function useProfileData() {
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar el perfil');
-      
-      // Si hay error de validación y no hemos agotado reintentos, no mostrar error aún
-      if (err instanceof Error && err.message.includes('no corresponden') && retryCount < MAX_RETRIES) {
-        return; // No mostrar error, estamos reintentando
-      }
-      
-      // Si hay error de validación después de todos los reintentos, limpiar caché
-      if (err instanceof Error && err.message.includes('no corresponden al usuario actual')) {
-        await profileCache.clear();
-      }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [status, session?.user?.email, validateUserData, retryCount]);
+  }, [status, session?.user?.email, validateUserData]);
 
-  // Precargar datos en background
-  const preloadData = useCallback(async () => {
-    if (session?.user?.email) {
-      await profileCache.preload(session.user.email);
-    }
-  }, [session?.user?.email]);
-
-  // Limpiar caché cuando cambie el usuario o se desloguee
+  // Limpiar cuando cambie el usuario o se desloguee
   useEffect(() => {
     if (status === 'unauthenticated') {
-      // Usuario se deslogueó, limpiar todo
       profileCache.clearOnLogout();
       setData(null);
       setError(null);
-      setRetryCount(0);
     }
   }, [status]);
 
-  // Load inicial súper optimizado
+  // Load inicial
   useEffect(() => {
     if (status === 'authenticated' && session?.user?.email) {
-      // Limpiar datos previos si cambió el usuario
+      // Limpiar datos previos
       setData(null);
       setError(null);
-      setRetryCount(0);
       
-      // 1. Intentar cargar desde caché inmediatamente (0ms)
+      // Intentar cargar desde caché primero
       loadFromCache().then(hasCache => {
-        if (hasCache) {
-          // Datos cargados instantáneamente desde caché
-          // Actualizar en background sin mostrar loading
-          setTimeout(() => fetchFreshData(true), 100);
-        } else {
-          // No hay caché, fetch normal con loading
+        if (!hasCache) {
+          // No hay caché válido, fetch desde servidor
           fetchFreshData(false);
         }
       });
-
-      // 2. Precargar para próximas visitas
-      setTimeout(() => preloadData(), 1000);
     }
-  }, [status, session?.user?.email, loadFromCache, fetchFreshData, preloadData]);
+  }, [status, session?.user?.email, loadFromCache, fetchFreshData]);
 
-  // Invalidar caché y forzar recarga (útil cuando sabemos que datos cambiaron)
-  const invalidateCache = useCallback(async () => {
+  // Función para limpiar caché y recargar
+  const clearCacheAndReload = useCallback(async () => {
     if (session?.user?.email) {
-      await profileCache.invalidate(session.user.email);
-      setRetryCount(0);
+      await profileCache.clear();
+      setData(null);
+      setError(null);
       await fetchFreshData(false);
     }
   }, [session?.user?.email, fetchFreshData]);
 
   // Refetch manual
   const refetch = useCallback(async () => {
-    setRetryCount(0);
     await fetchFreshData(false);
   }, [fetchFreshData]);
 
-  // Función para limpiar caché forzadamente (cuando datos están obsoletos)
-  const clearCacheAndReload = useCallback(async () => {
-    if (session?.user?.email) {
-      await profileCache.clear();
-      setData(null); // Limpiar estado actual
-      setError(null);
-      setRetryCount(0);
-      await fetchFreshData(false);
-    }
-  }, [session?.user?.email, fetchFreshData]);
-
   return {
     data,
-    loading: loading && !data, // Solo mostrar loading si no hay datos cacheados
+    loading: loading && !data,
     error,
     refetch,
-    invalidateCache,
     clearCacheAndReload,
-    isFromCache: !!data && !loading, // Indica si los datos vienen del caché
-    isRetrying: retryCount > 0 && retryCount < MAX_RETRIES, // Indica si está reintentando
+    isFromCache: !!data && !loading,
   };
 } 
