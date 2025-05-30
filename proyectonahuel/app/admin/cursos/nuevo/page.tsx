@@ -1174,7 +1174,7 @@ export default function NewCoursePage() {
           
           <div className="mb-6">
             <label htmlFor="price" className="block text-sm font-medium text-[var(--neutral-100)] mb-1">
-              Precio (USD)
+              Precio (ARS)
             </label>
             <input
               type="number"
@@ -1182,9 +1182,9 @@ export default function NewCoursePage() {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               min="0"
-              step="0.01"
+              step="1"
               className="w-full border border-[var(--border)] rounded-md px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-100)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] placeholder-[var(--neutral-400)]"
-              placeholder="Ej: 49.99"
+              placeholder="Ej: 12000"
             />
           </div>
 

@@ -576,7 +576,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="price" className="block text-sm text-neutral-400 uppercase">Precio (USD)</label>
+            <label htmlFor="price" className="block text-sm text-neutral-400 uppercase">Precio (ARS)</label>
             <input
               type="number"
               id="price"
@@ -585,7 +585,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
               value={price}
               onChange={(e) => setPrice(Number(e.target.value))}
               className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-white/90 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Precio del curso"
+              placeholder="Precio del curso en pesos"
             />
             <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
           </div>
