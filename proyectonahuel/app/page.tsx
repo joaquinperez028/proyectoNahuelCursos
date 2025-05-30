@@ -10,18 +10,28 @@ export default function Home() {
     <div className="bg-black text-gray-200">
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20 md:py-28">
-        <div className="absolute inset-0 z-0 opacity-20">
-          <div className="absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-blue-900 blur-[150px]"></div>
-          <div className="absolute bottom-0 right-0 h-[600px] w-[600px] rounded-full bg-green-900 blur-[150px]"></div>
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover opacity-60"
+          >
+            <source src="/images/grafico-156453.mp4" type="video/mp4" />
+          </video>
+          {/* Overlay para mejor legibilidad del texto */}
+          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl font-extrabold sm:text-5xl md:text-6xl bg-gradient-to-r from-blue-400 via-green-400 to-teal-400 bg-clip-text text-transparent pb-3 animate-fade-in">
-              Aprende inversión financiera con los expertos
+            <h1 className="text-4xl font-extrabold sm:text-5xl md:text-6xl bg-gradient-to-r from-[var(--primary-light)] to-[var(--accent)] bg-clip-text text-transparent pb-3 animate-fade-in">
+              APRENDE A INVERTIR COMO UN PROFESIONAL
             </h1>
             <p className="mt-6 text-xl max-w-3xl mx-auto text-gray-300">
-              Domina las estrategias de inversión en bolsa y criptomonedas. Aprende a generar ingresos pasivos y alcanzar la libertad financiera.
+              Descubre las estrategias utilizadas por traders profesionales y maximiza tus probabilidades de éxito en los mercados financieros.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
               <Link
