@@ -513,7 +513,7 @@ export default function ReportesPage() {
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] min-h-[500px]">
             <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ingresos Mensuales</h2>
             <div className="h-80">
               {stats && stats.monthlyData && stats.monthlyData.length > 0 ? (
@@ -526,7 +526,7 @@ export default function ReportesPage() {
             </div>
           </div>
           
-          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] min-h-[500px]">
             <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Productos Vendidos Este Mes</h2>
             <div className="h-80">
               {stats && stats.monthlyData && stats.monthlyData.length > 0 ? (
@@ -539,7 +539,7 @@ export default function ReportesPage() {
             </div>
           </div>
           
-          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] min-h-[500px]">
             <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Productos Más Vendidos</h2>
             <div className="h-80 mb-6">
               {stats && stats.topProducts && stats.topProducts.length > 0 ? (
@@ -600,7 +600,7 @@ export default function ReportesPage() {
             )}
           </div>
           
-          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] min-h-[500px] flex flex-col">
             <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-6 flex items-center">
               <svg className="w-6 h-6 mr-2 text-[#4CAF50]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -608,11 +608,11 @@ export default function ReportesPage() {
               Distribución por Método de Pago
             </h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 flex-1">
               {/* Gráfico de torta mejorado */}
-              <div className="lg:col-span-2">
-                <div className="bg-[var(--background)] rounded-xl p-6 border border-[var(--border)]">
-                  <div className="h-64 relative">
+              <div className="lg:col-span-2 flex flex-col">
+                <div className="bg-[var(--background)] rounded-xl p-6 border border-[var(--border)] flex-1 flex flex-col">
+                  <div className="flex-1 relative min-h-[300px]">
                     {stats && stats.paymentMethods && Object.keys(stats.paymentMethods).length > 0 ? (
                       <Doughnut 
                         data={{
@@ -690,7 +690,7 @@ export default function ReportesPage() {
               </div>
               
               {/* Estadísticas detalladas mejoradas */}
-              <div className="lg:col-span-3 space-y-4">
+              <div className="lg:col-span-3 flex flex-col justify-between space-y-3">
                 {stats && stats.paymentMethods && Object.entries(stats.paymentMethods).map(([key, value], index) => {
                   const total = Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.total, 0);
                   const percentage = total > 0 ? (value.total / total) * 100 : 0;
@@ -724,7 +724,7 @@ export default function ReportesPage() {
                   return (
                     <div 
                       key={key} 
-                      className="bg-[var(--background)] rounded-xl p-5 border border-[var(--border)] hover:border-[#4CAF50] transition-all duration-300 hover:shadow-lg"
+                      className="bg-[var(--background)] rounded-xl p-5 border border-[var(--border)] hover:border-[#4CAF50] transition-all duration-300 hover:shadow-lg flex-1"
                       style={{ backgroundColor: config.bgColor }}
                     >
                       <div className="flex items-center justify-between mb-4">
@@ -786,7 +786,7 @@ export default function ReportesPage() {
                 
                 {/* Resumen total mejorado */}
                 {stats && (
-                  <div className="bg-gradient-to-r from-[#4CAF50] to-[#45a049] rounded-xl p-5 text-white mt-6">
+                  <div className="bg-gradient-to-r from-[#4CAF50] to-[#45a049] rounded-xl p-5 text-white flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
