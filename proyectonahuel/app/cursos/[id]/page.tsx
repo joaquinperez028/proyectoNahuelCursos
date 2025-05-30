@@ -24,6 +24,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import CourseContentPagination from '@/components/CourseContentPagination';
 import CourseProgress from '@/components/CourseProgress';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -236,20 +237,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
     );
   }
   
-  // Si es desarrollo y no tenemos claves de MUX, simplemente mostramos los videos
-  // sin token de autenticación (modo de reproducción pública)
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const hasMuxCredentials = !!process.env.MUX_SIGNING_KEY && !!process.env.MUX_SIGNING_KEY_ID;
-  
-  // Los videos siempre están en modo público, no necesitamos tokens JWT
-  const useTokens = false; // Cambio: siempre usar modo público
-  
-  // Token para el video principal (vacío porque usamos modo público)
-  const mainToken = '';
-  
-  // Tokens para videos adicionales (vacíos porque usamos modo público)
-  const videoTokens: Record<string, string> = {};
-  
   // Calcular la puntuación media para mostrar en el encabezado
   const averageRating = course.reviews && course.reviews.length > 0
     ? course.reviews.reduce((acc, review) => acc + review.rating, 0) / course.reviews.length
@@ -279,12 +266,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
 
   const studentsCount = await User.countDocuments({ courses: courseId });
 
-  // Unificar videos y ejercicios en un solo array ordenado por 'order'
-  const itemsOrdenados = [
-    ...course.videos.map(v => ({ ...v, tipo: 'video' as const })),
-    ...course.exercises.map(e => ({ ...e, tipo: 'ejercicio' as const }))
-  ].sort((a, b) => a.order - b.order);
-
   return (
     <div className="bg-[var(--background)] min-h-screen pb-16">
       <div className="max-w-3xl mx-auto text-center mb-8">
@@ -299,25 +280,48 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             {/* Sección de video principal */}
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
               {userHasCourse ? (
-                // Usuario tiene acceso al curso - usar CourseViewer con video principal
-                (() => {
-                  // CORRECCIÓN: Usuarios con acceso ven el VIDEO PRINCIPAL del curso
-                  // Si hay playbackId (video principal), usarlo; si no, usar introPlaybackId como fallback
-                  const mainPlaybackId = course.playbackId || course.introPlaybackId;
-                  const mainVideoId = course.videoId || course.introVideoId;
-                  
-                  return mainPlaybackId ? (
-                    <CourseViewer 
-                      playbackId={mainPlaybackId}
-                      videoId={mainVideoId || ''}
-                      courseId={course._id}
-                    />
-                  ) : (
-                    <div className="aspect-video bg-[var(--neutral-900)] flex items-center justify-center">
-                      <p className="text-[var(--neutral-300)]">Video no disponible</p>
-                    </div>
-                  );
-                })()
+                // Usuario tiene acceso - redirigir a página de contenido
+                <Link href={`/cursos/${course._id}/contenido`} className="block relative group">
+                  <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
+                    {course.introPlaybackId || course.playbackId ? (
+                      <div className="relative">
+                        {course.hasThumbnailImage ? (
+                          <img 
+                            src={`/api/course-image?id=${course._id}`}
+                            alt={course.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : course.thumbnailUrl ? (
+                          <img 
+                            src={course.thumbnailUrl} 
+                            alt={course.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-900)]"></div>
+                        )}
+                        
+                        {/* Overlay con botón de play */}
+                        <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                          <div className="bg-[var(--primary)] bg-opacity-90 group-hover:bg-opacity-100 text-white rounded-full p-4 transform group-hover:scale-110 transition-all duration-300 shadow-xl">
+                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        {/* Badge de acceso */}
+                        <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          Acceso completo
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-[var(--neutral-300)]">Hacer click para acceder al contenido</p>
+                      </div>
+                    )}
+                  </div>
+                </Link>
               ) : (
                 // Usuario NO tiene acceso - mostrar preview (video de introducción)
                 course.introPlaybackId ? (
@@ -373,8 +377,12 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             </div>
             <hr className="border-[var(--border)] my-8" />
             
-            {/* Progreso del curso (solo si el usuario tiene acceso) */}
-            <CourseProgress courseId={course._id} userHasCourse={userHasCourse} />
+            {/* Progreso del curso (solo si el usuario tiene acceso) - Solo un indicador básico */}
+            {userHasCourse && (
+              <div className="mb-8">
+                <CourseProgress courseId={course._id} userHasCourse={userHasCourse} />
+              </div>
+            )}
             
             {/* Descripción completa */}
             <section>
@@ -383,16 +391,35 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                 <p>{course.description}</p>
               </div>
             </section>
-            {/* Lecciones y ejercicios en orden */}
-            {userHasCourse && itemsOrdenados.length > 0 && (
-              <CourseContentPagination 
-                items={itemsOrdenados}
-                courseId={course._id}
-                videoTokens={videoTokens}
-                userHasCourse={userHasCourse}
-                itemsPerPage={10}
-              />
+            
+            {/* Mensaje para usuarios con acceso */}
+            {userHasCourse && (
+              <section className="mt-8">
+                <div className="bg-[var(--primary)] bg-opacity-10 border border-[var(--primary)] border-opacity-30 rounded-xl p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-shrink-0">
+                      <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-[var(--neutral-100)] mb-2">¡Ya tienes acceso a este curso!</h3>
+                      <p className="text-[var(--neutral-300)] mb-4">Haz click en la imagen de arriba para acceder a todo el contenido, videos y ejercicios.</p>
+                      <Link 
+                        href={`/cursos/${course._id}/contenido`}
+                        className="inline-flex items-center px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-dark)] transition-colors font-medium"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Acceder al contenido
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </section>
             )}
+            
             {/* Reseñas */}
             <section>
               <hr className="border-[var(--border)] my-8" />
