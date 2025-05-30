@@ -381,14 +381,14 @@ export default function NuevoPackPage() {
 
                       {/* Confirmación */}
                       {uploadedImageData && (
-                        <div className="bg-green-600 bg-opacity-20 border border-green-500 rounded-lg p-4">
+                        <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
                           <div className="flex items-center gap-3">
-                            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                             <div>
-                              <p className="text-green-400 font-medium">¡Imagen subida correctamente!</p>
-                              <p className="text-green-300 text-sm">Lista para usar en el pack</p>
+                              <p className="text-white font-medium">¡Imagen subida correctamente!</p>
+                              <p className="text-gray-300 text-sm">Lista para usar en el pack</p>
                             </div>
                           </div>
                         </div>
@@ -450,16 +450,16 @@ export default function NuevoPackPage() {
 
                 {/* Preview de descuento */}
                 {calcularDescuento() > 0 && (
-                  <div className="bg-green-600 bg-opacity-20 border border-green-500 rounded-lg p-4">
+                  <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-4 mb-2">
-                        <span className="text-2xl font-bold text-green-400">{calcularDescuento()}% OFF</span>
+                        <span className="text-2xl font-bold text-white">{calcularDescuento()}% OFF</span>
                       </div>
                       <div className="flex items-center justify-center gap-3 text-lg">
                         <span className="text-gray-400 line-through">${Number(precioOriginal)}</span>
-                        <span className="text-2xl font-bold text-green-400">${Number(precio)}</span>
+                        <span className="text-2xl font-bold text-white">${Number(precio)}</span>
                       </div>
-                      <p className="text-green-300 text-sm mt-1">
+                      <p className="text-gray-300 text-sm mt-1">
                         Ahorro: ${(Number(precioOriginal) - Number(precio))}
                       </p>
                     </div>
