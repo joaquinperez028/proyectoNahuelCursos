@@ -124,7 +124,7 @@ export default function PacksPage() {
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
       // Mostrar alerta en lugar de abrir el modal
-      alert(`No puedes comprar este pack porque ya tienes acceso a: ${eligibility.ownedCourses.map(c => c.title).join(', ')}`);
+      alert('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
       return;
     }
 
@@ -140,7 +140,7 @@ export default function PacksPage() {
     // Verificar elegibilidad antes de proceder con la compra
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      alert(`No puedes comprar este pack porque ya tienes acceso a: ${eligibility.ownedCourses.map(c => c.title).join(', ')}`);
+      alert('No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.');
       setShowPaymentModal(null);
       return;
     }
@@ -172,7 +172,7 @@ export default function PacksPage() {
     if (!session) return null;
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      return `Ya tienes acceso a: ${eligibility.ownedCourses.map(c => c.title).join(', ')}`;
+      return 'Ya poseés uno de los cursos incluidos en este pack';
     }
     return null;
   };

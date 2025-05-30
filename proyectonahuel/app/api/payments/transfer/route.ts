@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       
       if (ownedCourses.length > 0) {
         return NextResponse.json({ 
-          error: `No puedes comprar este pack porque ya tienes acceso a: ${ownedCourses.map((c: any) => c.title).join(', ')}` 
+          error: 'No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.' 
         }, { status: 400 });
       }
       

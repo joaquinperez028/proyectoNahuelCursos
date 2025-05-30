@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       })),
       message: isEligible 
         ? 'El usuario puede comprar este pack' 
-        : `El usuario ya posee ${ownedCourses.length} curso(s) de este pack`
+        : 'No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.'
     });
     
   } catch (error) {
