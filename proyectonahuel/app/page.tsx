@@ -109,8 +109,17 @@ export default function Home() {
       </section>
 
       {/* Características */}
-      <section className="py-16 bg-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-16 relative overflow-hidden">
+        {/* Fondo con efectos de difuminado */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-0 left-1/4 h-[400px] w-[400px] rounded-full bg-blue-900/30 blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-0 right-1/4 h-[500px] w-[500px] rounded-full bg-green-900/40 blur-[140px] animate-pulse"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-[300px] w-[300px] rounded-full bg-purple-900/20 blur-[100px] animate-pulse"></div>
+          {/* Overlay sutil para unificar */}
+          <div className="absolute inset-0 bg-black/60"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-4 text-white">¿Por qué elegirnos?</h2>
           <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Nuestras formaciones están diseñadas para ofrecerte la mejor experiencia de aprendizaje en inversiones.</p>
           
@@ -144,7 +153,7 @@ export default function Home() {
                 )
               },
             ].map((feature, index) => (
-              <div key={index} className="p-6 bg-gray-800 rounded-xl shadow-xl border border-gray-700 card-transition">
+              <div key={index} className="p-6 bg-gray-800/60 backdrop-blur-sm rounded-xl shadow-xl border border-gray-700/50 card-transition hover:bg-gray-800/80 transition-all duration-300 transform hover:scale-105">
                 <div className="mb-5">{feature.icon}</div>
                 <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
                 <p className="text-gray-400">{feature.description}</p>
