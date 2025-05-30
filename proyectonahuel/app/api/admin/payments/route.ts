@@ -193,6 +193,62 @@ async function calculatePaymentStats(filters: any) {
     { $count: 'totalCourses' }
   ] as any[]);
 
+  // Obtener productos más vendidos (cursos y packs)
+  const topCourses = await Payment.aggregate([
+    { $match: { ...approvedFilter, courseId: { $exists: true, $ne: null } } },
+    { $group: {
+      _id: '$courseId',
+      count: { $sum: 1 },
+      total: { $sum: '$amount' }
+    }},
+    { $sort: { count: -1 } },
+    { $limit: 10 },
+    { $lookup: {
+      from: 'courses',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'courseInfo'
+    }},
+    { $unwind: '$courseInfo' },
+    { $project: {
+      _id: 1,
+      count: 1,
+      total: 1,
+      title: '$courseInfo.title',
+      type: 'course'
+    }}
+  ] as any[]);
+
+  const topPacks = await Payment.aggregate([
+    { $match: { ...approvedFilter, packId: { $exists: true, $ne: null } } },
+    { $group: {
+      _id: '$packId',
+      count: { $sum: 1 },
+      total: { $sum: '$amount' }
+    }},
+    { $sort: { count: -1 } },
+    { $limit: 10 },
+    { $lookup: {
+      from: 'packs',
+      localField: '_id',
+      foreignField: '_id',
+      as: 'packInfo'
+    }},
+    { $unwind: '$packInfo' },
+    { $project: {
+      _id: 1,
+      count: 1,
+      total: 1,
+      title: '$packInfo.name',
+      type: 'pack'
+    }}
+  ] as any[]);
+
+  // Combinar y ordenar productos más vendidos
+  const topProducts = [...topCourses, ...topPacks]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
   // Formatear resultados
   const statusMap: Record<string, { total: number, count: number }> = {};
   statusResults.forEach(item => {
@@ -231,6 +287,7 @@ async function calculatePaymentStats(filters: any) {
     rejectedTransactions: statusMap.rejected ? statusMap.rejected.count : 0,
     monthlyData: formattedMonthlyData,
     paymentMethods: paymentMethodMap,
-    coursesSold: coursesSold.length > 0 ? coursesSold[0].totalCourses : 0
+    coursesSold: coursesSold.length > 0 ? coursesSold[0].totalCourses : 0,
+    topProducts: topProducts
   };
 } 

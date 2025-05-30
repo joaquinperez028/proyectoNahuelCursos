@@ -66,6 +66,13 @@ interface Stats {
   }>;
   paymentMethods: Record<string, { total: number; count: number }>;
   coursesSold: number;
+  topProducts: Array<{
+    _id: string;
+    count: number;
+    total: number;
+    title: string;
+    type: 'course' | 'pack';
+  }>;
 }
 
 export default function ReportesPage() {
@@ -290,7 +297,7 @@ export default function ReportesPage() {
     labels: stats?.monthlyData.map(item => item.label) || [],
     datasets: [
       {
-        label: 'Ventas Mensuales',
+        label: 'Ingresos Mensuales',
         data: stats?.monthlyData.map(item => item.total) || [],
         fill: true,
         backgroundColor: 'rgba(76, 175, 80, 0.2)',
@@ -304,9 +311,29 @@ export default function ReportesPage() {
     labels: stats?.monthlyData.map(item => item.label) || [],
     datasets: [
       {
-        label: 'Cantidad de Ventas',
+        label: 'Productos Vendidos',
         data: stats?.monthlyData.map(item => item.count) || [],
         backgroundColor: 'rgba(33, 150, 243, 0.6)',
+      },
+    ],
+  };
+
+  // Configuración para productos más vendidos
+  const topProductsData = {
+    labels: stats?.topProducts.map(product => 
+      `${product.title} (${product.type === 'course' ? 'Curso' : 'Pack'})`
+    ) || [],
+    datasets: [
+      {
+        label: 'Ventas',
+        data: stats?.topProducts.map(product => product.count) || [],
+        backgroundColor: stats?.topProducts.map(product => 
+          product.type === 'course' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(156, 39, 176, 0.8)'
+        ) || [],
+        borderColor: stats?.topProducts.map(product => 
+          product.type === 'course' ? 'rgba(76, 175, 80, 1)' : 'rgba(156, 39, 176, 1)'
+        ) || [],
+        borderWidth: 1,
       },
     ],
   };
@@ -542,7 +569,7 @@ export default function ReportesPage() {
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
-            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ventas Mensuales</h2>
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ingresos Mensuales</h2>
             <div className="h-80">
               {stats && stats.monthlyData && stats.monthlyData.length > 0 ? (
                 <Line data={lineChartData} options={chartOptions} />
@@ -555,7 +582,7 @@ export default function ReportesPage() {
           </div>
           
           <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
-            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Cantidad de Ventas por Mes</h2>
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Productos Vendidos Este Mes</h2>
             <div className="h-80">
               {stats && stats.monthlyData && stats.monthlyData.length > 0 ? (
                 <Bar data={barChartData} options={chartOptions} />
@@ -567,8 +594,69 @@ export default function ReportesPage() {
             </div>
           </div>
           
-          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)] lg:col-span-2">
-            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ventas por Método de Pago</h2>
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Productos Más Vendidos</h2>
+            <div className="h-80 mb-6">
+              {stats && stats.topProducts && stats.topProducts.length > 0 ? (
+                <Bar data={topProductsData} options={{
+                  ...chartOptions,
+                  indexAxis: 'y',
+                  plugins: {
+                    legend: {
+                      display: false
+                    }
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      ticks: {
+                        stepSize: 1
+                      }
+                    }
+                  }
+                }} />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-[var(--neutral-400)]">No hay datos disponibles</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Detalles de productos */}
+            {stats && stats.topProducts && stats.topProducts.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-medium text-[var(--neutral-200)] mb-3">Detalles de Ventas</h3>
+                {stats.topProducts.slice(0, 5).map((product, index) => (
+                  <div key={product._id} className="flex items-center justify-between bg-[var(--background)] p-3 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        product.type === 'course' ? 'bg-green-500' : 'bg-purple-500'
+                      }`}></div>
+                      <div>
+                        <p className="text-sm font-medium text-[var(--neutral-100)] truncate max-w-xs">
+                          {product.title}
+                        </p>
+                        <p className="text-xs text-[var(--neutral-400)]">
+                          {product.type === 'course' ? 'Curso' : 'Pack'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-[var(--neutral-100)]">
+                        {product.count} ventas
+                      </p>
+                      <p className="text-xs text-[var(--neutral-400)]">
+                        {formatCurrency(product.total)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ventas Totales</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {renderPaymentMethodsChart()}
               
