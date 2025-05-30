@@ -60,10 +60,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🏗️ Creando categoría...');
+    
+    // Función para generar slug
+    const generateSlug = (text: string) => {
+      return text
+        .toLowerCase()
+        .normalize('NFD') // Descomponer caracteres con tildes
+        .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
+        .replace(/[^a-zA-Z0-9\s]/g, '') // Remover caracteres especiales
+        .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+        .replace(/^-+|-+$/g, '') // Remover guiones al inicio y final
+        .trim();
+    };
+    
+    const slug = generateSlug(title);
+    console.log('🏷️ Slug generado:', slug);
+    
     const category = new Category({
       title,
       description,
       icon,
+      slug,
       order: order || 0,
     });
 

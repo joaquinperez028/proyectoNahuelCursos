@@ -60,12 +60,27 @@ export async function PUT(
       );
     }
 
+    // Función para generar slug
+    const generateSlug = (text: string) => {
+      return text
+        .toLowerCase()
+        .normalize('NFD') // Descomponer caracteres con tildes
+        .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
+        .replace(/[^a-zA-Z0-9\s]/g, '') // Remover caracteres especiales
+        .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+        .replace(/^-+|-+$/g, '') // Remover guiones al inicio y final
+        .trim();
+    };
+
+    const slug = generateSlug(title);
+
     const category = await Category.findByIdAndUpdate(
       id,
       {
         title,
         description,
         icon,
+        slug,
         order: order || 0,
         isActive: isActive !== undefined ? isActive : true,
       },
