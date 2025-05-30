@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
 import { connectToDB } from '@/lib/database';
@@ -49,16 +49,18 @@ export async function GET(request: Request) {
       .limit(limit)
       .lean(); // Usar lean para mejor rendimiento
 
-    // Obtener la información de usuarios y cursos
+    // Obtener la información de usuarios, cursos y packs
     const userIds = [...new Set(payments.map(p => p.userId))];
-    const courseIds = [...new Set(payments.map(p => p.courseId))];
+    const courseIds = [...new Set(payments.map(p => p.courseId).filter(Boolean))];
+    const packIds = [...new Set(payments.map(p => p.packId).filter(Boolean))];
 
-    const [users, courses] = await Promise.all([
+    const [users, courses, packs] = await Promise.all([
       User.find({ _id: { $in: userIds } }).lean(),
-      Course.find({ _id: { $in: courseIds } }).lean()
+      courseIds.length > 0 ? Course.find({ _id: { $in: courseIds } }).lean() : [],
+      packIds.length > 0 ? Pack.find({ _id: { $in: packIds } }).lean() : []
     ]);
 
-    // Mapear usuarios y cursos por ID para acceso rápido
+    // Mapear usuarios, cursos y packs por ID para acceso rápido
     const userMap: Record<string, any> = {};
     for (const user of users) {
       if (user && user._id) {
@@ -75,16 +77,33 @@ export async function GET(request: Request) {
       }
     }
 
+    const packMap: Record<string, any> = {};
+    for (const pack of packs) {
+      if (pack && pack._id) {
+        const id = safeToString(pack._id);
+        packMap[id] = pack;
+      }
+    }
+
     // Construir respuesta con datos enriquecidos
     const enrichedPayments = payments.map(payment => {
       const userId = safeToString(payment.userId);
       const courseId = safeToString(payment.courseId);
+      const packId = safeToString(payment.packId);
+      
+      let itemTitle = 'Producto desconocido';
+      
+      if (packId && packMap[packId]) {
+        itemTitle = `Pack: ${packMap[packId].name}`;
+      } else if (courseId && courseMap[courseId]) {
+        itemTitle = courseMap[courseId].title;
+      }
       
       return {
         ...payment,
         userName: userMap[userId]?.name || 'Usuario desconocido',
         userEmail: userMap[userId]?.email || 'correo@desconocido.com',
-        courseTitle: courseMap[courseId]?.title || 'Curso desconocido'
+        courseTitle: itemTitle
       };
     });
 
@@ -212,13 +231,21 @@ export async function POST(request: Request) {
       // Enviar correo de rechazo
       try {
         const user = await User.findById(payment.userId);
-        const course = await Course.findById(payment.courseId);
+        let itemTitle = '';
+
+        if (payment.packId) {
+          const pack = await Pack.findById(payment.packId);
+          itemTitle = pack ? `Pack: ${pack.name}` : 'Pack desconocido';
+        } else if (payment.courseId) {
+          const course = await Course.findById(payment.courseId);
+          itemTitle = course ? course.title : 'Curso desconocido';
+        }
         
-        if (user && user.email && course) {
+        if (user && user.email && itemTitle) {
           await sendRejectionEmail(
             user.email, 
             user.name, 
-            course.title, 
+            itemTitle, 
             rejectionReason || 'No se pudo verificar el pago'
           );
         }

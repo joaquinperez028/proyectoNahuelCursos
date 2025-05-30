@@ -357,7 +357,7 @@ export default function TransferPaymentPage() {
                       Usuario
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#8A8A9A] uppercase tracking-wider">
-                      Curso
+                      Producto
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#8A8A9A] uppercase tracking-wider">
                       Monto

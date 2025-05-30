@@ -5,6 +5,7 @@ import { connectToDB } from '@/lib/database';
 import Payment from '@/models/Payment';
 import Course from '@/models/Course';
 import User from '@/models/User';
+import Pack from '@/models/Pack';
 
 export async function GET(request: Request) {
   try {
@@ -65,13 +66,22 @@ export async function GET(request: Request) {
     // Calcular estadísticas
     const stats = await calculatePaymentStats(filters);
 
-    // Obtener información adicional (nombre del curso y del usuario)
+    // Obtener información adicional (nombre del curso/pack y del usuario)
     const enrichedPayments = await Promise.all(payments.map(async (payment) => {
       const paymentObj = payment.toObject();
       
-      // Obtener información del curso
-      const course = await Course.findById(paymentObj.courseId);
-      paymentObj.courseTitle = course ? course.title : 'Curso no encontrado';
+      // Obtener información del curso o pack
+      let itemTitle = 'Producto no encontrado';
+      
+      if (paymentObj.packId) {
+        const pack = await Pack.findById(paymentObj.packId);
+        itemTitle = pack ? `Pack: ${pack.name}` : 'Pack no encontrado';
+      } else if (paymentObj.courseId) {
+        const course = await Course.findById(paymentObj.courseId);
+        itemTitle = course ? course.title : 'Curso no encontrado';
+      }
+      
+      paymentObj.courseTitle = itemTitle;
       
       // Obtener información del usuario
       const user = await User.findById(paymentObj.userId);
