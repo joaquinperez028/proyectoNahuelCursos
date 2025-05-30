@@ -512,8 +512,8 @@ export default function NuevoPackPage() {
                     
                     {/* Contador */}
                     {cursos.length > 0 && (
-                      <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
-                        <p className="text-blue-400 font-medium">
+                      <div className="bg-[#1E1E2F] border border-gray-600 rounded-lg p-4">
+                        <p className="text-gray-300 font-medium">
                           {cursos.length} curso{cursos.length !== 1 ? 's' : ''} seleccionado{cursos.length !== 1 ? 's' : ''}
                         </p>
                       </div>
