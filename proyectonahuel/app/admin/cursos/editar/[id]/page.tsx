@@ -648,7 +648,7 @@ export default function EditCoursePage({ params }: PageProps<EditCourseParams>) 
             {isFree ? (
               <p className="mt-1 text-xs text-neutral-500">El precio se establece automáticamente en $0 para cursos gratuitos</p>
             ) : (
-              <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
+            <p className="mt-1 text-xs text-neutral-500">Establecer a 0 para cursos gratuitos</p>
             )}
           </div>
           <div className="flex items-center space-x-2">

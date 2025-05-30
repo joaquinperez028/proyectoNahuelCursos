@@ -2,18 +2,127 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Tipos para las categorías
-type Categoria = {
-  name: string;
-  icon: React.ReactNode;
-  color: string;
+// Interfaces para las categorías
+interface Category {
+  _id: string;
+  title: string;
   description: string;
-  ariaLabel: string;  // Añadido para accesibilidad
-};
+  icon: string;
+  slug: string;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CategoryDisplayProps {
+  category: Category;
+  colorClass: string;
+  index: number;
+}
+
+function CategoryCard({ category, colorClass, index }: CategoryDisplayProps) {
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: 'easeOut',
+        delay: index * 0.15
+      }
+    }
+  };
+
+  return (
+    <motion.div 
+      className="card-transition bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 border border-gray-700 hover:border-opacity-100 hover:border-blue-600 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col h-full"
+      variants={itemVariants}
+      initial="hidden"
+      animate="visible"
+      aria-label={`Categoría de ${category.title}`}
+    >
+      <div className={`h-2 bg-gradient-to-r ${colorClass}`}></div>
+      
+      <div className="p-6 flex flex-col h-full">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 mb-4">
+          <div 
+            className="w-full h-full text-blue-400"
+            dangerouslySetInnerHTML={{ __html: category.icon }}
+          />
+        </div>
+        <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
+          {category.title}
+        </h3>
+        <p className="text-sm sm:text-base text-gray-400 mb-4 flex-grow">
+          {category.description}
+        </p>
+        <Link
+          href={`/cursos?categoria=${encodeURIComponent(category.title)}`}
+          className="inline-flex w-full sm:w-auto items-center justify-center sm:justify-start text-blue-400 font-medium hover:text-blue-500 transition-all duration-300 group hover:underline mt-auto"
+          aria-label={`Explorar cursos de ${category.title}`}
+        >
+          <span>Explorar cursos</span>
+          <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+          </svg>
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function CategoriesSection() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Colores para las categorías (se asignan cíclicamente)
+  const colorClasses = [
+    'from-blue-700 to-blue-500',
+    'from-green-700 to-green-500', 
+    'from-teal-700 to-teal-500',
+    'from-indigo-700 to-indigo-500',
+    'from-purple-700 to-purple-500',
+    'from-pink-700 to-pink-500',
+    'from-orange-700 to-orange-500',
+    'from-red-700 to-red-500'
+  ];
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/categories');
+      
+      if (!response.ok) {
+        throw new Error('Error al cargar las categorías');
+      }
+      
+      const data = await response.json();
+      
+      // Filtrar solo categorías activas y ordenar por el campo 'order'
+      const activeCategories = data
+        .filter((cat: Category) => cat.isActive)
+        .sort((a: Category, b: Category) => a.order - b.order);
+      
+      setCategories(activeCategories);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Variantes de animación para Framer Motion
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -25,93 +134,68 @@ export default function CategoriesSection() {
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-        ease: 'easeOut'
-      }
-    }
-  };
+  // Estado de carga
+  if (loading) {
+    return (
+      <div className="px-4 md:px-6 lg:px-8 mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-6">
+          {/* Skeleton loaders */}
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 animate-pulse">
+              <div className="h-2 bg-gray-600"></div>
+              <div className="p-6">
+                <div className="w-12 h-12 bg-gray-600 rounded-md mb-4"></div>
+                <div className="h-6 bg-gray-600 rounded mb-2"></div>
+                <div className="h-4 bg-gray-600 rounded mb-1"></div>
+                <div className="h-4 bg-gray-600 rounded mb-4 w-3/4"></div>
+                <div className="h-4 bg-gray-600 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  // Datos de categorías
-  const categorias: Categoria[] = [
-    { 
-      name: 'Análisis Técnico', 
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-blue-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="2" y="3" width="20" height="18" rx="2" strokeWidth="1.5" />
-          <line x1="2" y1="7" x2="22" y2="7" strokeWidth="1.5" />
-          <path d="M6 12v-2m0 6v-2m6-2v-2m0 6v-2m6-2v-2m0 6v-2" strokeWidth="1.5" />
-          <rect x="5" y="11" width="2" height="6" rx="0.5" fill="currentColor" />
-          <rect x="11" y="13" width="2" height="4" rx="0.5" fill="currentColor" />
-          <rect x="17" y="10" width="2" height="7" rx="0.5" fill="currentColor" />
-          <path d="M7 13l4-3 4 3 3-2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-      color: 'from-blue-700 to-blue-500',
-      description: 'Domina el análisis de gráficos y patrones para anticipar movimientos del mercado con precisión.',
-      ariaLabel: 'Categoría de Análisis Técnico con gráfico de velas japonesas'
-    },
-    { 
-      name: 'Análisis Fundamental', 
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-green-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M9 14H5v4h4v-4z" fill="currentColor" strokeWidth="0" />
-          <circle cx="16" cy="8" r="5" strokeWidth="1.5" />
-          <path d="M15 8h2" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M16 7v2" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M8.5 9h-2" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M8.5 12h-2" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      ),
-      color: 'from-green-700 to-green-500',
-      description: 'Evalúa el valor real de activos financieros mediante datos clave y análisis profundo.',
-      ariaLabel: 'Categoría de Análisis Fundamental con lupa sobre informe financiero'
-    },
-    { 
-      name: 'Estrategias de Trading', 
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-teal-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="2" y="3" width="20" height="18" rx="2" strokeWidth="1.5" />
-          <path d="M6 10l4 4 8-8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="6" y1="16" x2="18" y2="16" strokeWidth="1.5" strokeDasharray="2 2" />
-          <line x1="6" y1="7" x2="18" y2="7" strokeWidth="1.5" strokeDasharray="2 2" />
-          <path d="M16 7l-6 7" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M13 16v-3h3" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M8 7l3 3" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="15" y="6.5" fontSize="3" fill="currentColor">TP</text>
-          <text x="6" y="19" fontSize="3" fill="currentColor">SL</text>
-        </svg>
-      ),
-      color: 'from-teal-700 to-teal-500',
-      description: 'Descubre técnicas probadas, gestión monetaria y psicología avanzada del trading.',
-      ariaLabel: 'Categoría de Estrategias de Trading con gráfico de take profit y stop loss'
-    },
-    { 
-      name: 'Finanzas Personales', 
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" className="w-full h-full text-indigo-400" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M3 6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6z" strokeWidth="1.5" />
-          <path d="M16 10h2" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M16 14h2" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M6 14h6" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M3 10h18" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M12 17s1-2 3-2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M9 7c0 1.105 0.895 2 2 2s2-0.895 2-2-0.895-2-2-2" fill="currentColor" strokeWidth="0" />
-          <path d="M12 5v4" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M10 7h4" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      ),
-      color: 'from-indigo-700 to-indigo-500',
-      description: 'Organiza tu dinero, maximiza tus ahorros y planifica tu futuro financiero.',
-      ariaLabel: 'Categoría de Finanzas Personales con billetera y símbolos monetarios'
-    }
-  ];
+  // Estado de error
+  if (error) {
+    return (
+      <div className="px-4 md:px-6 lg:px-8 mx-auto">
+        <div className="text-center py-12 bg-gray-800 rounded-xl border border-gray-700">
+          <div className="w-16 h-16 mx-auto mb-4 text-red-400">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">Error al cargar categorías</h3>
+          <p className="text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={fetchCategories}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay categorías activas
+  if (categories.length === 0) {
+    return (
+      <div className="px-4 md:px-6 lg:px-8 mx-auto">
+        <div className="text-center py-12 bg-gray-800 rounded-xl border border-gray-700">
+          <div className="w-16 h-16 mx-auto mb-4 text-gray-400">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">No hay categorías disponibles</h3>
+          <p className="text-gray-400">Las categorías aparecerán aquí una vez que sean creadas y activadas.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 md:px-6 lg:px-8 mx-auto">
@@ -121,37 +205,13 @@ export default function CategoriesSection() {
         initial="hidden"
         animate="visible"
       >
-        {categorias.map((categoria) => (
-          <motion.div 
-            key={categoria.name} 
-            className="card-transition bg-gray-800 rounded-xl overflow-hidden hover:bg-gray-750 border border-gray-700 hover:border-opacity-100 hover:border-blue-600 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col h-full"
-            variants={itemVariants}
-            style={{ borderImageSource: `linear-gradient(to bottom, ${categoria.color.split(' ')[1]}, transparent)` }}
-            aria-label={categoria.ariaLabel}
-          >
-            <div className={`h-2 bg-gradient-to-r ${categoria.color}`}></div>
-            <div className="p-4 sm:p-6 flex flex-col flex-grow">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 mb-4">
-                {categoria.icon}
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
-                {categoria.name}
-              </h3>
-              <p className="text-sm sm:text-base text-gray-400 mb-4 flex-grow">
-                {categoria.description}
-              </p>
-              <Link
-                href={`/cursos?categoria=${categoria.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="inline-flex w-full sm:w-auto items-center justify-center sm:justify-start text-blue-400 font-medium hover:text-blue-500 transition-all duration-300 group hover:underline mt-auto"
-                aria-label={`Explorar cursos de ${categoria.name}`}
-              >
-                <span>Explorar cursos</span>
-                <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                </svg>
-              </Link>
-            </div>
-          </motion.div>
+        {categories.map((category, index) => (
+          <CategoryCard
+            key={category._id}
+            category={category}
+            colorClass={colorClasses[index % colorClasses.length]}
+            index={index}
+          />
         ))}
       </motion.div>
     </div>

@@ -22,14 +22,6 @@ export default function AdminCategoriasPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({
-    title: '',
-    description: '',
-    icon: '',
-    order: 0,
-    isActive: true,
-  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -41,9 +33,11 @@ export default function AdminCategoriasPage() {
       router.push('/');
       return;
     }
-
-    fetchCategories();
   }, [session, status, router]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const fetchCategories = async () => {
     try {
@@ -61,40 +55,6 @@ export default function AdminCategoriasPage() {
     }
   };
 
-  const handleEdit = (category: Category) => {
-    setEditingId(category._id);
-    setEditForm({
-      title: category.title,
-      description: category.description,
-      icon: category.icon,
-      order: category.order,
-      isActive: category.isActive,
-    });
-  };
-
-  const handleSave = async (id: string) => {
-    try {
-      const response = await fetch(`/api/categories/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editForm),
-      });
-
-      if (response.ok) {
-        await fetchCategories();
-        setEditingId(null);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Error al actualizar la categoría');
-      }
-    } catch (error) {
-      console.error('Error updating category:', error);
-      alert('Error al actualizar la categoría');
-    }
-  };
-
   const handleDelete = async (id: string, title: string) => {
     if (!confirm(`¿Estás seguro de que quieres eliminar la categoría "${title}"?`)) {
       return;
@@ -107,6 +67,7 @@ export default function AdminCategoriasPage() {
 
       if (response.ok) {
         await fetchCategories();
+        alert('Categoría eliminada exitosamente');
       } else {
         const errorData = await response.json();
         alert(errorData.error || 'Error al eliminar la categoría');
@@ -117,27 +78,16 @@ export default function AdminCategoriasPage() {
     }
   };
 
-  const handleCancel = () => {
-    setEditingId(null);
-    setEditForm({
-      title: '',
-      description: '',
-      icon: '',
-      order: 0,
-      isActive: true,
-    });
-  };
-
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
-        <div className="text-[var(--neutral-300)]">Cargando...</div>
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--accent)]"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] py-8">
+    <div className="min-h-screen bg-[var(--bg)] py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -150,7 +100,7 @@ export default function AdminCategoriasPage() {
           </div>
           <Link
             href="/admin/categorias/nueva"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-[var(--neutral-100)] bg-[var(--primary)] hover:bg-[var(--primary-dark)] transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
@@ -159,7 +109,7 @@ export default function AdminCategoriasPage() {
           </Link>
         </div>
 
-        <div className="bg-[var(--card)] rounded-lg shadow overflow-hidden">
+        <div className="bg-[var(--card)] rounded-lg shadow overflow-hidden border border-[var(--border)]">
           {categories.length === 0 ? (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-[var(--neutral-400)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +121,7 @@ export default function AdminCategoriasPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[var(--border)]">
-                <thead className="bg-[var(--card-header)]">
+                <thead className="bg-[var(--neutral-800)]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-[var(--neutral-400)] uppercase tracking-wider">
                       Orden
@@ -195,116 +145,50 @@ export default function AdminCategoriasPage() {
                 </thead>
                 <tbody className="bg-[var(--card)] divide-y divide-[var(--border)]">
                   {categories.map((category) => (
-                    <tr key={category._id} className="hover:bg-[var(--card-hover)]">
+                    <tr key={category._id} className="hover:bg-[var(--neutral-800)]">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--neutral-300)]">
-                        {editingId === category._id ? (
-                          <input
-                            type="number"
-                            value={editForm.order}
-                            onChange={(e) => setEditForm({ ...editForm, order: parseInt(e.target.value) || 0 })}
-                            className="w-16 px-2 py-1 bg-[var(--background)] border border-[var(--border)] rounded text-[var(--neutral-200)] text-sm"
-                          />
-                        ) : (
-                          category.order
-                        )}
+                        {category.order}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {editingId === category._id ? (
-                          <textarea
-                            value={editForm.icon}
-                            onChange={(e) => setEditForm({ ...editForm, icon: e.target.value })}
-                            className="w-full px-2 py-1 bg-[var(--background)] border border-[var(--border)] rounded text-[var(--neutral-200)] text-sm"
-                            rows={2}
-                            placeholder="SVG del ícono..."
-                          />
-                        ) : (
-                          <div 
-                            className="w-8 h-8 text-[var(--primary)]"
-                            dangerouslySetInnerHTML={{ __html: category.icon }}
-                          />
-                        )}
+                        <div 
+                          className="w-8 h-8 text-[var(--accent)]"
+                          dangerouslySetInnerHTML={{ __html: category.icon }}
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {editingId === category._id ? (
-                          <input
-                            type="text"
-                            value={editForm.title}
-                            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                            className="w-full px-2 py-1 bg-[var(--background)] border border-[var(--border)] rounded text-[var(--neutral-200)] text-sm"
-                          />
-                        ) : (
-                          <div className="text-sm font-medium text-[var(--neutral-200)]">
-                            {category.title}
-                          </div>
-                        )}
+                        <div className="text-sm font-medium text-[var(--neutral-200)]">
+                          {category.title}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        {editingId === category._id ? (
-                          <textarea
-                            value={editForm.description}
-                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                            className="w-full px-2 py-1 bg-[var(--background)] border border-[var(--border)] rounded text-[var(--neutral-200)] text-sm"
-                            rows={2}
-                          />
-                        ) : (
-                          <div className="text-sm text-[var(--neutral-300)] max-w-md">
-                            {category.description}
-                          </div>
-                        )}
+                        <div className="text-sm text-[var(--neutral-300)] max-w-md">
+                          {category.description}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {editingId === category._id ? (
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={editForm.isActive}
-                              onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
-                              className="mr-2"
-                            />
-                            <span className="text-sm text-[var(--neutral-300)]">Activo</span>
-                          </label>
-                        ) : (
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                            category.isActive 
-                              ? 'bg-[var(--success-dark)] text-[var(--success-light)]'
-                              : 'bg-[var(--neutral-700)] text-[var(--neutral-400)]'
-                          }`}>
-                            {category.isActive ? 'Activo' : 'Inactivo'}
-                          </span>
-                        )}
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          category.isActive 
+                            ? 'bg-green-900 text-green-300'
+                            : 'bg-[var(--neutral-700)] text-[var(--neutral-400)]'
+                        }`}>
+                          {category.isActive ? 'Activo' : 'Inactivo'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {editingId === category._id ? (
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleSave(category._id)}
-                              className="text-[var(--success)] hover:text-[var(--success-light)] transition-colors"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              onClick={handleCancel}
-                              className="text-[var(--neutral-400)] hover:text-[var(--neutral-300)] transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEdit(category)}
-                              className="text-[var(--primary)] hover:text-[var(--primary-light)] transition-colors"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => handleDelete(category._id, category.title)}
-                              className="text-[var(--error)] hover:text-[var(--error-light)] transition-colors"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/admin/categorias/editar/${category._id}`}
+                            className="text-blue-400 hover:text-blue-300 text-sm"
+                          >
+                            Editar
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(category._id, category.title)}
+                            className="text-red-400 hover:text-red-300 text-sm"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

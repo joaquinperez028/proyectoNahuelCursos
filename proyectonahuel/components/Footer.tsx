@@ -1,8 +1,42 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+
+interface Category {
+  _id: string;
+  title: string;
+  slug: string;
+  isActive: boolean;
+  order: number;
+}
 
 const Footer = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Filtrar solo categorías activas y tomar las primeras 4
+        const activeCategories = data
+          .filter((cat: Category) => cat.isActive)
+          .sort((a: Category, b: Category) => a.order - b.order)
+          .slice(0, 4);
+        
+        setCategories(activeCategories);
+      }
+    } catch (error) {
+      console.error('Error fetching categories for footer:', error);
+    }
+  };
+
   return (
     <footer className="bg-black text-gray-300 py-12 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,26 +78,20 @@ const Footer = () => {
               Categorías
             </h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/cursos?categoria=analisis-tecnico" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Análisis Técnico
-                </Link>
-              </li>
-              <li>
-                <Link href="/cursos?categoria=analisis-fundamental" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Análisis Fundamental
-                </Link>
-              </li>
-              <li>
-                <Link href="/cursos?categoria=estrategias-de-trading" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Estrategias de Trading
-                </Link>
-              </li>
-              <li>
-                <Link href="/cursos?categoria=finanzas-personales" className="text-gray-400 hover:text-green-500 transition-colors">
-                  Finanzas Personales
-                </Link>
-              </li>
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <li key={category._id}>
+                    <Link 
+                      href={`/cursos?categoria=${encodeURIComponent(category.title)}`} 
+                      className="text-gray-400 hover:text-green-500 transition-colors"
+                    >
+                      {category.title}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-gray-500">Cargando categorías...</li>
+              )}
             </ul>
           </div>
           
