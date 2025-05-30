@@ -281,45 +281,72 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             <div className="overflow-hidden rounded-xl bg-[var(--card)] border border-[var(--border)] shadow-xl mb-8">
               {userHasCourse ? (
                 // Usuario tiene acceso - redirigir a página de contenido
-                <Link href={`/cursos/${course._id}/contenido`} className="block relative group">
-                  <div className="aspect-video bg-[var(--neutral-900)] rounded-md overflow-hidden">
-                    {course.introPlaybackId || course.playbackId ? (
-                      <div className="relative">
-                        {course.hasThumbnailImage ? (
-                          <img 
-                            src={`/api/course-image?id=${course._id}`}
-                            alt={course.title} 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : course.thumbnailUrl ? (
-                          <img 
-                            src={course.thumbnailUrl} 
-                            alt={course.title} 
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-900)]"></div>
-                        )}
-                        
-                        {/* Overlay con botón de play */}
-                        <div className="absolute inset-0 bg-black bg-opacity-40 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                          <div className="bg-[var(--primary)] bg-opacity-90 group-hover:bg-opacity-100 text-white rounded-full p-4 transform group-hover:scale-110 transition-all duration-300 shadow-xl">
-                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z"/>
-                            </svg>
-                          </div>
-                        </div>
-                        
-                        {/* Badge de acceso */}
-                        <div className="absolute top-4 left-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                          Acceso completo
-                        </div>
-                      </div>
+                <Link href={`/cursos/${course._id}/contenido`} className="block relative group cursor-pointer">
+                  <div className="aspect-video bg-gradient-to-br from-[var(--neutral-800)] to-[var(--neutral-900)] rounded-md overflow-hidden relative">
+                    {/* Imagen de fondo del curso */}
+                    {course.hasThumbnailImage ? (
+                      <img 
+                        src={`/api/course-image?id=${course._id}`}
+                        alt={course.title} 
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : course.thumbnailUrl ? (
+                      <img 
+                        src={course.thumbnailUrl} 
+                        alt={course.title} 
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-[var(--neutral-300)]">Hacer click para acceder al contenido</p>
-                      </div>
+                      // Gradiente de fallback más atractivo
+                      <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-[var(--primary)] via-[var(--primary-dark)] to-[var(--accent)]"></div>
                     )}
+                    
+                    {/* Overlay con degradado sutil */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 group-hover:from-black/40 transition-all duration-300"></div>
+                    
+                    {/* Badge de acceso - posición mejorada */}
+                    <div className="absolute top-4 left-4 z-20">
+                      <div className="flex items-center space-x-2 bg-green-600 bg-opacity-90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Acceso completo</span>
+                      </div>
+                    </div>
+                    
+                    {/* Contenido central mejorado */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                      {/* Botón de play con mejor diseño */}
+                      <div className="mb-4 transform group-hover:scale-110 transition-all duration-300">
+                        <div className="relative">
+                          <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-full p-6 group-hover:bg-opacity-30 transition-all duration-300">
+                            <div className="bg-[var(--primary)] rounded-full p-4 shadow-xl group-hover:shadow-2xl transition-all duration-300">
+                              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                            </div>
+                          </div>
+                          {/* Efecto de pulsación */}
+                          <div className="absolute inset-0 bg-[var(--primary)] rounded-full animate-ping opacity-20"></div>
+                        </div>
+                      </div>
+                      
+                      {/* Texto de llamada a la acción */}
+                      <div className="text-center text-white">
+                        <h3 className="text-xl font-bold mb-2 drop-shadow-lg">Continúa tu aprendizaje</h3>
+                        <p className="text-sm opacity-90 drop-shadow-md">Haz click para acceder a todo el contenido</p>
+                      </div>
+                    </div>
+                    
+                    {/* Indicador de progreso en la esquina inferior derecha */}
+                    <div className="absolute bottom-4 right-4 z-20">
+                      <div className="bg-black bg-opacity-50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium">
+                        <svg className="w-4 h-4 inline mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
+                        </svg>
+                        {course.videos.length + 1} lecciones
+                      </div>
+                    </div>
                   </div>
                 </Link>
               ) : (
@@ -395,25 +422,42 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             {/* Mensaje para usuarios con acceso */}
             {userHasCourse && (
               <section className="mt-8">
-                <div className="bg-[var(--primary)] bg-opacity-10 border border-[var(--primary)] border-opacity-30 rounded-xl p-6">
+                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-opacity-10 border border-[var(--primary)] border-opacity-20 rounded-xl p-6 backdrop-blur-sm">
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
-                      <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
+                      <div className="w-12 h-12 bg-[var(--primary)] bg-opacity-20 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-[var(--neutral-100)] mb-2">¡Ya tienes acceso a este curso!</h3>
-                      <p className="text-[var(--neutral-300)] mb-4">Haz click en la imagen de arriba para acceder a todo el contenido, videos y ejercicios.</p>
-                      <Link 
-                        href={`/cursos/${course._id}/contenido`}
-                        className="inline-flex items-center px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-dark)] transition-colors font-medium"
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Acceder al contenido
-                      </Link>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h3 className="text-lg font-semibold text-[var(--neutral-100)]">¡Tienes acceso completo!</h3>
+                        <div className="px-2 py-1 bg-green-600 bg-opacity-20 text-green-400 text-xs font-medium rounded-full">
+                          PREMIUM
+                        </div>
+                      </div>
+                      <p className="text-[var(--neutral-300)] text-sm mb-4">
+                        Disfruta de {course.videos.length + 1} lecciones, {course.exercises.length} ejercicios y certificado de finalización.
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <Link 
+                          href={`/cursos/${course._id}/contenido`}
+                          className="inline-flex items-center px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-dark)] transition-all duration-200 font-medium text-sm shadow-lg hover:shadow-xl transform hover:scale-105"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Ver contenido
+                        </Link>
+                        <div className="inline-flex items-center px-3 py-2 bg-[var(--neutral-800)] text-[var(--neutral-300)] rounded-lg text-sm">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {totalDuration > 0 ? `${totalDuration} min` : 'Sin límite de tiempo'}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
