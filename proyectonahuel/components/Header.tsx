@@ -4,13 +4,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { useCategories } from '@/hooks/useCategories';
 
 const Header = () => {
   const { data: session } = useSession();
+  const { categories, loading: categoriesLoading } = useCategories();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false);
   const [createDropdownOpen, setCreateDropdownOpen] = useState(false);
+  const [coursesDropdownOpen, setCoursesDropdownOpen] = useState(false);
+  const [mobileCoursesDropdownOpen, setMobileCoursesDropdownOpen] = useState(false);
 
   // Efecto para detectar el scroll y cambiar el estilo del header
   useEffect(() => {
@@ -41,13 +45,25 @@ const Header = () => {
       if (createDropdownOpen && !target.closest('[data-dropdown="create"]')) {
         setCreateDropdownOpen(false);
       }
+
+      // Cerrar dropdown de cursos si click fuera
+      if (coursesDropdownOpen && !target.closest('[data-dropdown="courses"]')) {
+        setCoursesDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [adminDropdownOpen, createDropdownOpen]);
+  }, [adminDropdownOpen, createDropdownOpen, coursesDropdownOpen]);
+
+  // Efecto para cerrar dropdowns móviles cuando se cierra el menú principal
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      setMobileCoursesDropdownOpen(false);
+    }
+  }, [mobileMenuOpen]);
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -62,12 +78,66 @@ const Header = () => {
               </Link>
             </div>
             <nav className="hidden sm:ml-6 sm:flex gap-x-8 items-center">
-              <Link 
-                href="/cursos" 
-                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
-              >
-                Cursos
-              </Link>
+              {/* Dropdown de Cursos */}
+              <div className="relative" data-dropdown="courses">
+                <button
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium transition-all duration-200 ${coursesDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)]' : 'text-[var(--neutral-300)]'} hover:text-[var(--neutral-100)] hover:border-[var(--accent)]`}
+                  onClick={() => setCoursesDropdownOpen(!coursesDropdownOpen)}
+                >
+                  Cursos
+                  <svg className={`ml-1 w-4 h-4 transition-transform duration-200 ${coursesDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {coursesDropdownOpen && (
+                  <div className="absolute left-0 mt-2 w-64 bg-[var(--neutral-900)] border border-[var(--border)] rounded-md shadow-xl z-50 py-2">
+                    {/* Ver todos los cursos */}
+                    <Link 
+                      href="/cursos" 
+                      className="block px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group border-b border-[var(--border)] mb-2"
+                      onClick={() => setCoursesDropdownOpen(false)}
+                    >
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 mr-3 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <span className="font-medium">Ver todos los cursos</span>
+                      </div>
+                    </Link>
+                    
+                    {/* Categorías */}
+                    <div className="px-4 py-2">
+                      <p className="text-xs text-[var(--neutral-400)] font-medium uppercase tracking-wider">Por categoría</p>
+                    </div>
+                    
+                    {categoriesLoading ? (
+                      <div className="px-4 py-3 text-sm text-[var(--neutral-400)]">
+                        Cargando categorías...
+                      </div>
+                    ) : categories.length > 0 ? (
+                      categories.map((category) => (
+                        <Link 
+                          key={category._id}
+                          href={`/cursos?categoria=${encodeURIComponent(category.title)}`}
+                          className="block px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                          onClick={() => setCoursesDropdownOpen(false)}
+                        >
+                          <div className="flex items-center">
+                            <div 
+                              className="w-4 h-4 mr-3 text-[var(--accent)] flex-shrink-0"
+                              dangerouslySetInnerHTML={{ __html: category.icon }}
+                            />
+                            <span className="group-hover:pl-1 transition-all duration-200">{category.title}</span>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-[var(--neutral-400)]">
+                        No hay categorías disponibles
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <Link 
                 href="/cursos/packs" 
                 className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-[var(--neutral-300)] hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200"
@@ -252,13 +322,71 @@ const Header = () => {
       {mobileMenuOpen && (
         <div className="sm:hidden bg-[var(--neutral-900)] shadow-xl rounded-b-lg animate-fadeIn">
           <div className="pt-2 pb-3 space-y-1">
-            <Link 
-              href="/cursos" 
-              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Cursos
-            </Link>
+            {/* Cursos con dropdown en móvil */}
+            <div>
+              <button
+                className={`flex items-center justify-between w-full pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium ${mobileCoursesDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)] bg-[var(--card)]' : 'text-[var(--neutral-300)]'} hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200`}
+                onClick={() => setMobileCoursesDropdownOpen(!mobileCoursesDropdownOpen)}
+              >
+                <span>Cursos</span>
+                <svg className={`w-4 h-4 transition-transform duration-200 ${mobileCoursesDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {mobileCoursesDropdownOpen && (
+                <div className="bg-[var(--neutral-800)] ml-4 mt-1 rounded-md">
+                  {/* Ver todos los cursos */}
+                  <Link 
+                    href="/cursos" 
+                    className="flex items-center px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors border-b border-[var(--border)]"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setMobileCoursesDropdownOpen(false);
+                    }}
+                  >
+                    <svg className="w-4 h-4 mr-3 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span className="font-medium">Ver todos los cursos</span>
+                  </Link>
+                  
+                  {/* Categorías */}
+                  <div className="px-4 py-2">
+                    <p className="text-xs text-[var(--neutral-400)] font-medium uppercase tracking-wider">Por categoría</p>
+                  </div>
+                  
+                  {categoriesLoading ? (
+                    <div className="px-4 py-3 text-sm text-[var(--neutral-400)]">
+                      Cargando categorías...
+                    </div>
+                  ) : categories.length > 0 ? (
+                    categories.map((category) => (
+                      <Link 
+                        key={category._id}
+                        href={`/cursos?categoria=${encodeURIComponent(category.title)}`}
+                        className="flex items-center px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setMobileCoursesDropdownOpen(false);
+                        }}
+                      >
+                        <div 
+                          className="w-4 h-4 mr-3 text-[var(--accent)] flex-shrink-0"
+                          dangerouslySetInnerHTML={{ __html: category.icon }}
+                        />
+                        <span>{category.title}</span>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-[var(--neutral-400)]">
+                      No hay categorías disponibles
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Link 
               href="/cursos/packs" 
               className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-[var(--neutral-300)] hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200"
