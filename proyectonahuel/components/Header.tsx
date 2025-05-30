@@ -105,11 +105,8 @@ const Header = () => {
                       <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group" onClick={() => setAdminDropdownOpen(false)}>
                         <span className="group-hover:pl-2 transition-all duration-200">Usuarios</span>
                       </Link>
-                      <Link href="/admin/packs" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group" onClick={() => setAdminDropdownOpen(false)}>
+                      <Link href="/admin/packs" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors rounded-b-md group" onClick={() => setAdminDropdownOpen(false)}>
                         <span className="group-hover:pl-2 transition-all duration-200">Administrar packs</span>
-                      </Link>
-                      <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors rounded-b-md group" onClick={() => setAdminDropdownOpen(false)}>
-                        <span className="group-hover:pl-2 transition-all duration-200">Crear Pack</span>
                       </Link>
                     </div>
                   )}
@@ -299,7 +296,6 @@ const Header = () => {
                     <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar cursos</Link>
                     <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Usuarios</Link>
                     <Link href="/admin/packs" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar packs</Link>
-                    <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Crear Pack</Link>
                   </div>
                 )}
               </div>
