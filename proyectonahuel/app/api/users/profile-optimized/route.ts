@@ -12,8 +12,11 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
+      console.log('❌ API Profile: No hay sesión o email');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+
+    console.log('🔍 API Profile: Sesión encontrada para email:', session.user.email);
 
     await connectToDatabase();
 
@@ -41,7 +44,23 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!profileResult) {
+      console.log('❌ API Profile: Usuario no encontrado para email:', session.user.email);
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    console.log('✅ API Profile: Usuario encontrado:', {
+      email: profileResult.email,
+      name: profileResult.name,
+      role: profileResult.role
+    });
+
+    // Validación adicional: asegurar que el email coincide
+    if (profileResult.email !== session.user.email) {
+      console.error('🚨 API Profile: MISMATCH DE EMAILS!', {
+        sessionEmail: session.user.email,
+        profileEmail: profileResult.email
+      });
+      return NextResponse.json({ error: 'Error de datos de usuario' }, { status: 500 });
     }
 
     // Process active courses with progress
@@ -159,17 +178,31 @@ export async function GET(request: NextRequest) {
       timestamp: Date.now() // For caching
     };
 
-    // Set aggressive caching headers
+    console.log('✅ API Profile: Enviando respuesta para:', response.user.email);
+
+    // VALIDACIÓN FINAL: Asegurar que la respuesta corresponde al usuario de la sesión
+    if (response.user.email !== session.user.email) {
+      console.error('🚨 RESPUESTA CON EMAIL INCORRECTO:', {
+        sessionEmail: session.user.email,
+        responseEmail: response.user.email
+      });
+      return NextResponse.json({ error: 'Error crítico de datos de usuario' }, { status: 500 });
+    }
+
+    // Desactivar completamente el caché del navegador
     return new NextResponse(JSON.stringify(response), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=600', // 5min cache, 10min stale
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store',
       },
     });
     
   } catch (error) {
-    console.error('Error in profile-optimized API:', error);
+    console.error('❌ Error in profile-optimized API:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error instanceof Error ? error.message : 'Error desconocido'

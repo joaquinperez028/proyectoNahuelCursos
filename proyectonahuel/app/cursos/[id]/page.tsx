@@ -376,7 +376,7 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             
             {/* Descripción completa */}
             <section>
-              <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Descripción del curso</h2>
+              <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Sobre esta formación</h2>
               <div className="prose prose-lg max-w-none text-[var(--neutral-300)] prose-headings:text-[var(--neutral-100)] prose-a:text-[var(--primary-light)]">
                 <p>{course.description}</p>
               </div>
@@ -394,7 +394,7 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             {/* Reseñas */}
             <section>
               <hr className="border-[var(--border)] my-8" />
-              <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Reseñas del curso</h2>
+              <h2 className="text-2xl font-bold text-[var(--neutral-100)] mb-4">Opiniones de estudiantes</h2>
               <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
                 <ReviewSection courseId={course._id} reviews={course.reviews} />
               </div>
@@ -443,15 +443,15 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
             </div>
             {/* Bloque de beneficios */}
             <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-xl p-6 mb-8">
-              <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Este curso incluye</h2>
+              <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Esta formación incluye</h2>
               <ul className="space-y-3 text-[var(--neutral-300)]">
                 <li className="flex items-center text-[var(--neutral-300)]">
                   <svg className="h-5 w-5 text-[var(--accent)] mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 002 2v8a2 2 0 002 2z" />
                   </svg>
                   {course.videos.length > 0 
-                    ? `${course.videos.length + 1} videos en total`
-                    : 'Video principal del curso'
+                    ? `${course.videos.length + 1} lecciones en total`
+                    : 'Lección principal completa'
                   }
                 </li>
                 {course.exercises.length > 0 && (
@@ -478,13 +478,13 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                   <svg className="h-5 w-5 text-[var(--accent)] mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                   </svg>
-                  Acceso en la nube
+                  Acceso on-demand
                 </li>
               </ul>
             </div>
             <div className="mt-6 border-t border-[var(--border)] pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[var(--neutral-100)]">Compartir este curso</h3>
+                <h3 className="text-lg font-semibold text-[var(--neutral-100)]">Compartir esta formación</h3>
               </div>
               <div className="flex space-x-3">
                 <button className="p-2 rounded-full bg-[var(--neutral-800)] hover:bg-[var(--primary-dark)] text-[var(--neutral-300)] hover:text-[var(--neutral-100)] transition-colors">

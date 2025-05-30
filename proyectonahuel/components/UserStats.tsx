@@ -31,11 +31,28 @@ function StatCard({ title, value, icon, bgClass }: StatCardProps) {
     return () => clearInterval(timer);
   }, [value]);
 
+  // Determinar el color del círculo basado en el título
+  let circleClass = "";
+  let iconClass = "";
+  
+  if (title.includes("Cursos Inscritos")) {
+    circleClass = "bg-blue-100 border-2 border-blue-200";
+    iconClass = "text-blue-600";
+  } else if (title.includes("Cursos Completados")) {
+    circleClass = "bg-green-100 border-2 border-green-200";
+    iconClass = "text-green-600";
+  } else if (title.includes("Certificados")) {
+    circleClass = "bg-orange-100 border-2 border-orange-200";
+    iconClass = "text-orange-600";
+  }
+
   return (
     <div className={`rounded-lg shadow-lg p-4 ${bgClass} transition-transform duration-300 hover:scale-105`}>
       <div className="flex items-center">
-        <div className="p-3 rounded-full bg-white bg-opacity-20 mr-4">
-          {icon}
+        <div className={`p-3 rounded-full mr-4 ${circleClass}`}>
+          <div className={iconClass}>
+            {icon}
+          </div>
         </div>
         <div>
           <p className="text-sm font-medium text-white opacity-75">{title}</p>

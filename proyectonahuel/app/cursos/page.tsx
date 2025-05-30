@@ -214,10 +214,10 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-[var(--neutral-100)] sm:text-4xl">
-            {categoria ? `Cursos de ${categoria}` : 'Todos los cursos'}
+            {categoria ? `Formaciones de ${categoria}` : 'Toda nuestra oferta'}
           </h1>
           <p className="mt-4 text-xl text-[var(--neutral-300)]">
-            Explora nuestra selección de cursos de alta calidad
+            Explora nuestra selección de contenido educativo de alta calidad
           </p>
         </div>
         
@@ -228,14 +228,14 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
           <p className="text-[var(--neutral-300)]">
             {courses.totalCourses > 0 ? (
               <>
-                <span className="font-medium">{courses.totalCourses}</span> {courses.totalCourses === 1 ? 'curso encontrado' : 'cursos encontrados'}
+                <span className="font-medium">{courses.totalCourses}</span> {courses.totalCourses === 1 ? 'formación encontrada' : 'formaciones encontradas'}
                 {categoria && <span> en <span className="text-[var(--accent)]">{categoria}</span></span>}
                 {courses.totalPages > 1 && (
                   <span className="text-sm"> • Página {courses.currentPage} de {courses.totalPages}</span>
                 )}
               </>
             ) : (
-              'No se encontraron cursos'
+              'No se encontraron resultados'
             )}
           </p>
           
@@ -244,7 +244,7 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
               href="/cursos" 
               className="text-[var(--accent)] hover:underline flex items-center transition-all duration-200"
             >
-              <span>Ver todos los cursos</span>
+              <span>Ver todo</span>
               <svg className="w-4 h-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
@@ -259,8 +259,8 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
             </svg>
             <p className="mt-4 text-lg text-[var(--neutral-300)]">
               {categoria 
-                ? `No hay cursos disponibles en la categoría "${categoria}" en este momento.`
-                : 'No hay cursos disponibles en este momento.'
+                ? `No hay contenido disponible en la categoría "${categoria}" en este momento.`
+                : 'No hay contenido disponible en este momento.'
               }
             </p>
             {categoria && (
@@ -269,7 +269,7 @@ export default async function CoursesPage({ params, searchParams }: PageProps) {
                   href="/cursos"
                   className="px-4 py-2 bg-[var(--accent)] text-white rounded-md hover:bg-[var(--accent-dark)] transition-colors"
                 >
-                  Ver todos los cursos
+                  Ver todo el catálogo
                 </Link>
               </div>
             )}

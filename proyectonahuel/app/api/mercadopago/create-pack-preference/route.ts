@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import Pack from '@/models/Pack';
+import User from '@/models/User';
 import { connectToDB } from '@/lib/database';
 
 // Configurar MercadoPago con la clave de acceso
@@ -17,14 +18,39 @@ export async function POST(request: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+    
     const { packId } = await request.json();
     if (!packId) {
       return NextResponse.json({ error: 'ID del pack requerido' }, { status: 400 });
     }
-    const pack = await Pack.findById(packId);
+    
+    // Obtener pack con sus cursos
+    const pack = await Pack.findById(packId).populate('courses', 'title');
     if (!pack) {
       return NextResponse.json({ error: 'Pack no encontrado' }, { status: 404 });
     }
+    
+    // Verificar elegibilidad del usuario
+    const user = await User.findOne({ email: session.user.email });
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+    
+    // Verificar si el usuario ya tiene algún curso del pack
+    const userCourseIds = user.courses.map((id: any) => id.toString());
+    const packCourseIds = pack.courses.map((course: any) => course._id.toString());
+    
+    // Encontrar cursos que ya posee
+    const ownedCourses = pack.courses.filter((course: any) => 
+      userCourseIds.includes(course._id.toString())
+    );
+    
+    if (ownedCourses.length > 0) {
+      return NextResponse.json({ 
+        error: 'No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.' 
+      }, { status: 400 });
+    }
+    
     // Crear la preferencia de pago para el pack
     const preferenceData = {
       items: [

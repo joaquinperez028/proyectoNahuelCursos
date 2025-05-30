@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 
-export default function NuevoPackPage() {
+export default function EditarPackPage() {
   const { data: session, status } = useSession();
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -16,9 +16,11 @@ export default function NuevoPackPage() {
   const [cursos, setCursos] = useState<string[]>([]);
   const [cursosDisponibles, setCursosDisponibles] = useState<{_id: string, title: string}[]>([]);
   const [loadingCursos, setLoadingCursos] = useState(true);
+  const [loadingPack, setLoadingPack] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const params = useParams();
 
   // Estados para upload de imagen
   const [imageMethod, setImageMethod] = useState<'url' | 'file'>('url');
@@ -37,6 +39,7 @@ export default function NuevoPackPage() {
     }
   }, [status, session, router]);
 
+  // Cargar cursos disponibles
   useEffect(() => {
     const fetchCursos = async () => {
       try {
@@ -52,6 +55,39 @@ export default function NuevoPackPage() {
     };
     fetchCursos();
   }, []);
+
+  // Cargar datos del pack
+  useEffect(() => {
+    if (!params?.id) return;
+
+    const fetchPack = async () => {
+      try {
+        const res = await fetch(`/api/packs/${params.id}`);
+        if (!res.ok) throw new Error("Error al cargar el pack");
+        const pack = await res.json();
+        
+        setNombre(pack.name);
+        setDescripcion(pack.description);
+        setPrecio((pack.price / 100).toString()); // Convertir de centavos a pesos
+        setPrecioOriginal((pack.originalPrice / 100).toString()); // Convertir de centavos a pesos
+        setCursos(pack.courses.map((c: any) => c._id || c));
+        
+        // Manejar imagen
+        if (pack.imageData) {
+          setImageMethod('file');
+          setUploadedImageData(pack.imageData);
+        } else if (pack.imageUrl) {
+          setImageMethod('url');
+          setImagen(pack.imageUrl);
+        }
+      } catch (err: any) {
+        setError(err.message || "Error al cargar el pack");
+      } finally {
+        setLoadingPack(false);
+      }
+    };
+    fetchPack();
+  }, [params?.id]);
 
   const handleCursoChange = (id: string) => {
     setCursos((prev) =>
@@ -142,20 +178,25 @@ export default function NuevoPackPage() {
 
     setLoading(true);
     try {
-      // Subir imagen si se seleccionó un archivo y no se ha subido aún
-      let finalImageData = null;
+      // Verificar que tenemos el ID del pack
+      if (!params?.id) {
+        setError("ID del pack no encontrado");
+        setLoading(false);
+        return;
+      }
+
+      // Subir imagen si se seleccionó un archivo nuevo
+      let finalImageData = uploadedImageData;
       if (imageMethod === 'file' && imageFile && !uploadedImageData) {
         finalImageData = await uploadImage();
         if (!finalImageData) {
           setLoading(false);
           return;
         }
-      } else if (imageMethod === 'file' && uploadedImageData) {
-        finalImageData = uploadedImageData;
       }
 
-      const res = await fetch("/api/packs", {
-        method: "POST",
+      const res = await fetch(`/api/packs/${params.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: nombre,
@@ -169,7 +210,7 @@ export default function NuevoPackPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Error al crear el pack");
+        throw new Error(data.error || "Error al actualizar el pack");
       }
       router.push("/admin/packs");
     } catch (err: any) {
@@ -187,8 +228,28 @@ export default function NuevoPackPage() {
     return 0;
   };
 
+  const getPackImageSrc = () => {
+    if (uploadedImageData && uploadedImageData.data) {
+      return `data:${uploadedImageData.contentType};base64,${uploadedImageData.data}`;
+    }
+    return imagen || undefined;
+  };
+
   if (status !== 'authenticated' || session?.user?.role !== 'admin') {
     return null;
+  }
+
+  if (loadingPack) {
+    return (
+      <div className="min-h-screen bg-[#1A1A2E] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+            <span className="ml-3 text-gray-300">Cargando pack...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -197,10 +258,10 @@ export default function NuevoPackPage() {
         {/* Header Simple */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
-            📦 Crear Nuevo Pack
+            ✏️ Editar Pack
           </h1>
           <p className="text-gray-300 mb-6">
-            Crea un paquete de cursos con precio promocional
+            Modifica la información del pack de cursos
           </p>
           
           {/* Breadcrumb */}
@@ -209,7 +270,7 @@ export default function NuevoPackPage() {
               Packs
             </Link>
             <span className="text-gray-500">/</span>
-            <span className="text-gray-300">Nuevo Pack</span>
+            <span className="text-gray-300">Editar Pack</span>
           </nav>
         </div>
 
@@ -320,13 +381,29 @@ export default function NuevoPackPage() {
                         ref={imageInputRef}
                         className="hidden"
                         id="packImage"
-                        disabled={isUploadingImage || !!uploadedImageData}
+                        disabled={isUploadingImage}
                       />
+                      
+                      {/* Vista previa de imagen existente */}
+                      {uploadedImageData && !imageFile && (
+                        <div className="relative rounded-lg overflow-hidden border border-gray-600 mb-4">
+                          <Image 
+                            src={getPackImageSrc()!} 
+                            alt="Imagen actual" 
+                            width={400} 
+                            height={200}
+                            className="w-full h-48 object-cover"
+                          />
+                          <div className="absolute top-3 left-3 bg-blue-600 text-white px-2 py-1 rounded text-sm">
+                            Imagen actual
+                          </div>
+                        </div>
+                      )}
                       
                       <label
                         htmlFor="packImage"
                         className={`cursor-pointer bg-[#1E1E2F] border-2 border-dashed border-gray-600 rounded-lg p-8 text-center block hover:border-blue-500 transition-colors ${
-                          isUploadingImage || !!uploadedImageData ? 'cursor-not-allowed opacity-50' : ''
+                          isUploadingImage ? 'cursor-not-allowed opacity-50' : ''
                         }`}
                       >
                         <div className="space-y-3">
@@ -337,15 +414,15 @@ export default function NuevoPackPage() {
                           </div>
                           <div>
                             <span className="text-blue-400 font-medium">
-                              {uploadedImageData ? 'Imagen lista' : 'Hacer clic para seleccionar'}
+                              {uploadedImageData ? 'Cambiar imagen' : 'Hacer clic para seleccionar'}
                             </span>
                             <p className="text-gray-400 text-sm">PNG, JPG, GIF hasta 5MB</p>
                           </div>
                         </div>
                       </label>
 
-                      {/* Vista previa */}
-                      {imagePreview && !uploadedImageData && (
+                      {/* Vista previa nueva */}
+                      {imagePreview && (
                         <div className="relative rounded-lg overflow-hidden border border-gray-600">
                           <Image 
                             src={imagePreview} 
@@ -354,11 +431,14 @@ export default function NuevoPackPage() {
                             height={200}
                             className="w-full h-48 object-cover"
                           />
+                          <div className="absolute top-3 left-3 bg-green-600 text-white px-2 py-1 rounded text-sm">
+                            Nueva imagen
+                          </div>
                         </div>
                       )}
 
                       {/* Botón de subida */}
-                      {imageFile && !uploadedImageData && (
+                      {imageFile && (
                         <button
                           type="button"
                           onClick={uploadImage}
@@ -374,21 +454,21 @@ export default function NuevoPackPage() {
                               Subiendo...
                             </span>
                           ) : (
-                            'Subir Imagen'
+                            'Subir nueva imagen'
                           )}
                         </button>
                       )}
 
                       {/* Confirmación */}
-                      {uploadedImageData && (
+                      {uploadedImageData && !imageFile && (
                         <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
                           <div className="flex items-center gap-3">
                             <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                             <div>
-                              <p className="text-white font-medium">¡Imagen subida correctamente!</p>
-                              <p className="text-gray-300 text-sm">Lista para usar en el pack</p>
+                              <p className="text-white font-medium">Imagen configurada</p>
+                              <p className="text-gray-300 text-sm">Se mantendrá la imagen actual o se usará la nueva si la subes</p>
                             </div>
                           </div>
                         </div>
@@ -557,10 +637,10 @@ export default function NuevoPackPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creando...
+                      Actualizando...
                     </span>
                   ) : (
-                    'Crear Pack'
+                    'Actualizar Pack'
                   )}
                 </button>
               </div>

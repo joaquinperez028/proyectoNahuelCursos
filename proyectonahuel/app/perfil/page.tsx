@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useProfileData } from '@/hooks/useProfileData';
+import { profileCache } from '@/lib/profileCache';
 import CourseProgressCard from '@/components/CourseProgressCard';
 import CertificateCard from '@/components/CertificateCard';
 
@@ -45,6 +47,7 @@ export default function PerfilPage() {
   const { data: session, status } = useSession();
   const { data: profileData, loading, error, isFromCache, clearCacheAndReload } = useProfileData();
   const [activeTab, setActiveTab] = useState('informacion');
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [muxStatus, setMuxStatus] = useState({
     loading: false,
     result: null as any,
@@ -122,18 +125,30 @@ export default function PerfilPage() {
     );
   }
 
-  // Error state
+  // Error state simplificado
   if (error) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-[#1E1E2F]">
-        <div className="text-center">
-          <p className="text-red-400 text-xl">Error: {error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-4 px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200"
-          >
-            Reintentar
-          </button>
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-20 h-20 mx-auto mb-4 bg-red-900 bg-opacity-30 rounded-full flex items-center justify-center text-4xl">
+            ⚠️
+          </div>
+          <p className="text-red-400 text-xl mb-4">Error al cargar el perfil</p>
+          <p className="text-gray-400 text-sm mb-6">{error}</p>
+          <div className="flex gap-3 justify-center">
+            <button 
+              onClick={clearCacheAndReload} 
+              className="px-6 py-3 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] transition-colors duration-200"
+            >
+              🔄 Reintentar
+            </button>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+            >
+              🔃 Recargar página
+            </button>
+          </div>
         </div>
       </div>
     );

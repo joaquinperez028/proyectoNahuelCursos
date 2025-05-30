@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
     const packData: any = {
       name: data.name,
       description: data.description,
-      price: data.price,
-      originalPrice: data.originalPrice,
+      price: Math.round(data.price * 100), // Convertir a centavos
+      originalPrice: Math.round(data.originalPrice * 100), // Convertir a centavos
       courses: data.courses,
       active: true
     };

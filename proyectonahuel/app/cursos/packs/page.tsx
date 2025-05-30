@@ -37,6 +37,12 @@ interface PackType {
   active: boolean;
 }
 
+interface EligibilityInfo {
+  isEligible: boolean;
+  ownedCourses: { _id: string; title: string }[];
+  message: string;
+}
+
 // Componente Skeleton simple
 function Skeleton({ className }: { className: string }) {
   return <div className={`animate-pulse bg-gray-600 ${className}`}></div>;
@@ -56,8 +62,20 @@ export default function PacksPage() {
   const [selectedPack, setSelectedPack] = useState<PackType | null>(null);
   const [buyingPackId, setBuyingPackId] = useState<string | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
+  const [eligibilityMap, setEligibilityMap] = useState<{ [key: string]: EligibilityInfo }>({});
+  const [checkingEligibility, setCheckingEligibility] = useState<{ [key: string]: boolean }>({});
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
   const { data: session } = useSession();
   const router = useRouter();
+
+  const showToast = (message: string) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 4000);
+  };
 
   useEffect(() => {
     const fetchPacks = async () => {
@@ -75,11 +93,68 @@ export default function PacksPage() {
     fetchPacks();
   }, []);
 
+  // Verificar elegibilidad cuando el usuario está autenticado
+  useEffect(() => {
+    if (session && packs.length > 0) {
+      checkPacksEligibility();
+    }
+  }, [session, packs]);
+
+  const checkPacksEligibility = async () => {
+    const newEligibilityMap: { [key: string]: EligibilityInfo } = {};
+    const newCheckingEligibility: { [key: string]: boolean } = {};
+
+    for (const pack of packs) {
+      if (pack.active) {
+        newCheckingEligibility[pack._id] = true;
+        try {
+          const res = await fetch(`/api/packs/check-eligibility?packId=${pack._id}`);
+          if (res.ok) {
+            const eligibilityData = await res.json();
+            newEligibilityMap[pack._id] = eligibilityData;
+          }
+        } catch (err) {
+          console.error(`Error al verificar elegibilidad del pack ${pack._id}:`, err);
+        } finally {
+          newCheckingEligibility[pack._id] = false;
+        }
+      }
+    }
+    
+    setEligibilityMap(newEligibilityMap);
+    setCheckingEligibility(newCheckingEligibility);
+  };
+
+  const handleShowPaymentModal = (packId: string) => {
+    if (!session) {
+      router.push('/api/auth/signin');
+      return;
+    }
+
+    const eligibility = eligibilityMap[packId];
+    if (eligibility && !eligibility.isEligible) {
+      // Mostrar notificación en lugar de alerta
+      showToast('No podés comprar un pack si ya poseés uno de los contenidos incluidos.');
+      return;
+    }
+
+    setShowPaymentModal(packId);
+  };
+
   const handleBuyPack = async (packId: string) => {
     if (!session) {
       router.push('/api/auth/signin');
       return;
     }
+
+    // Verificar elegibilidad antes de proceder con la compra
+    const eligibility = eligibilityMap[packId];
+    if (eligibility && !eligibility.isEligible) {
+      showToast('No podés comprar un pack si ya poseés uno de los contenidos incluidos.');
+      setShowPaymentModal(null);
+      return;
+    }
+
     setBuyingPackId(packId);
     try {
       const res = await fetch('/api/mercadopago/create-pack-preference', {
@@ -91,10 +166,25 @@ export default function PacksPage() {
       const data = await res.json();
       window.location.href = data.init_point;
     } catch (err) {
-      alert('No se pudo procesar la compra. Intenta nuevamente.');
+      showToast('No se pudo procesar la compra. Intenta nuevamente.');
     } finally {
       setBuyingPackId(null);
     }
+  };
+
+  const isPackDisabled = (packId: string) => {
+    if (!session) return false;
+    const eligibility = eligibilityMap[packId];
+    return eligibility && !eligibility.isEligible;
+  };
+
+  const getPackStatusMessage = (packId: string) => {
+    if (!session) return null;
+    const eligibility = eligibilityMap[packId];
+    if (eligibility && !eligibility.isEligible) {
+      return 'Ya poseés uno de los contenidos incluidos en este pack';
+    }
+    return null;
   };
 
   return (
@@ -107,10 +197,10 @@ export default function PacksPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
         <div className="text-center mb-14">
           <h1 className="text-4xl sm:text-5xl font-bold text-neutral-100 mb-4 tracking-tight leading-tight font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Packs de cursos
+            Packs completos
           </h1>
-          <p className="mt-2 text-lg sm:text-xl text-neutral-300 font-normal font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Seleccioná un pack y obtené varios cursos a precio promocional
+          <p className="text-lg sm:text-xl text-neutral-400 max-w-3xl mx-auto leading-relaxed" style={{ fontFamily: 'Inter, sans-serif' }}>
+            Obtené acceso a múltiples formaciones por un precio especial. Ahorrá hasta un 40% comprando nuestros packs educativos.
           </p>
         </div>
         {loading ? (
@@ -131,86 +221,128 @@ export default function PacksPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-y-12 gap-x-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {packs.filter(pack => pack.active).map((pack) => (
-              <div
-                key={pack._id}
-                className="group flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-green-500/10 hover:border-green-500/20 hover:-translate-y-1 font-sans"
-                style={{ fontFamily: 'Inter, sans-serif' }}
-              >
-                {/* Imagen con overlay al hover */}
-                <div className="relative overflow-hidden">
-                  {getPackImageSrc(pack) ? (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
-                      <img
-                        src={getPackImageSrc(pack)}
-                        alt={pack.name}
-                        className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    </>
-                  ) : (
-                    <div className="w-full h-48 flex items-center justify-center bg-neutral-800 text-neutral-400 text-3xl">
-                      <span className="font-bold">Sin imagen</span>
-                    </div>
-                  )}
-                  {/* Badge de descuento */}
-                  <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20 transform transition-transform duration-300 group-hover:scale-110">
-                    {Math.round((1 - pack.price / pack.originalPrice) * 100)}% OFF
-                  </div>
-                </div>
-
-                {/* Contenido */}
-                <div className="p-6 flex flex-col gap-4 flex-grow">
-                  {/* Título con línea decorativa */}
-                  <div className="relative">
-                    <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors duration-300">{pack.name}</h2>
-                    <div className="h-0.5 w-16 bg-green-500 transform origin-left transition-all duration-300 group-hover:w-full"></div>
-                  </div>
-
-                  {/* Descripción */}
-                  <p className="text-sm text-neutral-400 flex-grow">{pack.description}</p>
-
-                  {/* Cursos incluidos con iconos e hipervínculos */}
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-neutral-300 mb-2">Cursos incluidos:</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {pack.courses.map((course) => (
-                        <a
-                          key={course._id}
-                          href={`/cursos/${course._id}`}
-                          className="px-3 py-1.5 bg-neutral-800 text-neutral-300 text-xs rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50 hover:text-green-400"
-                        >
-                          {course.title}
-                        </a>
-                      ))}
+            {packs.filter(pack => pack.active).map((pack) => {
+              const isDisabled = isPackDisabled(pack._id);
+              const statusMessage = getPackStatusMessage(pack._id);
+              
+              return (
+                <div
+                  key={pack._id}
+                  className={`group flex flex-col bg-neutral-900 border rounded-2xl shadow-lg overflow-hidden transition-all duration-300 font-sans ${
+                    isDisabled 
+                      ? 'border-red-500/50 opacity-75' 
+                      : 'border-neutral-800 hover:shadow-2xl hover:shadow-green-500/10 hover:border-green-500/20 hover:-translate-y-1'
+                  }`}
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                  {/* Imagen con overlay al hover */}
+                  <div className="relative overflow-hidden">
+                    {getPackImageSrc(pack) ? (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 to-transparent opacity-50 z-10"></div>
+                        <img
+                          src={getPackImageSrc(pack)}
+                          alt={pack.name}
+                          className={`w-full h-48 object-cover transition-transform duration-500 ${
+                            !isDisabled ? 'group-hover:scale-110' : ''
+                          }`}
+                        />
+                      </>
+                    ) : (
+                      <div className="w-full h-48 flex items-center justify-center bg-neutral-800 text-neutral-400 text-3xl">
+                        <span className="font-bold">Sin imagen</span>
+                      </div>
+                    )}
+                    {/* Badge de descuento */}
+                    <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-semibold z-20 transform transition-transform duration-300 ${
+                      isDisabled 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-green-500 text-white group-hover:scale-110'
+                    }`}>
+                      {isDisabled 
+                        ? 'NO DISPONIBLE' 
+                        : `${Math.round((1 - pack.price / pack.originalPrice) * 100)}% OFF`
+                      }
                     </div>
                   </div>
 
-                  {/* Precios con animación */}
-                  <div className="flex items-center gap-3 my-4">
-                    <span className="text-2xl font-bold text-green-500 transition-all duration-300 group-hover:scale-110">${pack.price / 100}</span>
-                    <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
-                  </div>
+                  {/* Contenido */}
+                  <div className="p-6 flex flex-col gap-4 flex-grow">
+                    {/* Título con línea decorativa */}
+                    <div className="relative">
+                      <h2 className={`text-2xl font-bold mb-2 transition-colors duration-300 ${
+                        isDisabled 
+                          ? 'text-neutral-400' 
+                          : 'text-white group-hover:text-green-400'
+                      }`}>{pack.name}</h2>
+                      <div className={`h-0.5 w-16 transform origin-left transition-all duration-300 ${
+                        isDisabled 
+                          ? 'bg-red-500' 
+                          : 'bg-green-500 group-hover:w-full'
+                      }`}></div>
+                    </div>
 
-                  {/* Botones con nueva organización */}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      onClick={() => setShowPaymentModal(pack._id)}
-                      className="w-full px-4 py-3 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                    >
-                      <span>Comprar pack</span>
-                    </button>
-                    
-                    <button
-                      className="w-full px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 transform hover:-translate-y-0.5"
-                      onClick={() => setSelectedPack(pack)}
-                    >
-                      Ver detalles
-                    </button>
+                    {/* Mensaje de estado si no es elegible */}
+                    {statusMessage && (
+                      <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3">
+                        <p className="text-red-400 text-sm font-medium">⚠️ {statusMessage}</p>
+                      </div>
+                    )}
+
+                    {/* Descripción */}
+                    <p className="text-sm text-neutral-400 flex-grow">{pack.description}</p>
+
+                    {/* Cursos incluidos con iconos e hipervínculos */}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-neutral-300 mb-2">Cursos incluidos:</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {pack.courses.map((course) => (
+                          <a
+                            key={course._id}
+                            href={`/cursos/${course._id}`}
+                            className="px-3 py-1.5 bg-neutral-800 text-neutral-300 text-xs rounded-lg font-medium border border-neutral-700 transition-all duration-300 hover:border-green-500/50 hover:bg-neutral-800/50 hover:text-green-400"
+                          >
+                            {course.title}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Precios con animación */}
+                    <div className="flex items-center gap-3 my-4">
+                      <span className={`text-2xl font-bold transition-all duration-300 ${
+                        isDisabled 
+                          ? 'text-neutral-500' 
+                          : 'text-green-500 group-hover:scale-110'
+                      }`}>${pack.price / 100}</span>
+                      <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
+                    </div>
+
+                    {/* Botones con nueva organización */}
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={() => handleShowPaymentModal(pack._id)}
+                        disabled={isDisabled}
+                        className={`w-full px-4 py-3 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 transform flex items-center justify-center gap-2 ${
+                          isDisabled
+                            ? 'bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-60'
+                            : 'bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:ring-green-400/50 hover:-translate-y-0.5'
+                        }`}
+                      >
+                        <span>{isDisabled ? 'No disponible' : 'Comprar pack'}</span>
+                      </button>
+                      
+                      <button
+                        className="w-full px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 bg-transparent font-semibold transition-all duration-300 hover:border-green-500 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-400/30 transform hover:-translate-y-0.5"
+                        onClick={() => setSelectedPack(pack)}
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -311,15 +443,36 @@ export default function PacksPage() {
                 </div>
               )}
               {/* Badge de descuento */}
-              <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
-                {Math.round((1 - selectedPack.price / selectedPack.originalPrice) * 100)}% OFF
-              </div>
+              {!isPackDisabled(selectedPack._id) ? (
+                <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
+                  {Math.round((1 - selectedPack.price / selectedPack.originalPrice) * 100)}% OFF
+                </div>
+              ) : (
+                <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
+                  NO DISPONIBLE
+                </div>
+              )}
             </div>
 
             <div className="relative mb-6">
               <h2 className="text-3xl font-bold text-white mb-2">{selectedPack.name}</h2>
               <div className="h-0.5 w-16 bg-green-500 transition-all duration-300 hover:w-32"></div>
             </div>
+
+            {/* Mensaje de estado si no es elegible */}
+            {getPackStatusMessage(selectedPack._id) && (
+              <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-red-400 font-medium">Pack no disponible para compra</p>
+                    <p className="text-red-300 text-sm">{getPackStatusMessage(selectedPack._id)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <p className="text-neutral-300 mb-6 text-base leading-relaxed">{selectedPack.description}</p>
 
@@ -350,12 +503,41 @@ export default function PacksPage() {
             <div className="grid grid-cols-1 gap-4">
               <button
                 onClick={() => {
-                  setShowPaymentModal(selectedPack._id);
+                  handleShowPaymentModal(selectedPack._id);
                   setSelectedPack(null);
                 }}
-                className="w-full px-6 py-4 rounded-xl bg-green-500 text-white font-semibold transition-all duration-300 hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-400/50 disabled:opacity-60 transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                disabled={isPackDisabled(selectedPack._id)}
+                className={`w-full px-6 py-4 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 transform flex items-center justify-center gap-2 ${
+                  isPackDisabled(selectedPack._id)
+                    ? 'bg-neutral-700 text-neutral-500 cursor-not-allowed opacity-60'
+                    : 'bg-green-500 text-white hover:bg-green-600 hover:shadow-lg hover:shadow-green-500/20 focus:ring-green-400/50 hover:-translate-y-0.5'
+                }`}
               >
-                <span>Comprar pack</span>
+                <span>{isPackDisabled(selectedPack._id) ? 'No disponible para compra' : 'Comprar pack'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Notificación Toast */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 z-[60] max-w-sm w-full">
+          <div className="bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg border border-red-500 animate-slideIn">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-white mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-medium text-sm">{notificationMessage}</p>
+              </div>
+              <button
+                onClick={() => setShowNotification(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           </div>

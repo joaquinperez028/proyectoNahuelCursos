@@ -118,10 +118,23 @@ export async function POST(request: Request) {
     if (packId) {
       itemType = 'pack';
       itemId = packId;
-      const pack = await Pack.findById(packId);
+      const pack = await Pack.findById(packId).populate('courses', 'title');
       if (!pack) {
         return NextResponse.json({ error: 'Pack no encontrado' }, { status: 404 });
       }
+      
+      // Verificar elegibilidad del usuario para el pack
+      const userCourseIds = user.courses.map((id: any) => id.toString());
+      const ownedCourses = pack.courses.filter((course: any) => 
+        userCourseIds.includes(course._id.toString())
+      );
+      
+      if (ownedCourses.length > 0) {
+        return NextResponse.json({ 
+          error: 'No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.' 
+        }, { status: 400 });
+      }
+      
       itemPrice = pack.price;
       console.log('Pack encontrado:', { id: pack._id, price: pack.price });
     } else {

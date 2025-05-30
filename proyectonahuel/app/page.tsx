@@ -28,7 +28,7 @@ export default function Home() {
                 href="/cursos"
                 className="group relative px-8 py-4 rounded-lg overflow-hidden bg-green-600 text-white font-medium text-lg hover:bg-green-700 transition-colors duration-300 flex items-center justify-center"
               >
-                <span className="relative z-10">Ver todos los cursos</span>
+                <span className="relative z-10">Explorar formaciones</span>
                 <span className="absolute bottom-0 left-0 h-1 w-full bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Link>
               
@@ -36,7 +36,7 @@ export default function Home() {
                 href="/cursos/packs"
                 className="group relative px-8 py-4 rounded-lg bg-gray-800 text-white font-medium text-lg hover:bg-gray-700 transition-colors duration-300 flex items-center justify-center border border-gray-700"
               >
-                <span className="relative z-10">Packs de cursos</span>
+                <span className="relative z-10">Packs completos</span>
                 <span className="absolute bottom-0 left-0 h-1 w-full bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
               </Link>
             </div>
@@ -58,7 +58,7 @@ export default function Home() {
       <section className="py-16 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-4 text-white">¿Por qué elegirnos?</h2>
-          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Nuestros cursos están diseñados para ofrecerte la mejor experiencia de aprendizaje en inversiones.</p>
+          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Nuestras formaciones están diseñadas para ofrecerte la mejor experiencia de aprendizaje en inversiones.</p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -104,7 +104,7 @@ export default function Home() {
       <section className="py-16 bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-4 text-white">Lo que dicen nuestros estudiantes</h2>
-          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Historias reales de éxito de quienes ya han completado nuestros cursos.</p>
+          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">Historias reales de éxito de quienes ya han completado nuestra formación.</p>
           
           <Suspense fallback={<div className="text-center py-10">Cargando testimonios...</div>}>
             <DynamicTestimonials />
@@ -130,7 +130,7 @@ export default function Home() {
             href="/cursos"
             className="inline-block bg-green-600 text-white px-8 py-4 rounded-lg font-medium text-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105"
           >
-            Explorar cursos
+            Empezar ahora
           </Link>
         </div>
       </section>
@@ -143,7 +143,7 @@ export default function Home() {
               <div className="col-span-4 text-center py-10">Cargando estadísticas...</div>
             }>
               <StatisticCounter type="students" label="Estudiantes" />
-              <StatisticCounter type="courses" label="Cursos" />
+              <StatisticCounter type="courses" label="Formaciones" />
               <StatisticCounter type="instructors" label="Instructores" />
               <StatisticCounter type="satisfactionRate" label="Satisfacción" suffix="%" />
             </Suspense>
