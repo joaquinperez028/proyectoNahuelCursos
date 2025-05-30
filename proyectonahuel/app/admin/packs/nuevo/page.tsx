@@ -425,7 +425,7 @@ export default function NuevoPackPage() {
                   {/* Precio Original */}
                   <div>
                     <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
-                      Precio Original ($) *
+                      Precio Original *
                     </label>
                     <input 
                       type="number" 
@@ -442,7 +442,7 @@ export default function NuevoPackPage() {
                   {/* Precio Promocional */}
                   <div>
                     <label className="block text-sm font-medium text-[#E0E0E0] mb-2">
-                      Precio Promocional ($) *
+                      Precio Promocional *
                     </label>
                     <input 
                       type="number" 
