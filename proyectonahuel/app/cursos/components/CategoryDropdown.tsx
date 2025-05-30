@@ -138,18 +138,24 @@ export default function CategoryDropdown({ categoriaActual, categoryCounts }: Ca
                 {/* Opción "Todas las categorías" */}
                 <button
                   onClick={() => handleSelectCategory()}
-                  className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--card-hover)] transition-colors duration-150 flex items-center justify-between ${
-                    !categoriaActual ? 'bg-[var(--accent)] text-white' : 'text-[var(--neutral-200)]'
+                  className={`w-full px-4 py-2 text-left text-sm transition-all duration-200 flex items-center justify-between group ${
+                    !categoriaActual 
+                      ? 'bg-[var(--accent)] text-white' 
+                      : 'text-[var(--neutral-200)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] hover:pl-6'
                   }`}
                 >
                   <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mr-3 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     Todas las categorías
                   </span>
                   {categoryCounts && (
-                    <span className="text-xs bg-[var(--neutral-700)] text-[var(--neutral-300)] px-2 py-1 rounded-full">
+                    <span className={`text-xs px-2 py-1 rounded-full transition-colors duration-200 ${
+                      !categoriaActual 
+                        ? 'bg-white/20 text-white' 
+                        : 'bg-[var(--neutral-700)] text-[var(--neutral-300)] group-hover:bg-[var(--accent)]/20 group-hover:text-[var(--accent)]'
+                    }`}>
                       {Object.values(categoryCounts).reduce((sum, count) => sum + count, 0)}
                     </span>
                   )}
@@ -168,19 +174,25 @@ export default function CategoryDropdown({ categoriaActual, categoryCounts }: Ca
                     <button
                       key={category._id}
                       onClick={() => handleSelectCategory(category.title)}
-                      className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--card-hover)] transition-colors duration-150 flex items-center justify-between ${
-                        categoriaActual === category.title ? 'bg-[var(--accent)] text-white' : 'text-[var(--neutral-200)]'
+                      className={`w-full px-4 py-2 text-left text-sm transition-all duration-200 flex items-center justify-between group ${
+                        categoriaActual === category.title 
+                          ? 'bg-[var(--accent)] text-white' 
+                          : 'text-[var(--neutral-200)] hover:bg-[var(--accent)]/10 hover:text-[var(--accent)] hover:pl-6'
                       }`}
                     >
                       <span className="flex items-center">
                         <div 
-                          className="w-4 h-4 mr-3"
+                          className="w-4 h-4 mr-3 transition-transform duration-200 group-hover:scale-110"
                           dangerouslySetInnerHTML={{ __html: category.icon }}
                         />
                         {category.title}
                       </span>
                       {categoryCounts && categoryCounts[category.title] && (
-                        <span className="text-xs bg-[var(--neutral-700)] text-[var(--neutral-300)] px-2 py-1 rounded-full">
+                        <span className={`text-xs px-2 py-1 rounded-full transition-colors duration-200 ${
+                          categoriaActual === category.title 
+                            ? 'bg-white/20 text-white' 
+                            : 'bg-[var(--neutral-700)] text-[var(--neutral-300)] group-hover:bg-[var(--accent)]/20 group-hover:text-[var(--accent)]'
+                        }`}>
                           {categoryCounts[category.title]}
                         </span>
                       )}

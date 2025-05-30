@@ -27,6 +27,28 @@ const Header = () => {
     };
   }, [scrolled]);
 
+  // Efecto para cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      
+      // Cerrar dropdown de admin si click fuera
+      if (adminDropdownOpen && !target.closest('[data-dropdown="admin"]')) {
+        setAdminDropdownOpen(false);
+      }
+      
+      // Cerrar dropdown de crear si click fuera
+      if (createDropdownOpen && !target.closest('[data-dropdown="create"]')) {
+        setCreateDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [adminDropdownOpen, createDropdownOpen]);
+
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       scrolled ? 'bg-[var(--neutral-900)] shadow-lg backdrop-blur-lg bg-opacity-90' : 'bg-transparent'
@@ -67,20 +89,28 @@ const Header = () => {
                 </Link>
               )}
               {session?.user.role === 'admin' && (
-                <div className="relative">
+                <div className="relative" data-dropdown="admin">
                   <button
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium ${adminDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)]' : 'text-[var(--neutral-300)]'} hover:text-[var(--neutral-100)] hover:border-[var(--accent)] transition-all duration-200`}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium transition-all duration-200 ${adminDropdownOpen ? 'text-[var(--neutral-100)] border-[var(--accent)]' : 'text-[var(--neutral-300)]'} hover:text-[var(--neutral-100)] hover:border-[var(--accent)]`}
                     onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
                   >
                     Admin
-                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                    <svg className={`ml-1 w-4 h-4 transition-transform duration-200 ${adminDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                   </button>
                   {adminDropdownOpen && (
                     <div className="absolute left-0 mt-2 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
-                      <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar cursos</Link>
-                      <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Usuarios</Link>
-                      <Link href="/admin/packs" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)]">Administrar packs</Link>
-                      <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] rounded-b-md">Crear Pack</Link>
+                      <Link href="/admin/cursos" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group" onClick={() => setAdminDropdownOpen(false)}>
+                        <span className="group-hover:pl-2 transition-all duration-200">Administrar cursos</span>
+                      </Link>
+                      <Link href="/admin/usuarios" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group" onClick={() => setAdminDropdownOpen(false)}>
+                        <span className="group-hover:pl-2 transition-all duration-200">Usuarios</span>
+                      </Link>
+                      <Link href="/admin/packs" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group" onClick={() => setAdminDropdownOpen(false)}>
+                        <span className="group-hover:pl-2 transition-all duration-200">Administrar packs</span>
+                      </Link>
+                      <Link href="/admin/packs/nuevo" className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors rounded-b-md group" onClick={() => setAdminDropdownOpen(false)}>
+                        <span className="group-hover:pl-2 transition-all duration-200">Crear Pack</span>
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -112,32 +142,36 @@ const Header = () => {
                 {session?.user.role === 'admin' && (
                   <div 
                     className="relative"
-                    onMouseEnter={() => setCreateDropdownOpen(true)}
-                    onMouseLeave={() => setCreateDropdownOpen(false)}
+                    data-dropdown="create"
                   >
                     <button
-                      className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md transition-colors ${
+                      onClick={() => setCreateDropdownOpen(!createDropdownOpen)}
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md transition-all duration-200 ${
                         createDropdownOpen 
-                          ? 'text-[var(--neutral-100)] bg-[var(--secondary-dark)]' 
-                          : 'text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)]'
+                          ? 'text-[var(--neutral-100)] bg-[var(--secondary-dark)] shadow-lg' 
+                          : 'text-[var(--neutral-100)] bg-[var(--secondary)] hover:bg-[var(--secondary-dark)] hover:shadow-md'
                       }`}
                     >
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
                       </svg>
                       Crear
-                      <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`ml-1 w-3 h-3 transition-transform duration-200 ${createDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
+                    
                     {createDropdownOpen && (
-                      <div className="absolute right-0 mt-1 w-40 bg-[var(--neutral-900)] border border-[var(--border)] rounded-md shadow-lg z-50">
+                      <div className="absolute right-0 mt-2 w-44 bg-[var(--neutral-900)] border border-[var(--border)] rounded-md shadow-xl z-50 py-1">
                         <Link 
                           href="/admin/cursos/nuevo" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                          className="block px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                          onClick={() => {
+                            setCreateDropdownOpen(false);
+                          }}
                         >
                           <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 mr-3 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                             Curso
@@ -145,21 +179,27 @@ const Header = () => {
                         </Link>
                         <Link 
                           href="/admin/packs/nuevo" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                          className="block px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                          onClick={() => {
+                            setCreateDropdownOpen(false);
+                          }}
                         >
                           <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 mr-3 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                             </svg>
                             Pack
                           </div>
                         </Link>
                         <Link 
-                          href="/admin/categorias" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                          href="/admin/categorias/nueva" 
+                          className="block px-4 py-3 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                          onClick={() => {
+                            setCreateDropdownOpen(false);
+                          }}
                         >
                           <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 mr-3 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                             </svg>
                             Categoría
@@ -288,11 +328,14 @@ const Header = () => {
                   <div className="pl-6 mt-1 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
                     <Link 
                       href="/admin/cursos/nuevo" 
-                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setCreateDropdownOpen(false);
+                      }}
                     >
                       <div className="flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                         Curso
@@ -300,22 +343,29 @@ const Header = () => {
                     </Link>
                     <Link 
                       href="/admin/packs/nuevo" 
-                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
-                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setCreateDropdownOpen(false);
+                      }}
                     >
                       <div className="flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
                         Pack
                       </div>
                     </Link>
                     <Link 
-                      href="/admin/categorias" 
-                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
+                      href="/admin/categorias/nueva" 
+                      className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors group"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setCreateDropdownOpen(false);
+                      }}
                     >
                       <div className="flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                         </svg>
                         Categoría
@@ -345,68 +395,6 @@ const Header = () => {
                   )}
                   <div className="text-sm font-medium text-[var(--neutral-200)]">{session.user.name}</div>
                 </div>
-                {session?.user.role === 'admin' && (
-                  <div 
-                    className="relative"
-                    onMouseEnter={() => setCreateDropdownOpen(true)}
-                    onMouseLeave={() => setCreateDropdownOpen(false)}
-                  >
-                    <button
-                      className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium ${
-                        createDropdownOpen 
-                          ? 'text-[var(--neutral-100)] border-[var(--accent)]' 
-                          : 'text-[var(--neutral-300)]'
-                      } hover:bg-[var(--card)] hover:border-[var(--accent)] hover:text-[var(--neutral-100)] transition-all duration-200`}
-                    >
-                      <div className="flex items-center">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        Crear
-                        <svg className="ml-1 w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </button>
-                    {createDropdownOpen && (
-                      <div className="pl-6 mt-1 w-40 bg-[var(--neutral-900)] rounded-md shadow-lg z-50">
-                        <Link 
-                          href="/admin/cursos/nuevo" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Curso
-                          </div>
-                        </Link>
-                        <Link 
-                          href="/admin/packs/nuevo" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            Pack
-                          </div>
-                        </Link>
-                        <Link 
-                          href="/admin/categorias" 
-                          className="block px-4 py-2 text-sm text-[var(--neutral-200)] hover:bg-[var(--card)] hover:text-[var(--neutral-100)] transition-colors"
-                        >
-                          <div className="flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                            Categoría
-                          </div>
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
