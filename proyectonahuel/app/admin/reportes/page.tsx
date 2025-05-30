@@ -468,72 +468,6 @@ export default function ReportesPage() {
     );
   };
   
-  // Distribución de métodos de pago
-  const renderPaymentMethodsChart = () => {
-    if (!stats || !stats.paymentMethods) return null;
-
-    const paymentMethods = stats.paymentMethods;
-    const labels = Object.keys(paymentMethods).map(key => 
-      key === 'MercadoPago' ? 'MercadoPago' : 
-      key === 'Transferencia' ? 'Transferencia' : 
-      key === 'PayPal' ? 'PayPal' : 
-      'Otro'
-    );
-    const data = Object.values(paymentMethods).map(item => item.count);
-    const backgroundColor = [
-      '#8B5CF6', // Primary (MercadoPago)
-      '#10B981', // Success (PayPal)
-      '#4CAF50', // Transferencia
-      '#6B7280', // Other
-    ];
-
-    const chartData = {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor,
-          borderWidth: 0,
-        },
-      ],
-    };
-
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom' as const,
-          labels: {
-            padding: 20,
-            boxWidth: 10,
-            usePointStyle: true,
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (context: any) => {
-              const label = context.label || '';
-              const value = context.raw || 0;
-              const total = data.reduce((a, b) => a + b, 0);
-              const percentage = Math.round((value / total) * 100);
-              return `${label}: ${value} (${percentage}%)`;
-            },
-          },
-        },
-      },
-    };
-
-    return (
-      <div className="bg-white rounded-lg shadow p-6 col-span-1">
-        <h3 className="text-lg font-medium text-[var(--neutral-500)] mb-4">Métodos de Pago</h3>
-        <div className="h-64">
-          <Doughnut data={chartData} options={chartOptions} />
-        </div>
-      </div>
-    );
-  };
-
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
@@ -548,6 +482,17 @@ export default function ReportesPage() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] py-12 px-4 sm:px-6 lg:px-8">
+      <style jsx>{`
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+      `}</style>
+      
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-[var(--neutral-100)]">Reporte de Ingresos</h1>
@@ -656,32 +601,215 @@ export default function ReportesPage() {
           </div>
           
           <div className="bg-[var(--card)] p-6 rounded-lg border border-[var(--border)]">
-            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-4">Ventas Totales</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {renderPaymentMethodsChart()}
-              
-              <div className="flex flex-col justify-center">
-                {stats && stats.paymentMethods && Object.entries(stats.paymentMethods).map(([key, value]) => (
-                  <div key={key} className="mb-4">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-[var(--neutral-300)]">{key}</span>
-                      <span className="text-sm font-medium text-[var(--neutral-100)]">
-                        {formatCurrency(value.total)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-[var(--neutral-800)] rounded-full h-2.5">
-                      <div 
-                        className="bg-[#4CAF50] h-2.5 rounded-full" 
-                        style={{ 
-                          width: `${value.total / stats.approvedAmount * 100}%` 
+            <h2 className="text-xl font-semibold text-[var(--neutral-100)] mb-6 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-[#4CAF50]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Distribución por Método de Pago
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              {/* Gráfico de torta mejorado */}
+              <div className="lg:col-span-2">
+                <div className="bg-[var(--background)] rounded-xl p-6 border border-[var(--border)]">
+                  <div className="h-64 relative">
+                    {stats && stats.paymentMethods && Object.keys(stats.paymentMethods).length > 0 ? (
+                      <Doughnut 
+                        data={{
+                          labels: Object.keys(stats.paymentMethods).map(key => {
+                            switch(key) {
+                              case 'MercadoPago': return 'MercadoPago';
+                              case 'PayPal': return 'PayPal';
+                              case 'Transferencia': return 'Transferencia';
+                              default: return key;
+                            }
+                          }),
+                          datasets: [{
+                            data: Object.values(stats.paymentMethods).map(item => item.count),
+                            backgroundColor: [
+                              '#00A8E8', // MercadoPago azul
+                              '#003087', // PayPal azul oscuro
+                              '#4CAF50', // Transferencia verde
+                              '#FF6B35', // Otros naranja
+                            ],
+                            borderColor: [
+                              '#0088CC',
+                              '#002456',
+                              '#45a049',
+                              '#E55A31',
+                            ],
+                            borderWidth: 3,
+                          }]
                         }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-[var(--neutral-400)] mt-1">
-                      {value.count} transacciones ({(value.total / stats.approvedAmount * 100).toFixed(1)}%)
-                    </p>
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          cutout: '60%',
+                          plugins: {
+                            legend: {
+                              display: false
+                            },
+                            tooltip: {
+                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                              titleColor: '#fff',
+                              bodyColor: '#fff',
+                              borderColor: '#4CAF50',
+                              borderWidth: 1,
+                              callbacks: {
+                                label: (context: any) => {
+                                  const label = context.label || '';
+                                  const value = context.raw || 0;
+                                  const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                  const percentage = Math.round((value / total) * 100);
+                                  return `${label}: ${value} ventas (${percentage}%)`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <p className="text-[var(--neutral-400)]">No hay datos disponibles</p>
+                      </div>
+                    )}
+                    
+                    {/* Centro del donut con total */}
+                    {stats && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-[var(--neutral-100)]">
+                            {Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.count, 0)}
+                          </p>
+                          <p className="text-sm text-[var(--neutral-400)]">Total Ventas</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                </div>
+              </div>
+              
+              {/* Estadísticas detalladas mejoradas */}
+              <div className="lg:col-span-3 space-y-4">
+                {stats && stats.paymentMethods && Object.entries(stats.paymentMethods).map(([key, value], index) => {
+                  const total = Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.total, 0);
+                  const percentage = total > 0 ? (value.total / total) * 100 : 0;
+                  
+                  // Iconos y colores para cada método
+                  const methodConfig: Record<string, { icon: string; color: string; bgColor: string; }> = {
+                    'MercadoPago': { 
+                      icon: '💳', 
+                      color: '#00A8E8', 
+                      bgColor: 'rgba(0, 168, 232, 0.1)' 
+                    },
+                    'PayPal': { 
+                      icon: '🅿️', 
+                      color: '#003087', 
+                      bgColor: 'rgba(0, 48, 135, 0.1)' 
+                    },
+                    'Transferencia': { 
+                      icon: '🏦', 
+                      color: '#4CAF50', 
+                      bgColor: 'rgba(76, 175, 80, 0.1)' 
+                    },
+                    'default': { 
+                      icon: '💰', 
+                      color: '#FF6B35', 
+                      bgColor: 'rgba(255, 107, 53, 0.1)' 
+                    }
+                  };
+                  
+                  const config = methodConfig[key] || methodConfig.default;
+                  
+                  return (
+                    <div 
+                      key={key} 
+                      className="bg-[var(--background)] rounded-xl p-5 border border-[var(--border)] hover:border-[#4CAF50] transition-all duration-300 hover:shadow-lg"
+                      style={{ backgroundColor: config.bgColor }}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
+                            style={{ backgroundColor: config.color + '20', color: config.color }}
+                          >
+                            {config.icon}
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-semibold text-[var(--neutral-100)]">
+                              {key}
+                            </h4>
+                            <p className="text-sm text-[var(--neutral-400)]">
+                              {value.count} transacciones
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-[var(--neutral-100)]">
+                            {formatCurrency(value.total)}
+                          </p>
+                          <p className="text-sm text-[var(--neutral-400)]">
+                            {percentage.toFixed(1)}% del total
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Barra de progreso mejorada */}
+                      <div className="w-full bg-[var(--neutral-800)] rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                          style={{ 
+                            width: `${percentage}%`,
+                            backgroundColor: config.color,
+                            boxShadow: `0 0 10px ${config.color}40`
+                          }}
+                        >
+                          {/* Efecto de brillo animado */}
+                          <div 
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"
+                            style={{ animation: 'shimmer 2s infinite' }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      {/* Estadísticas adicionales */}
+                      <div className="flex justify-between items-center mt-3 text-xs text-[var(--neutral-400)]">
+                        <span>Promedio: {formatCurrency(value.total / value.count)}</span>
+                        <span>
+                          {((value.count / Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.count, 0)) * 100).toFixed(1)}% de ventas
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Resumen total mejorado */}
+                {stats && (
+                  <div className="bg-gradient-to-r from-[#4CAF50] to-[#45a049] rounded-xl p-5 text-white mt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold">Total de Ingresos</h4>
+                          <p className="text-sm opacity-90">
+                            {Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.count, 0)} transacciones aprobadas
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">
+                          {formatCurrency(Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.total, 0))}
+                        </p>
+                        <p className="text-sm opacity-90">100% del total</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
