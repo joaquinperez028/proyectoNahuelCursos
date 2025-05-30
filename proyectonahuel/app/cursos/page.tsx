@@ -69,10 +69,35 @@ async function getCourses(categoria?: string, page: number = 1): Promise<Paginat
     // Crear consulta base
     let query = {};
     
-    // Si hay una categoría específica, filtrar por ella
+    // Si hay una categoría específica, buscarla primero por título y luego usar su ObjectId
     if (categoria) {
-      query = { category: categoria };
+      console.log('🔍 Buscando categoría por título:', categoria);
+      
+      // Importar el modelo Category
+      const Category = (await import('@/models/Category')).default;
+      
+      // Buscar la categoría por título
+      const categoryDoc = await Category.findOne({ 
+        title: categoria,
+        isActive: true 
+      }).lean() as any;
+      
+      if (categoryDoc && categoryDoc._id) {
+        console.log('✅ Categoría encontrada:', categoryDoc._id);
+        query = { category: categoryDoc._id };
+      } else {
+        console.log('❌ Categoría no encontrada:', categoria);
+        // Si no se encuentra la categoría, retornar resultados vacíos
+        return {
+          courses: [],
+          totalPages: 0,
+          currentPage: page,
+          totalCourses: 0
+        };
+      }
     }
+    
+    console.log('🔍 Query final para cursos:', query);
     
     // Calcular skip para paginación
     const skip = (page - 1) * COURSES_PER_PAGE;
@@ -169,18 +194,39 @@ async function getCategoryCounts(): Promise<CategoryCount> {
   try {
     await connectToDatabase();
     
-    // Obtener conteo por categoría
+    // Importar el modelo Category
+    const Category = (await import('@/models/Category')).default;
+    
+    // Obtener conteo por categoría con populate
     const categoryCounts = await Course.aggregate([
-      { $group: { _id: "$category", count: { $sum: 1 } } }
+      { $group: { _id: "$category", count: { $sum: 1 } } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "_id",
+          foreignField: "_id", 
+          as: "categoryInfo"
+        }
+      },
+      { $unwind: "$categoryInfo" },
+      {
+        $project: {
+          _id: 1,
+          count: 1,
+          title: "$categoryInfo.title"
+        }
+      }
     ]);
     
-    // Convertir a un objeto para fácil acceso
+    // Convertir a un objeto para fácil acceso usando el título de la categoría
     const counts: CategoryCount = {};
     let totalCount = 0;
     
     categoryCounts.forEach((item) => {
-      counts[item._id] = item.count;
-      totalCount += item.count;
+      if (item.title) {
+        counts[item.title] = item.count;
+        totalCount += item.count;
+      }
     });
     
     // Agregar el total
