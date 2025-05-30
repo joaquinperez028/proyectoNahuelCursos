@@ -490,33 +490,6 @@ export default async function CoursePage({ params }: PageProps<CourseParams>) {
                 </li>
               </ul>
             </div>
-            <div className="mt-6 border-t border-[var(--border)] pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[var(--neutral-100)]">Compartir esta formación</h3>
-              </div>
-              <div className="flex space-x-3">
-                <button className="p-2 rounded-full bg-[var(--neutral-800)] hover:bg-[var(--primary-dark)] text-[var(--neutral-300)] hover:text-[var(--neutral-100)] transition-colors">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/>
-                  </svg>
-                </button>
-                <button className="p-2 rounded-full bg-[var(--neutral-800)] hover:bg-blue-700 text-[var(--neutral-300)] hover:text-[var(--neutral-100)] transition-colors">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z" />
-                  </svg>
-                </button>
-                <button className="p-2 rounded-full bg-[var(--neutral-800)] hover:bg-red-600 text-[var(--neutral-300)] hover:text-[var(--neutral-100)] transition-colors">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fillRule="evenodd" d="M19.812 5.418c.861.23 1.538.907 1.768 1.768C21.998 8.746 22 12 22 12s0 3.255-.418 4.814a2.504 2.504 0 0 1-1.768 1.768c-1.56.419-7.814.419-7.814.419s-6.255 0-7.814-.419a2.505 2.505 0 0 1-1.768-1.768C2 15.255 2 12 2 12s0-3.255.417-4.814a2.507 2.507 0 0 1 1.768-1.768C5.744 5 11.998 5 11.998 5s6.255 0 7.814.418ZM15.194 12 10 15V9l5.194 3Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <button className="p-2 rounded-full bg-[var(--neutral-800)] hover:bg-green-600 text-[var(--neutral-300)] hover:text-[var(--neutral-100)] transition-colors">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7.253 18.494l.724.423A7.953 7.953 0 0012 19a8 8 0 10-8-8 7.95 7.95 0 00.797 3.463l.46.831-1.45 5.2 5.446-1.447zm1.45-5.809a.3.3 0 01-.286-.286c-.242-.642-.39-1.35-.442-2.065a6.955 6.955 0 01.23-2.174.3.3 0 01.286-.286h1.37a.3.3 0 01.286.286 6.96 6.96 0 01-.23 2.174.3.3 0 01-.286.286h-1.37zm5.348-3.773a.3.3 0 01-.286.287h-3.984a.3.3 0 01-.286-.287v-1.37a.3.3 0 01.286-.286h3.984a.3.3 0 01.286.286v1.37z"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
           </aside>
         </div>
       </div>
