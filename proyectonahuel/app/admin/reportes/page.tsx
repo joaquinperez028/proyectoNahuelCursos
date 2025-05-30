@@ -612,7 +612,17 @@ export default function ReportesPage() {
               {/* Gráfico de torta mejorado */}
               <div className="lg:col-span-2 flex flex-col">
                 <div className="bg-[var(--background)] rounded-xl p-6 border border-[var(--border)] flex-1 flex flex-col">
-                  <div className="flex-1 relative min-h-[300px]">
+                  {/* Total de ventas arriba del gráfico */}
+                  {stats && (
+                    <div className="text-center mb-4">
+                      <p className="text-3xl font-bold text-[var(--neutral-100)]">
+                        {Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.count, 0)}
+                      </p>
+                      <p className="text-sm text-[var(--neutral-400)]">Total de Ventas</p>
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 relative min-h-[250px]">
                     {stats && stats.paymentMethods && Object.keys(stats.paymentMethods).length > 0 ? (
                       <Doughnut 
                         data={{
@@ -644,28 +654,48 @@ export default function ReportesPage() {
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
-                          cutout: '60%',
+                          cutout: '75%',
                           plugins: {
                             legend: {
                               display: false
                             },
                             tooltip: {
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                              titleColor: '#fff',
-                              bodyColor: '#fff',
+                              enabled: true,
+                              backgroundColor: '#1E1E2F',
+                              titleColor: '#ffffff',
+                              bodyColor: '#ffffff',
                               borderColor: '#4CAF50',
-                              borderWidth: 1,
+                              borderWidth: 2,
+                              cornerRadius: 8,
+                              titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                              },
+                              bodyFont: {
+                                size: 13
+                              },
+                              padding: 12,
+                              displayColors: true,
                               callbacks: {
+                                title: (context: any) => {
+                                  return context[0].label;
+                                },
                                 label: (context: any) => {
-                                  const label = context.label || '';
                                   const value = context.raw || 0;
                                   const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
                                   const percentage = Math.round((value / total) * 100);
-                                  return `${label}: ${value} ventas (${percentage}%)`;
+                                  return [
+                                    `Ventas: ${value}`,
+                                    `Porcentaje: ${percentage}%`
+                                  ];
                                 },
                               },
                             },
                           },
+                          interaction: {
+                            intersect: false,
+                            mode: 'nearest'
+                          }
                         }}
                       />
                     ) : (
@@ -673,19 +703,29 @@ export default function ReportesPage() {
                         <p className="text-[var(--neutral-400)]">No hay datos disponibles</p>
                       </div>
                     )}
-                    
-                    {/* Centro del donut con total */}
-                    {stats && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-[var(--neutral-100)]">
-                            {Object.values(stats.paymentMethods).reduce((sum, item) => sum + item.count, 0)}
-                          </p>
-                          <p className="text-sm text-[var(--neutral-400)]">Total Ventas</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
+                  
+                  {/* Leyenda personalizada debajo del gráfico */}
+                  {stats && stats.paymentMethods && (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      {Object.entries(stats.paymentMethods).map(([key, value], index) => {
+                        const colors = ['#00A8E8', '#003087', '#4CAF50', '#FF6B35'];
+                        const icons = ['💳', '🅿️', '🏦', '💰'];
+                        
+                        return (
+                          <div key={key} className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: colors[index] || '#FF6B35' }}
+                            ></div>
+                            <span className="text-xs text-[var(--neutral-300)] truncate">
+                              {icons[index] || '💰'} {key}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               
