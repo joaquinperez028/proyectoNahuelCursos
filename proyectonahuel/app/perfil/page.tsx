@@ -48,6 +48,7 @@ export default function PerfilPage() {
   const { data: profileData, loading, error, isFromCache, clearCacheAndReload } = useProfileData();
   const [activeTab, setActiveTab] = useState('informacion');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [debugSessionData, setDebugSessionData] = useState<any>(null);
   const [muxStatus, setMuxStatus] = useState({
     loading: false,
     result: null as any,
@@ -112,6 +113,17 @@ export default function PerfilPage() {
       window.location.reload();
     } catch (error) {
       console.error('Error al limpiar caché:', error);
+    }
+  };
+
+  const testSession = async () => {
+    try {
+      const response = await fetch('/api/debug-session');
+      const data = await response.json();
+      setDebugSessionData(data);
+      console.log('🔍 Debug Session Data:', data);
+    } catch (error) {
+      console.error('Error testing session:', error);
     }
   };
 
@@ -214,6 +226,12 @@ export default function PerfilPage() {
                   >
                     Limpiar Caché
                   </button>
+                  <button
+                    onClick={testSession}
+                    className="text-blue-400 text-xs hover:text-blue-300"
+                  >
+                    Test Sesión
+                  </button>
                 </div>
               </div>
               
@@ -227,6 +245,19 @@ export default function PerfilPage() {
                   <div><strong>Timestamp:</strong> {profileData?.timestamp ? new Date(profileData.timestamp).toLocaleString() : 'No disponible'}</div>
                   <div><strong>Rol:</strong> {profileData?.user?.role || 'No disponible'}</div>
                   <div><strong>LocalStorage email:</strong> {typeof window !== 'undefined' ? localStorage.getItem('current_user_email') : 'No disponible'}</div>
+                  
+                  {debugSessionData && (
+                    <div className="mt-3 p-2 bg-blue-900 bg-opacity-30 rounded">
+                      <div><strong>🔍 Debug Session:</strong></div>
+                      <div><strong>DB User Found:</strong> {debugSessionData.dbUser ? '✅ Sí' : '❌ No'}</div>
+                      <div><strong>DB Email:</strong> {debugSessionData.dbUser?.email || 'No encontrado'}</div>
+                      <div><strong>DB Role:</strong> {debugSessionData.dbUser?.role || 'No encontrado'}</div>
+                      <div><strong>Emails Match:</strong> {debugSessionData.emailsMatch ? '✅ Sí' : '❌ No'}</div>
+                      <pre className="text-xs mt-1 bg-black bg-opacity-50 p-1 rounded overflow-x-auto">
+                        {JSON.stringify(debugSessionData, null, 2)}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

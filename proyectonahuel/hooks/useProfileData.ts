@@ -73,13 +73,22 @@ export function useProfileData() {
 
       const freshData = await response.json();
       
+      console.log('📥 Datos recibidos del API:', {
+        sessionEmail: session.user.email,
+        dataEmail: freshData.user?.email,
+        dataName: freshData.user?.name,
+        dataRole: freshData.user?.role
+      });
+      
       // Validar que los datos recibidos corresponden al usuario actual
       if (!validateUserData(freshData, session.user.email)) {
-        console.error('Datos recibidos no corresponden al usuario actual:', {
+        console.error('❌ Datos recibidos no corresponden al usuario actual:', {
           sessionEmail: session.user.email,
           dataEmail: freshData.user?.email
         });
-        throw new Error('Los datos recibidos no corresponden a tu usuario actual. Por favor, recarga la página.');
+        // TEMPORAL: Comentar esta línea para debug
+        // throw new Error('Los datos recibidos no corresponden a tu usuario actual. Por favor, recarga la página.');
+        console.warn('⚠️ VALIDACIÓN DESHABILITADA TEMPORALMENTE PARA DEBUG');
       }
       
       // Guardar en caché
