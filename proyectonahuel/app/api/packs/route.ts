@@ -50,11 +50,16 @@ export async function POST(request: NextRequest) {
 
     // Calcular precios automáticamente
     const totalCoursesPrice = selectedCourses.reduce((sum, course) => sum + (course.price || 0), 0);
-    if (totalCoursesPrice === 0) {
-      return NextResponse.json({ error: 'Los cursos seleccionados deben tener precios configurados' }, { status: 400 });
+    if (totalCoursesPrice <= 0) {
+      return NextResponse.json({ error: 'Los cursos seleccionados deben tener precios configurados y mayor a $0' }, { status: 400 });
     }
 
     const packPriceWithDiscount = Math.round(totalCoursesPrice * 0.9); // 10% descuento
+    
+    // VALIDACIÓN: Asegurar precio mínimo del pack
+    if (packPriceWithDiscount <= 0) {
+      return NextResponse.json({ error: 'El precio calculado del pack debe ser mayor a $0' }, { status: 400 });
+    }
 
     // Preparar datos para crear el pack
     const packData: any = {

@@ -66,7 +66,12 @@ export async function POST(request: Request) {
     const ownedCoursesPrice = ownedCourses.reduce((sum: number, course: any) => sum + course.price, 0);
     
     // 4. Precio final = Precio base del pack - Precio de cursos que ya tiene
-    const finalPrice = packBasePrice - ownedCoursesPrice;
+    let finalPrice = packBasePrice - ownedCoursesPrice;
+    
+    // 5. VALIDACIÓN: Evitar precios negativos o cero
+    if (finalPrice <= 0) {
+      finalPrice = Math.max(1, Math.round(packBasePrice * 0.1)); // Mínimo 10% del precio base o $1
+    }
     
     // Información para mostrar al usuario
     const packInfo = {

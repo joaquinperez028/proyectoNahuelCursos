@@ -59,14 +59,15 @@ export default function NuevoPackPage() {
 
   // Calcular precios automáticamente
   const calcularPreciosAutomaticos = () => {
-    if (cursos.length === 0) return { totalCursos: 0, precioPackConDescuento: 0, descuentoPorPack: 0 };
+    if (cursos.length === 0) return { totalCursos: 0, precioPackConDescuento: 0, descuentoPorPack: 0, esValido: false };
     
     const cursosSeleccionados = cursosDisponibles.filter(curso => cursos.includes(curso._id));
     const totalCursos = cursosSeleccionados.reduce((sum, curso) => sum + curso.price, 0);
     const precioPackConDescuento = Math.round(totalCursos * 0.9); // 10% descuento
     const descuentoPorPack = totalCursos - precioPackConDescuento;
+    const esValido = totalCursos > 0 && precioPackConDescuento > 0;
     
-    return { totalCursos, precioPackConDescuento, descuentoPorPack };
+    return { totalCursos, precioPackConDescuento, descuentoPorPack, esValido };
   };
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -449,33 +450,51 @@ export default function NuevoPackPage() {
                         
                         {/* Calculadora de precios automática */}
                         {(() => {
-                          const { totalCursos, precioPackConDescuento, descuentoPorPack } = calcularPreciosAutomaticos();
-                          return totalCursos > 0 ? (
-                            <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
-                              <h4 className="text-white font-semibold mb-3">💰 Precios Calculados Automáticamente</h4>
+                          const { totalCursos, precioPackConDescuento, descuentoPorPack, esValido } = calcularPreciosAutomaticos();
+                          return (
+                            <div className={`border rounded-lg p-4 ${
+                              esValido 
+                                ? 'bg-blue-600 bg-opacity-20 border-blue-500' 
+                                : 'bg-red-600 bg-opacity-20 border-red-500'
+                            }`}>
+                              <h4 className="text-white font-semibold mb-3">
+                                {esValido ? '💰 Precios Calculados Automáticamente' : '⚠️ Error en Precios'}
+                              </h4>
                               
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-300">Total cursos individuales:</span>
-                                  <span className="text-white font-medium">${totalCursos}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-300">Descuento del pack (10%):</span>
-                                  <span className="text-green-400 font-medium">-${descuentoPorPack}</span>
-                                </div>
-                                <div className="border-t border-gray-600 pt-2 mt-2">
-                                  <div className="flex justify-between text-lg">
-                                    <span className="text-white font-semibold">Precio final del pack:</span>
-                                    <span className="text-green-400 font-bold">${precioPackConDescuento}</span>
+                              {esValido ? (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-300">Total cursos individuales:</span>
+                                    <span className="text-white font-medium">${totalCursos}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-300">Descuento del pack (10%):</span>
+                                    <span className="text-green-400 font-medium">-${descuentoPorPack}</span>
+                                  </div>
+                                  <div className="border-t border-gray-600 pt-2 mt-2">
+                                    <div className="flex justify-between text-lg">
+                                      <span className="text-white font-semibold">Precio final del pack:</span>
+                                      <span className="text-green-400 font-bold">${precioPackConDescuento}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <div className="text-red-400">
+                                  <p className="font-medium">No se puede crear el pack</p>
+                                  <p className="text-sm mt-1">
+                                    Los cursos seleccionados no tienen precios válidos (todos son $0 o gratis)
+                                  </p>
+                                </div>
+                              )}
                               
                               <div className="mt-3 text-xs text-gray-400">
-                                Los usuarios que ya tengan algunos cursos pagarán menos (se descontará el precio de los cursos que ya posean)
+                                {esValido 
+                                  ? 'Los usuarios que ya tengan algunos cursos pagarán menos (se descontará el precio de los cursos que ya posean)'
+                                  : 'Selecciona cursos con precios válidos para crear el pack'
+                                }
                               </div>
                             </div>
-                          ) : null;
+                          );
                         })()}
                       </div>
                     )}
