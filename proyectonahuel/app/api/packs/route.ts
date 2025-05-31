@@ -36,16 +36,32 @@ export async function POST(request: NextRequest) {
     }
     await connectToDatabase();
     const data = await request.json();
-    if (!data.name || !data.description || !data.price || !data.originalPrice || !Array.isArray(data.courses) || data.courses.length === 0) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
+    
+    // Validación de campos requeridos (los precios ya no son requeridos)
+    if (!data.name || !data.description || !Array.isArray(data.courses) || data.courses.length === 0) {
+      return NextResponse.json({ error: 'Faltan campos requeridos (name, description, courses)' }, { status: 400 });
     }
+
+    // Obtener los cursos seleccionados para calcular precios
+    const selectedCourses = await Course.find({ _id: { $in: data.courses } });
+    if (selectedCourses.length !== data.courses.length) {
+      return NextResponse.json({ error: 'Algunos cursos no existen' }, { status: 400 });
+    }
+
+    // Calcular precios automáticamente
+    const totalCoursesPrice = selectedCourses.reduce((sum, course) => sum + (course.price || 0), 0);
+    if (totalCoursesPrice === 0) {
+      return NextResponse.json({ error: 'Los cursos seleccionados deben tener precios configurados' }, { status: 400 });
+    }
+
+    const packPriceWithDiscount = Math.round(totalCoursesPrice * 0.9); // 10% descuento
 
     // Preparar datos para crear el pack
     const packData: any = {
       name: data.name,
       description: data.description,
-      price: Math.round(data.price * 100), // Convertir a centavos
-      originalPrice: Math.round(data.originalPrice * 100), // Convertir a centavos
+      price: packPriceWithDiscount, // Precio calculado automáticamente
+      originalPrice: totalCoursesPrice, // Total de cursos sin descuento
       courses: data.courses,
       active: true
     };
@@ -60,7 +76,17 @@ export async function POST(request: NextRequest) {
     }
 
     const newPack = await Pack.create(packData);
-    return NextResponse.json(newPack, { status: 201 });
+    
+    // Retornar el pack creado con información adicional de precios
+    return NextResponse.json({
+      ...newPack.toObject(),
+      pricing: {
+        totalCoursesPrice,
+        packPrice: packPriceWithDiscount,
+        discount: totalCoursesPrice - packPriceWithDiscount,
+        discountPercentage: 10
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error('Error al crear pack:', error);
     return NextResponse.json({ error: 'Error al crear el pack' }, { status: 500 });

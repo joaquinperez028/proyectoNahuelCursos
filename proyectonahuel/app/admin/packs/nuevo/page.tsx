@@ -10,11 +10,9 @@ export default function NuevoPackPage() {
   const { data: session, status } = useSession();
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [precio, setPrecio] = useState("");
-  const [precioOriginal, setPrecioOriginal] = useState("");
   const [imagen, setImagen] = useState("");
   const [cursos, setCursos] = useState<string[]>([]);
-  const [cursosDisponibles, setCursosDisponibles] = useState<{_id: string, title: string}[]>([]);
+  const [cursosDisponibles, setCursosDisponibles] = useState<{_id: string, title: string, price: number}[]>([]);
   const [loadingCursos, setLoadingCursos] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -43,7 +41,7 @@ export default function NuevoPackPage() {
         const res = await fetch("/api/courses");
         if (!res.ok) throw new Error("Error al cargar cursos");
         const data = await res.json();
-        setCursosDisponibles(data.map((c: any) => ({ _id: c._id, title: c.title })));
+        setCursosDisponibles(data.map((c: any) => ({ _id: c._id, title: c.title, price: c.price || 0 })));
       } catch (err) {
         setCursosDisponibles([]);
       } finally {
@@ -57,6 +55,18 @@ export default function NuevoPackPage() {
     setCursos((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+  };
+
+  // Calcular precios automáticamente
+  const calcularPreciosAutomaticos = () => {
+    if (cursos.length === 0) return { totalCursos: 0, precioPackConDescuento: 0, descuentoPorPack: 0 };
+    
+    const cursosSeleccionados = cursosDisponibles.filter(curso => cursos.includes(curso._id));
+    const totalCursos = cursosSeleccionados.reduce((sum, curso) => sum + curso.price, 0);
+    const precioPackConDescuento = Math.round(totalCursos * 0.9); // 10% descuento
+    const descuentoPorPack = totalCursos - precioPackConDescuento;
+    
+    return { totalCursos, precioPackConDescuento, descuentoPorPack };
   };
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,6 +124,8 @@ export default function NuevoPackPage() {
     e.preventDefault();
     setError("");
     
+    const { totalCursos, precioPackConDescuento } = calcularPreciosAutomaticos();
+    
     // Validaciones
     if (!nombre.trim()) {
       setError("El nombre del pack es obligatorio");
@@ -123,20 +135,12 @@ export default function NuevoPackPage() {
       setError("La descripción es obligatoria");
       return;
     }
-    if (!precio || Number(precio) <= 0) {
-      setError("El precio promocional debe ser mayor a 0");
-      return;
-    }
-    if (!precioOriginal || Number(precioOriginal) <= 0) {
-      setError("El precio original debe ser mayor a 0");
-      return;
-    }
-    if (Number(precio) >= Number(precioOriginal)) {
-      setError("El precio promocional debe ser menor al precio original");
-      return;
-    }
     if (cursos.length === 0) {
       setError("Debe seleccionar al menos un curso");
+      return;
+    }
+    if (totalCursos === 0) {
+      setError("Los cursos seleccionados deben tener precio configurado");
       return;
     }
 
@@ -160,8 +164,8 @@ export default function NuevoPackPage() {
         body: JSON.stringify({
           name: nombre,
           description: descripcion,
-          price: Number(precio),
-          originalPrice: Number(precioOriginal),
+          price: precioPackConDescuento, // Precio calculado automáticamente
+          originalPrice: totalCursos, // Total de cursos sin descuento
           courses: cursos,
           imageUrl: imageMethod === 'url' ? imagen : '',
           imageData: finalImageData
@@ -179,14 +183,6 @@ export default function NuevoPackPage() {
     }
   };
 
-  const calcularDescuento = () => {
-    if (precio && precioOriginal && Number(precio) > 0 && Number(precioOriginal) > 0) {
-      const descuento = ((Number(precioOriginal) - Number(precio)) / Number(precioOriginal)) * 100;
-      return Math.round(descuento);
-    }
-    return 0;
-  };
-
   if (status !== 'authenticated' || session?.user?.role !== 'admin') {
     return null;
   }
@@ -199,8 +195,8 @@ export default function NuevoPackPage() {
           <h1 className="text-3xl font-bold text-white mb-2">
             📦 Crear Nuevo Pack
           </h1>
-          <p className="text-gray-300 mb-6">
-            Crea un paquete de cursos con precio promocional
+          <p className="text-gray-400">
+            Crea un paquete de cursos con descuento automático del 10%. El precio se calcula automáticamente sumando los cursos seleccionados.
           </p>
           
           {/* Breadcrumb */}
@@ -398,75 +394,6 @@ export default function NuevoPackPage() {
                 </div>
               </div>
 
-              {/* Precios */}
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-white border-b border-gray-600 pb-2">
-                  💰 Configuración de Precios
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Precio Original */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Precio Original *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">$</span>
-                      </div>
-                      <input 
-                        type="number" 
-                        value={precioOriginal} 
-                        onChange={e => setPrecioOriginal(e.target.value)} 
-                        required 
-                        min={0}
-                        placeholder="0"
-                        className="w-full bg-[#1E1E2F] border border-gray-600 rounded-lg pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Precio Promocional */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Precio Promocional *
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">$</span>
-                      </div>
-                      <input 
-                        type="number" 
-                        value={precio} 
-                        onChange={e => setPrecio(e.target.value)} 
-                        required 
-                        min={0}
-                        placeholder="0"
-                        className="w-full bg-[#1E1E2F] border border-gray-600 rounded-lg pl-8 pr-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Preview de descuento */}
-                {calcularDescuento() > 0 && (
-                  <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-4 mb-2">
-                        <span className="text-2xl font-bold text-white">{calcularDescuento()}% OFF</span>
-                      </div>
-                      <div className="flex items-center justify-center gap-3 text-lg">
-                        <span className="text-gray-400 line-through">${Number(precioOriginal)}</span>
-                        <span className="text-2xl font-bold text-white">${Number(precio)}</span>
-                      </div>
-                      <p className="text-gray-300 text-sm mt-1">
-                        Ahorro: ${(Number(precioOriginal) - Number(precio))}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Selección de cursos */}
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-white border-b border-gray-600 pb-2">
@@ -505,17 +432,51 @@ export default function NuevoPackPage() {
                             onChange={() => handleCursoChange(curso._id)}
                             className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
                           />
-                          <span className="text-white font-medium">{curso.title}</span>
+                          <div className="flex-1">
+                            <span className="text-white font-medium">{curso.title}</span>
+                            <div className="text-sm text-gray-400">${curso.price / 100}</div>
+                          </div>
                         </label>
                       ))}
                     </div>
                     
-                    {/* Contador */}
+                    {/* Contador y precios */}
                     {cursos.length > 0 && (
-                      <div className="bg-[#1E1E2F] border border-gray-600 rounded-lg p-4">
+                      <div className="bg-[#1E1E2F] border border-gray-600 rounded-lg p-4 space-y-4">
                         <p className="text-gray-300 font-medium">
                           {cursos.length} curso{cursos.length !== 1 ? 's' : ''} seleccionado{cursos.length !== 1 ? 's' : ''}
                         </p>
+                        
+                        {/* Calculadora de precios automática */}
+                        {(() => {
+                          const { totalCursos, precioPackConDescuento, descuentoPorPack } = calcularPreciosAutomaticos();
+                          return totalCursos > 0 ? (
+                            <div className="bg-blue-600 bg-opacity-20 border border-blue-500 rounded-lg p-4">
+                              <h4 className="text-white font-semibold mb-3">💰 Precios Calculados Automáticamente</h4>
+                              
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-300">Total cursos individuales:</span>
+                                  <span className="text-white font-medium">${totalCursos / 100}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-300">Descuento del pack (10%):</span>
+                                  <span className="text-green-400 font-medium">-${descuentoPorPack / 100}</span>
+                                </div>
+                                <div className="border-t border-gray-600 pt-2 mt-2">
+                                  <div className="flex justify-between text-lg">
+                                    <span className="text-white font-semibold">Precio final del pack:</span>
+                                    <span className="text-green-400 font-bold">${precioPackConDescuento / 100}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-3 text-xs text-gray-400">
+                                Los usuarios que ya tengan algunos cursos pagarán menos (se descontará el precio de los cursos que ya posean)
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>
