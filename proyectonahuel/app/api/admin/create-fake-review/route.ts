@@ -53,11 +53,12 @@ export async function POST(request: Request) {
       fakeUserName: fakeUserName.trim(),
     });
 
-    // Añadir la reseña al curso si no está ya en el array
-    if (!course.reviews.includes(newReview._id)) {
-      course.reviews.push(newReview._id);
-      await course.save();
-    }
+    // Añadir la reseña al curso usando findByIdAndUpdate para evitar validación completa
+    await Course.findByIdAndUpdate(
+      courseId,
+      { $addToSet: { reviews: newReview._id } },
+      { runValidators: false }
+    );
 
     // Poblar la reseña con los datos del curso para devolver información completa
     await newReview.populate('courseId', 'title');
