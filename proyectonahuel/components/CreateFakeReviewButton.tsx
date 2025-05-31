@@ -29,8 +29,23 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
   const [comment, setComment] = useState('');
   const [searchUser, setSearchUser] = useState('');
   const [searchCourse, setSearchCourse] = useState('');
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   
   const { showNotification } = useNotifications();
+
+  // Función para cerrar modal y limpiar estados
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedUserId('');
+    setSelectedCourseId('');
+    setRating(5);
+    setComment('');
+    setSearchUser('');
+    setSearchCourse('');
+    setShowUserDropdown(false);
+    setShowCourseDropdown(false);
+  };
 
   // Cargar datos al abrir el modal
   useEffect(() => {
@@ -102,13 +117,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
       showNotification('Reseña falsa creada correctamente', 'success');
       
       // Cerrar modal y reiniciar valores
-      setIsModalOpen(false);
-      setSelectedUserId('');
-      setSelectedCourseId('');
-      setRating(5);
-      setComment('');
-      setSearchUser('');
-      setSearchCourse('');
+      closeModal();
       
       // Llamar callback para refrescar la lista
       onReviewCreated();
@@ -160,7 +169,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                 <h3 className="text-lg font-semibold text-white">Crear Reseña Falsa</h3>
                 <button 
                   className="text-neutral-400 hover:text-white transition-colors"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -186,9 +195,14 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                       className="block w-full px-3 py-2 border border-neutral-600 rounded-md shadow-sm bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       placeholder="Buscar usuario por nombre o email"
                       value={searchUser}
-                      onChange={(e) => setSearchUser(e.target.value)}
+                      onChange={(e) => {
+                        setSearchUser(e.target.value);
+                        setShowUserDropdown(e.target.value.length > 0);
+                      }}
+                      onFocus={() => setShowUserDropdown(searchUser.length > 0)}
+                      onBlur={() => setTimeout(() => setShowUserDropdown(false), 200)}
                     />
-                    {searchUser && (
+                    {showUserDropdown && (
                       <div className="absolute z-10 mt-1 w-full bg-neutral-800 shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm border border-neutral-700">
                         {filteredUsers.length === 0 ? (
                           <div className="px-4 py-2 text-sm text-neutral-400">
@@ -199,9 +213,11 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                             <div
                               key={user._id}
                               className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-neutral-700 ${selectedUserId === user._id ? 'bg-neutral-700' : ''}`}
+                              onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setSelectedUserId(user._id);
                                 setSearchUser(`${user.name} (${user.email})`);
+                                setShowUserDropdown(false);
                               }}
                             >
                               <div className="flex items-center">
@@ -232,9 +248,14 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                       className="block w-full px-3 py-2 border border-neutral-600 rounded-md shadow-sm bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       placeholder="Buscar curso por título"
                       value={searchCourse}
-                      onChange={(e) => setSearchCourse(e.target.value)}
+                      onChange={(e) => {
+                        setSearchCourse(e.target.value);
+                        setShowCourseDropdown(e.target.value.length > 0);
+                      }}
+                      onFocus={() => setShowCourseDropdown(searchCourse.length > 0)}
+                      onBlur={() => setTimeout(() => setShowCourseDropdown(false), 200)}
                     />
-                    {searchCourse && (
+                    {showCourseDropdown && (
                       <div className="absolute z-10 mt-1 w-full bg-neutral-800 shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm border border-neutral-700">
                         {filteredCourses.length === 0 ? (
                           <div className="px-4 py-2 text-sm text-neutral-400">
@@ -245,9 +266,11 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                             <div
                               key={course._id}
                               className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-neutral-700 ${selectedCourseId === course._id ? 'bg-neutral-700' : ''}`}
+                              onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setSelectedCourseId(course._id);
                                 setSearchCourse(course.title);
+                                setShowCourseDropdown(false);
                               }}
                             >
                               <span className="font-medium block truncate text-white">{course.title}</span>
@@ -315,7 +338,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
             <div className="px-6 py-4 bg-neutral-700 flex justify-end space-x-3 border-t border-neutral-600">
               <button
                 className="px-4 py-2 border border-neutral-600 rounded-md shadow-sm text-sm font-medium text-white bg-neutral-600 hover:bg-neutral-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
               >
                 Cancelar
               </button>
