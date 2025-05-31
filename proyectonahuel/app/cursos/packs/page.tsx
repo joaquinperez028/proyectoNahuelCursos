@@ -240,8 +240,8 @@ export default function PacksPage() {
           <h1 className="text-4xl sm:text-5xl font-bold text-neutral-100 mb-4 tracking-tight leading-tight font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
             Packs completos
           </h1>
-          <p className="text-lg sm:text-xl text-neutral-400 max-w-3xl mx-auto leading-relaxed" style={{ fontFamily: 'Inter, sans-serif' }}>
-            Obtené acceso a múltiples formaciones por un precio especial. Ahorrá hasta un 40% comprando nuestros packs educativos.
+          <p className="text-neutral-300 text-center max-w-3xl mx-auto text-lg mb-12 leading-relaxed">
+            Obtené acceso a múltiples formaciones por un precio especial. Ahorrá hasta un 10% comprando nuestros packs educativos.
           </p>
         </div>
         {loading ? (
