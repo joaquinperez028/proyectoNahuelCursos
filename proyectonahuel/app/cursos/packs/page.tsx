@@ -358,10 +358,10 @@ export default function PacksPage() {
                               ? 'text-neutral-500' 
                               : 'text-green-500 group-hover:scale-110'
                           }`}>
-                            ${packDiscountInfo[pack._id].adjustedPrice / 100}
+                            ${packDiscountInfo[pack._id].adjustedPrice}
                           </span>
                           <span className="text-base line-through text-neutral-500">
-                            ${pack.price / 100}
+                            ${pack.price}
                           </span>
                           <span className="text-sm bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
                             -{Math.round((1 - packDiscountInfo[pack._id].adjustedPrice / pack.price) * 100)}%
@@ -373,8 +373,8 @@ export default function PacksPage() {
                             isDisabled 
                               ? 'text-neutral-500' 
                               : 'text-green-500 group-hover:scale-110'
-                          }`}>${pack.price / 100}</span>
-                          <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
+                          }`}>${pack.price}</span>
+                          <span className="text-base line-through text-neutral-500">${pack.originalPrice}</span>
                         </>
                       )}
                     </div>
@@ -573,10 +573,10 @@ export default function PacksPage() {
             </div>
 
             <div className="flex items-center gap-4 mb-8">
-              <span className="text-4xl font-bold text-green-500">${selectedPack.price / 100}</span>
-              <span className="text-xl line-through text-neutral-500">${selectedPack.originalPrice / 100}</span>
+              <span className="text-4xl font-bold text-green-500">${selectedPack.price}</span>
+              <span className="text-xl line-through text-neutral-500">${selectedPack.originalPrice}</span>
               <span className="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-sm font-semibold">
-                Ahorrás ${(selectedPack.originalPrice - selectedPack.price) / 100}
+                Ahorrás ${(selectedPack.originalPrice - selectedPack.price)}
               </span>
             </div>
 

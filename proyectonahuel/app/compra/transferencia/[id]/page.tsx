@@ -233,9 +233,9 @@ export default function TransferPaymentPage() {
               <div className="p-6 md:w-2/3">
                 <h2 className="text-xl font-bold text-[var(--neutral-800)] mb-2">{pack.name}</h2>
                 <div className="mb-4">
-                  <span className="text-2xl font-bold text-[var(--primary)]">${(pack.price / 100).toFixed(2)}</span>
-                  <span className="ml-2 text-sm text-[var(--neutral-500)] line-through">
-                    ${(pack.originalPrice / 100).toFixed(2)}
+                  <span className="text-2xl font-bold text-[var(--primary)]">${pack.price.toFixed(2)}</span>
+                  <span className="text-lg text-gray-500 line-through ml-2">
+                    ${pack.originalPrice.toFixed(2)}
                   </span>
                 </div>
                 <div className="mb-2">

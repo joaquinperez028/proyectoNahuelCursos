@@ -91,7 +91,7 @@ export async function POST(request: Request) {
         title: c.title,
         price: c.price
       })),
-      message: `Descuento del pack (10%) + Ya tenés ${ownedCourses.length} curso${ownedCourses.length !== 1 ? 's' : ''} por $${ownedCoursesPrice / 100}`
+      message: `Descuento del pack (10%) + Ya tenés ${ownedCourses.length} curso${ownedCourses.length !== 1 ? 's' : ''} por $${ownedCoursesPrice}`
     });
 
   } catch (error) {

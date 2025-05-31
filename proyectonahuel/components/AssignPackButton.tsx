@@ -239,9 +239,9 @@ export default function AssignPackButton() {
                                     {pack.courses.length} curso{pack.courses.length !== 1 ? 's' : ''}
                                   </span>
                                 </div>
-                                <span className="text-[var(--neutral-400)] ml-2 block truncate">
-                                  ${(pack.price / 100).toFixed(2)}
-                                </span>
+                                <div className="text-sm text-[var(--neutral-400)]">
+                                  ${pack.price.toFixed(2)}
+                                </div>
                               </div>
                             </div>
                           ))

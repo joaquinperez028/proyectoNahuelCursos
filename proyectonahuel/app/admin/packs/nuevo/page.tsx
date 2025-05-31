@@ -434,7 +434,7 @@ export default function NuevoPackPage() {
                           />
                           <div className="flex-1">
                             <span className="text-white font-medium">{curso.title}</span>
-                            <div className="text-sm text-gray-400">${curso.price / 100}</div>
+                            <div className="text-sm text-gray-400">${curso.price}</div>
                           </div>
                         </label>
                       ))}
@@ -457,16 +457,16 @@ export default function NuevoPackPage() {
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-gray-300">Total cursos individuales:</span>
-                                  <span className="text-white font-medium">${totalCursos / 100}</span>
+                                  <span className="text-white font-medium">${totalCursos}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-gray-300">Descuento del pack (10%):</span>
-                                  <span className="text-green-400 font-medium">-${descuentoPorPack / 100}</span>
+                                  <span className="text-green-400 font-medium">-${descuentoPorPack}</span>
                                 </div>
                                 <div className="border-t border-gray-600 pt-2 mt-2">
                                   <div className="flex justify-between text-lg">
                                     <span className="text-white font-semibold">Precio final del pack:</span>
-                                    <span className="text-green-400 font-bold">${precioPackConDescuento / 100}</span>
+                                    <span className="text-green-400 font-bold">${precioPackConDescuento}</span>
                                   </div>
                                 </div>
                               </div>
