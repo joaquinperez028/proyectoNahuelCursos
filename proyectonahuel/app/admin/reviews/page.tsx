@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CreateFakeReviewButton from "@/components/CreateFakeReviewButton";
 
 interface Review {
   _id: string;
@@ -60,7 +61,7 @@ export default function AdminReviewsPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6 text-white">Moderación de Reseñas</h1>
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 mb-6 flex-wrap">
         <input
           type="text"
           placeholder="Filtrar por usuario"
@@ -75,8 +76,12 @@ export default function AdminReviewsPage() {
           onChange={e => setFilterCourse(e.target.value)}
           className="px-3 py-2 rounded bg-neutral-800 text-white border border-neutral-700"
         />
-        <button onClick={fetchReviews} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Refrescar</button>
+        <button onClick={fetchReviews} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Refrescar
+        </button>
+        <CreateFakeReviewButton onReviewCreated={fetchReviews} />
       </div>
+      
       {loading ? (
         <div className="text-white">Cargando reseñas...</div>
       ) : error ? (
