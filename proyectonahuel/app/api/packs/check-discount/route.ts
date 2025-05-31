@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     // Obtener pack con sus cursos
-    const pack = await Pack.findById(packId).populate('courses', '_id title');
+    const pack = await Pack.findById(packId).populate('courses', '_id title price');
     if (!pack) {
       return NextResponse.json({ error: 'Pack no encontrado' }, { status: 404 });
     }
@@ -33,7 +33,6 @@ export async function POST(request: Request) {
 
     // Verificar qué cursos del pack ya tiene el usuario
     const userCourseIds = user.courses.map((id: any) => id.toString());
-    const packCourseIds = pack.courses.map((course: any) => course._id.toString());
     
     const ownedCourses = pack.courses.filter((course: any) => 
       userCourseIds.includes(course._id.toString())
@@ -43,7 +42,7 @@ export async function POST(request: Request) {
       !userCourseIds.includes(course._id.toString())
     );
 
-    // Si no tiene ningún curso del pack, no hay descuento
+    // Si no tiene ningún curso del pack, no hay descuento adicional (solo el 10% del pack)
     if (ownedCourses.length === 0) {
       return NextResponse.json({ hasDiscount: false });
     }
@@ -57,27 +56,42 @@ export async function POST(request: Request) {
       });
     }
 
-    // Calcular precio ajustado
-    const totalCourses = pack.courses.length;
-    const coursesToBuyCount = coursesToBuy.length;
-    const adjustedPrice = Math.round((coursesToBuyCount / totalCourses) * pack.price);
-    const discount = pack.price - adjustedPrice;
+    // NUEVA LÓGICA DE PRECIOS:
+    // 1. Calcular precio total de todos los cursos
+    const totalCoursesPrice = pack.courses.reduce((sum: number, course: any) => sum + course.price, 0);
+    
+    // 2. Precio base del pack con 10% descuento
+    const packBasePrice = Math.round(totalCoursesPrice * 0.9);
+    
+    // 3. Precio de cursos que ya tiene
+    const ownedCoursesPrice = ownedCourses.reduce((sum: number, course: any) => sum + course.price, 0);
+    
+    // 4. Precio final = Precio base del pack - Precio de cursos que ya tiene
+    const finalPrice = packBasePrice - ownedCoursesPrice;
+    
+    // 5. Descuento total = Precio original - Precio final
+    const totalDiscount = totalCoursesPrice - finalPrice;
 
     return NextResponse.json({
       hasDiscount: true,
-      originalPrice: pack.price,
-      adjustedPrice: adjustedPrice,
-      discount: discount,
-      discountPercentage: Math.round((discount / pack.price) * 100),
+      totalCoursesPrice: totalCoursesPrice,
+      packBasePrice: packBasePrice,
+      adjustedPrice: finalPrice,
+      totalDiscount: totalDiscount,
+      discountFromPack: totalCoursesPrice - packBasePrice, // 10% descuento
+      discountFromOwned: ownedCoursesPrice, // Descuento por cursos ya poseídos
+      discountPercentage: Math.round((totalDiscount / totalCoursesPrice) * 100),
       ownedCourses: ownedCourses.map((c: any) => ({
         _id: c._id,
-        title: c.title
+        title: c.title,
+        price: c.price
       })),
       coursesToBuy: coursesToBuy.map((c: any) => ({
         _id: c._id,
-        title: c.title
+        title: c.title,
+        price: c.price
       })),
-      message: `Ya tenés ${ownedCourses.length} de ${totalCourses} cursos. Precio ajustado: $${adjustedPrice / 100}`
+      message: `Descuento del pack (10%) + Ya tenés ${ownedCourses.length} curso${ownedCourses.length !== 1 ? 's' : ''} por $${ownedCoursesPrice / 100}`
     });
 
   } catch (error) {

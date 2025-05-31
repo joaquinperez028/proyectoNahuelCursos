@@ -24,8 +24,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID del pack requerido' }, { status: 400 });
     }
     
-    // Obtener pack con sus cursos
-    const pack = await Pack.findById(packId).populate('courses', 'title');
+    // Obtener pack con sus cursos (incluyendo precios)
+    const pack = await Pack.findById(packId).populate('courses', 'title price');
     if (!pack) {
       return NextResponse.json({ error: 'Pack no encontrado' }, { status: 404 });
     }
@@ -38,7 +38,6 @@ export async function POST(request: Request) {
     
     // Verificar si el usuario ya tiene algún curso del pack
     const userCourseIds = user.courses.map((id: any) => id.toString());
-    const packCourseIds = pack.courses.map((course: any) => course._id.toString());
     
     // Encontrar cursos que ya posee y cursos que necesita comprar
     const ownedCourses = pack.courses.filter((course: any) => 
@@ -56,19 +55,33 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    // Calcular precio ajustado proporcional
-    const totalCourses = pack.courses.length;
-    const coursesToBuyCount = coursesToBuy.length;
-    const adjustedPrice = Math.round((coursesToBuyCount / totalCourses) * pack.price);
+    // NUEVA LÓGICA DE PRECIOS:
+    // 1. Calcular precio total de todos los cursos
+    const totalCoursesPrice = pack.courses.reduce((sum: number, course: any) => sum + course.price, 0);
+    
+    // 2. Aplicar 10% de descuento al total
+    const packBasePrice = Math.round(totalCoursesPrice * 0.9); // 10% descuento
+    
+    // 3. Calcular precio de cursos que ya tiene el usuario
+    const ownedCoursesPrice = ownedCourses.reduce((sum: number, course: any) => sum + course.price, 0);
+    
+    // 4. Precio final = Precio base del pack - Precio de cursos que ya tiene
+    const finalPrice = packBasePrice - ownedCoursesPrice;
     
     // Información para mostrar al usuario
     const packInfo = {
-      originalPrice: pack.price,
-      adjustedPrice: adjustedPrice,
-      discount: pack.price - adjustedPrice,
-      ownedCourses: ownedCourses.map((c: any) => c.title),
-      coursesToBuy: coursesToBuy.map((c: any) => c.title),
-      discountReason: ownedCourses.length > 0 ? `Ya tenés ${ownedCourses.length} de ${totalCourses} cursos` : null
+      totalCoursesPrice: totalCoursesPrice,
+      packBasePrice: packBasePrice, // Con 10% descuento
+      ownedCoursesPrice: ownedCoursesPrice,
+      finalPrice: finalPrice,
+      discountFromCourses: totalCoursesPrice - packBasePrice, // Descuento del 10%
+      discountFromOwned: ownedCoursesPrice, // Descuento por cursos que ya tiene
+      totalDiscount: (totalCoursesPrice - finalPrice),
+      ownedCourses: ownedCourses.map((c: any) => ({ title: c.title, price: c.price })),
+      coursesToBuy: coursesToBuy.map((c: any) => ({ title: c.title, price: c.price })),
+      discountReason: ownedCourses.length > 0 
+        ? `Descuento pack (10%) + Ya tenés ${ownedCourses.length} curso${ownedCourses.length !== 1 ? 's' : ''}`
+        : 'Descuento pack (10%)'
     };
     
     // Crear la preferencia de pago para el pack
@@ -80,7 +93,7 @@ export async function POST(request: Request) {
             id: packId,
             title: pack.name,
             description: pack.description.substring(0, 255),
-            unit_price: adjustedPrice,
+            unit_price: finalPrice,
             quantity: 1,
             currency_id: 'ARS',
           }
@@ -101,8 +114,8 @@ export async function POST(request: Request) {
         metadata: {
           pack_id: packId,
           user_id: user._id.toString(),
-          original_price: pack.price,
-          adjusted_price: adjustedPrice,
+          original_price: totalCoursesPrice,
+          adjusted_price: finalPrice,
           owned_courses: ownedCourses.length,
           courses_to_buy: coursesToBuy.length,
         }
