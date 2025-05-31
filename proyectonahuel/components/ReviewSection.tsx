@@ -9,11 +9,14 @@ interface ReviewProps {
   _id: string;
   rating: number;
   comment: string;
-  userId: {
+  userId?: {
     _id: string;
     name: string;
     image?: string;
   };
+  // Campos para usuarios falsos
+  isFakeUser?: boolean;
+  fakeUserName?: string;
   createdAt: string;
 }
 
@@ -32,7 +35,7 @@ const ReviewSection = ({ courseId, reviews }: ReviewSectionProps) => {
   const [errorMessage, setErrorMessage] = useState('');
 
   // Verificar si el usuario ya ha hecho una reseña
-  const userReview = session?.user ? reviews.find(review => review.userId._id === session.user.id) : null;
+  const userReview = session?.user ? reviews.find(review => review.userId?._id === session.user.id) : null;
 
   // Si el usuario ya tiene una reseña, cargar sus valores
   useState(() => {
@@ -233,24 +236,31 @@ const ReviewSection = ({ courseId, reviews }: ReviewSectionProps) => {
               <div className="p-5">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    {review.userId.image ? (
+                    {(review.isFakeUser ? false : review.userId?.image) ? (
                       <Image
-                        src={review.userId.image}
-                        alt={review.userId.name}
+                        src={review.userId!.image!}
+                        alt={review.isFakeUser ? review.fakeUserName! : review.userId!.name}
                         width={40}
                         height={40}
                         className="rounded-full ring-2 ring-[var(--border)]"
                       />
                     ) : (
                       <div className="w-10 h-10 bg-[var(--primary)] rounded-full flex items-center justify-center">
-                        <span className="text-[var(--neutral-100)]">{review.userId.name.charAt(0)}</span>
+                        <span className="text-[var(--neutral-100)]">
+                          {review.isFakeUser 
+                            ? review.fakeUserName?.charAt(0) 
+                            : review.userId?.name.charAt(0)
+                          }
+                        </span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-[var(--neutral-100)]">{review.userId.name}</h4>
+                        <h4 className="font-medium text-[var(--neutral-100)]">
+                          {review.isFakeUser ? review.fakeUserName : review.userId?.name}
+                        </h4>
                         <div className="flex items-center mt-1">
                           {renderStarRating(review.rating)}
                         </div>
@@ -258,9 +268,10 @@ const ReviewSection = ({ courseId, reviews }: ReviewSectionProps) => {
                           {new Date(review.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      {(session?.user.id === review.userId._id || session?.user.role === 'admin') && (
+                      {/* Solo mostrar opciones de edición/borrado para usuarios reales y admins */}
+                      {!review.isFakeUser && (session?.user.id === review.userId?._id || session?.user.role === 'admin') && (
                         <div className="flex space-x-2">
-                          {session?.user.id === review.userId._id && (
+                          {session?.user.id === review.userId?._id && (
                             <button
                               onClick={() => {
                                 setUserRating(review.rating);
@@ -283,6 +294,20 @@ const ReviewSection = ({ courseId, reviews }: ReviewSectionProps) => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             Eliminar
+                          </button>
+                        </div>
+                      )}
+                      {/* Para reseñas falsas, solo admins pueden eliminar */}
+                      {review.isFakeUser && session?.user.role === 'admin' && (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleDeleteReview(review._id)}
+                            className="text-sm text-red-500 hover:text-red-400 transition-colors flex items-center"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            Eliminar (Falsa)
                           </button>
                         </div>
                       )}

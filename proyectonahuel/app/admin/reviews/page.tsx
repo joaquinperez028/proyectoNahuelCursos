@@ -7,9 +7,11 @@ interface Review {
   _id: string;
   rating: number;
   comment: string;
-  userId: { _id: string; name: string; image?: string };
+  userId?: { _id: string; name: string; image?: string };
   courseId: { _id: string; title: string };
   createdAt: string;
+  isFakeUser?: boolean;
+  fakeUserName?: string;
 }
 
 export default function AdminReviewsPage() {
@@ -53,10 +55,11 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const filtered = reviews.filter((r) =>
-    (!filterUser || r.userId.name.toLowerCase().includes(filterUser.toLowerCase())) &&
-    (!filterCourse || r.courseId.title.toLowerCase().includes(filterCourse.toLowerCase()))
-  );
+  const filtered = reviews.filter((r) => {
+    const userName = r.isFakeUser ? r.fakeUserName : r.userId?.name;
+    return (!filterUser || userName?.toLowerCase().includes(filterUser.toLowerCase())) &&
+           (!filterCourse || r.courseId.title.toLowerCase().includes(filterCourse.toLowerCase()));
+  });
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -97,7 +100,15 @@ export default function AdminReviewsPage() {
                   <span className="text-yellow-400 font-bold">{"★".repeat(r.rating)}</span>
                   <span className="text-neutral-400 text-xs">{new Date(r.createdAt).toLocaleString()}</span>
                 </div>
-                <div className="text-white font-medium mb-1">{r.userId.name} en <span className="text-blue-300">{r.courseId.title}</span></div>
+                <div className="text-white font-medium mb-1">
+                  {r.isFakeUser ? (
+                    <span>
+                      {r.fakeUserName} <span className="text-orange-400 text-xs">(Usuario falso)</span>
+                    </span>
+                  ) : (
+                    r.userId?.name
+                  )} en <span className="text-blue-300">{r.courseId.title}</span>
+                </div>
                 <div className="text-neutral-200">{r.comment}</div>
               </div>
               <button

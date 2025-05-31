@@ -9,42 +9,31 @@ interface CourseOption {
   title: string;
 }
 
-interface UserOption {
-  _id: string;
-  name: string;
-  email: string;
-  role?: string;
-}
-
 export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCreated: () => void }) {
   // Estados
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [courses, setCourses] = useState<CourseOption[]>([]);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [searchUser, setSearchUser] = useState('');
   const [searchCourse, setSearchCourse] = useState('');
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+  // Estados para usuario falso
+  const [fakeUserName, setFakeUserName] = useState('');
   
   const { showNotification } = useNotifications();
 
   // Función para cerrar modal y limpiar estados
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedUserId('');
     setSelectedCourseId('');
     setRating(5);
     setComment('');
-    setSearchUser('');
     setSearchCourse('');
-    setShowUserDropdown(false);
     setShowCourseDropdown(false);
+    setFakeUserName('');
   };
 
   // Cargar datos al abrir el modal
@@ -54,7 +43,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
     }
   }, [isModalOpen]);
 
-  // Función para obtener cursos y usuarios
+  // Función para obtener cursos
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -66,7 +55,6 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
       
       const data = await response.json();
       setCourses(data.courses || []);
-      setUsers(data.users || []);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       showNotification('Error al cargar datos. Inténtalo de nuevo.', 'error');
@@ -75,12 +63,6 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
     }
   };
 
-  // Filtrar usuarios según la búsqueda
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchUser.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchUser.toLowerCase())
-  );
-
   // Filtrar cursos según la búsqueda
   const filteredCourses = courses.filter(course => 
     course.title.toLowerCase().includes(searchCourse.toLowerCase())
@@ -88,7 +70,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
 
   // Crear reseña falsa
   const handleCreateFakeReview = async () => {
-    if (!selectedUserId || !selectedCourseId || !comment.trim() || rating < 1 || rating > 5) {
+    if (!fakeUserName.trim() || !selectedCourseId || !comment.trim() || rating < 1 || rating > 5) {
       showNotification('Debes completar todos los campos correctamente', 'error');
       return;
     }
@@ -101,7 +83,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: selectedUserId,
+          fakeUserName: fakeUserName.trim(),
           courseId: selectedCourseId,
           rating,
           comment: comment.trim()
@@ -145,7 +127,6 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
     ));
   };
 
-  const selectedUser = users.find(user => user._id === selectedUserId);
   const selectedCourse = courses.find(course => course._id === selectedCourseId);
 
   return (
@@ -184,57 +165,21 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
               </div>
             ) : (
               <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-                {/* Selector de usuario */}
+                {/* Campo de usuario falso */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Usuario (autor de la reseña)
+                    Nombre del usuario falso
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      className="block w-full px-3 py-2 border border-neutral-600 rounded-md shadow-sm bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      placeholder="Buscar usuario por nombre o email"
-                      value={searchUser}
-                      onChange={(e) => {
-                        setSearchUser(e.target.value);
-                        setShowUserDropdown(e.target.value.length > 0);
-                      }}
-                      onFocus={() => setShowUserDropdown(searchUser.length > 0)}
-                      onBlur={() => setTimeout(() => setShowUserDropdown(false), 200)}
-                    />
-                    {showUserDropdown && (
-                      <div className="absolute z-10 mt-1 w-full bg-neutral-800 shadow-lg max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm border border-neutral-700">
-                        {filteredUsers.length === 0 ? (
-                          <div className="px-4 py-2 text-sm text-neutral-400">
-                            No se encontraron resultados
-                          </div>
-                        ) : (
-                          filteredUsers.map((user) => (
-                            <div
-                              key={user._id}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-neutral-700 ${selectedUserId === user._id ? 'bg-neutral-700' : ''}`}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => {
-                                setSelectedUserId(user._id);
-                                setSearchUser(`${user.name} (${user.email})`);
-                                setShowUserDropdown(false);
-                              }}
-                            >
-                              <div className="flex items-center">
-                                <span className="font-medium block truncate text-white">{user.name}</span>
-                                <span className="text-neutral-400 ml-2 block truncate">{user.email}</span>
-                              </div>
-                              {user.role === 'admin' && (
-                                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                  Admin
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    className="block w-full px-3 py-2 border border-neutral-600 rounded-md shadow-sm bg-neutral-700 text-white placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ej: María García, Juan Pérez, etc."
+                    value={fakeUserName}
+                    onChange={(e) => setFakeUserName(e.target.value)}
+                  />
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Este nombre aparecerá como autor de la reseña
+                  </p>
                 </div>
 
                 {/* Selector de curso */}
@@ -317,7 +262,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                 </div>
 
                 {/* Vista previa */}
-                {selectedUser && selectedCourse && comment && (
+                {fakeUserName.trim() && selectedCourse && comment && (
                   <div className="bg-neutral-700 rounded-lg p-4 border border-neutral-600">
                     <h4 className="text-sm font-medium text-white mb-2">Vista previa:</h4>
                     <div className="bg-neutral-800 border border-neutral-600 rounded-lg p-4">
@@ -326,7 +271,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
                         <span className="text-neutral-400 text-xs">Ahora</span>
                       </div>
                       <div className="text-white font-medium mb-1">
-                        {selectedUser.name} en <span className="text-blue-300">{selectedCourse.title}</span>
+                        {fakeUserName.trim()} en <span className="text-blue-300">{selectedCourse.title}</span>
                       </div>
                       <div className="text-neutral-200">{comment}</div>
                     </div>
@@ -345,7 +290,7 @@ export default function CreateFakeReviewButton({ onReviewCreated }: { onReviewCr
               <button
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleCreateFakeReview}
-                disabled={submitting || !selectedUserId || !selectedCourseId || !comment.trim()}
+                disabled={submitting || !fakeUserName.trim() || !selectedCourseId || !comment.trim()}
               >
                 {submitting ? (
                   <div className="flex items-center">

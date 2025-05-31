@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/options';
 import { connectToDatabase } from '@/lib/mongodb';
 import Course from '@/models/Course';
-import User from '@/models/User';
 import Review from '@/models/Review';
 
 // Endpoint para crear reseñas falsas (solo administradores)
@@ -19,35 +18,29 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     // Obtener datos del cuerpo de la solicitud
-    const { userId, courseId, rating, comment } = await request.json();
+    const { fakeUserName, courseId, rating, comment } = await request.json();
 
-    if (!userId || !courseId || !rating || !comment || rating < 1 || rating > 5) {
+    if (!fakeUserName?.trim() || !courseId || !rating || !comment?.trim() || rating < 1 || rating > 5) {
       return NextResponse.json({ error: 'Todos los campos son requeridos y la calificación debe estar entre 1 y 5' }, { status: 400 });
     }
 
-    // Verificar si el usuario y el curso existen
-    const [user, course] = await Promise.all([
-      User.findById(userId),
-      Course.findById(courseId)
-    ]);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
-    }
+    // Verificar si el curso existe
+    const course = await Course.findById(courseId);
 
     if (!course) {
       return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 });
     }
 
-    // Verificar si ya existe una reseña de este usuario para este curso
+    // Verificar si ya existe una reseña falsa con el mismo nombre para este curso
     const existingReview = await Review.findOne({
-      userId,
+      isFakeUser: true,
+      fakeUserName: fakeUserName.trim(),
       courseId,
     });
 
     if (existingReview) {
       return NextResponse.json({ 
-        error: `${user.name} ya tiene una reseña para el curso "${course.title}"` 
+        error: `Ya existe una reseña de "${fakeUserName.trim()}" para el curso "${course.title}"` 
       }, { status: 400 });
     }
 
@@ -55,8 +48,9 @@ export async function POST(request: Request) {
     const newReview = await Review.create({
       rating: parseInt(rating),
       comment: comment.trim(),
-      userId,
       courseId,
+      isFakeUser: true,
+      fakeUserName: fakeUserName.trim(),
     });
 
     // Añadir la reseña al curso si no está ya en el array
@@ -65,11 +59,10 @@ export async function POST(request: Request) {
       await course.save();
     }
 
-    // Poblar la reseña con los datos del usuario para devolver información completa
-    await newReview.populate('userId', 'name image');
+    // Poblar la reseña con los datos del curso para devolver información completa
     await newReview.populate('courseId', 'title');
 
-    console.log(`[CREATE-FAKE-REVIEW] Reseña falsa creada: ${newReview._id} por admin ${session.user.id}`);
+    console.log(`[CREATE-FAKE-REVIEW] Reseña falsa creada: ${newReview._id} por admin ${session.user.id} (usuario falso: ${fakeUserName.trim()})`);
 
     return NextResponse.json({
       success: true,
@@ -86,7 +79,7 @@ export async function POST(request: Request) {
   }
 }
 
-// Endpoint para obtener cursos y usuarios para el formulario
+// Endpoint para obtener cursos para el formulario
 export async function GET(request: Request) {
   try {
     // Verificar que sea un administrador
@@ -98,15 +91,11 @@ export async function GET(request: Request) {
     // Conectar a la base de datos
     await connectToDatabase();
 
-    // Obtener lista de cursos y usuarios para los selectores
-    const [courses, users] = await Promise.all([
-      Course.find().select('_id title').sort({ title: 1 }).lean(),
-      User.find().select('_id name email role').sort({ name: 1 }).lean()
-    ]);
+    // Obtener lista de cursos para el selector
+    const courses = await Course.find().select('_id title').sort({ title: 1 }).lean();
 
     return NextResponse.json({
-      courses,
-      users
+      courses
     });
 
   } catch (error) {
