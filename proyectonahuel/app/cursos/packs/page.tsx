@@ -69,6 +69,9 @@ export default function PacksPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
+  // Estado para información de descuentos de packs
+  const [packDiscountInfo, setPackDiscountInfo] = useState<Record<string, any>>({});
+
   const showToast = (message: string) => {
     setNotificationMessage(message);
     setShowNotification(true);
@@ -124,6 +127,40 @@ export default function PacksPage() {
     setEligibilityMap(newEligibilityMap);
     setCheckingEligibility(newCheckingEligibility);
   };
+
+  // Función para verificar descuentos disponibles para packs
+  const checkPackDiscounts = async () => {
+    if (!session?.user) return;
+    
+    try {
+      for (const pack of packs) {
+        const response = await fetch('/api/packs/check-discount', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packId: pack._id })
+        });
+        
+        if (response.ok) {
+          const discountInfo = await response.json();
+          if (discountInfo.hasDiscount) {
+            setPackDiscountInfo(prev => ({
+              ...prev,
+              [pack._id]: discountInfo
+            }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar descuentos:', error);
+    }
+  };
+
+  // Verificar descuentos cuando cambien los packs o el usuario
+  useEffect(() => {
+    if (packs.length > 0) {
+      checkPackDiscounts();
+    }
+  }, [packs, session]);
 
   const handleShowPaymentModal = (packId: string) => {
     if (!session) {
@@ -310,13 +347,52 @@ export default function PacksPage() {
 
                     {/* Precios con animación */}
                     <div className="flex items-center gap-3 my-4">
-                      <span className={`text-2xl font-bold transition-all duration-300 ${
-                        isDisabled 
-                          ? 'text-neutral-500' 
-                          : 'text-green-500 group-hover:scale-110'
-                      }`}>${pack.price / 100}</span>
-                      <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
+                      {packDiscountInfo[pack._id] ? (
+                        <>
+                          <span className={`text-2xl font-bold transition-all duration-300 ${
+                            isDisabled 
+                              ? 'text-neutral-500' 
+                              : 'text-green-500 group-hover:scale-110'
+                          }`}>
+                            ${packDiscountInfo[pack._id].adjustedPrice / 100}
+                          </span>
+                          <span className="text-base line-through text-neutral-500">
+                            ${pack.price / 100}
+                          </span>
+                          <span className="text-sm bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                            -{Math.round((1 - packDiscountInfo[pack._id].adjustedPrice / pack.price) * 100)}%
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className={`text-2xl font-bold transition-all duration-300 ${
+                            isDisabled 
+                              ? 'text-neutral-500' 
+                              : 'text-green-500 group-hover:scale-110'
+                          }`}>${pack.price / 100}</span>
+                          <span className="text-base line-through text-neutral-500">${pack.originalPrice / 100}</span>
+                        </>
+                      )}
                     </div>
+
+                    {/* Información de descuento por cursos ya poseídos */}
+                    {packDiscountInfo[pack._id] && (
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 mb-4">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-orange-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-orange-400 font-medium text-sm">
+                              ¡Precio ajustado!
+                            </p>
+                            <p className="text-orange-300 text-xs">
+                              Ya tenés {packDiscountInfo[pack._id].ownedCourses.length} curso{packDiscountInfo[pack._id].ownedCourses.length !== 1 ? 's' : ''} de este pack
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Botones con nueva organización */}
                     <div className="flex flex-col gap-3">
