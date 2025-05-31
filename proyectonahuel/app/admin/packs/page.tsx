@@ -214,7 +214,7 @@ export default function AdminPacksPage() {
                           <div className="text-lg font-bold text-[#4CAF50]">${pack.price}</div>
                           <div className="text-sm text-[#8A8A9A] line-through">${pack.originalPrice}</div>
                           <div className="text-xs text-[#4CAF50]">
-                            {Math.round((1 - pack.price / pack.originalPrice) * 100)}% OFF
+                            10% OFF
                           </div>
                         </div>
                       </td>

@@ -302,7 +302,7 @@ export default function PacksPage() {
                     }`}>
                       {isDisabled 
                         ? 'NO DISPONIBLE' 
-                        : `${Math.round((1 - pack.price / pack.originalPrice) * 100)}% OFF`
+                        : `10% OFF`
                       }
                     </div>
                   </div>
@@ -525,7 +525,7 @@ export default function PacksPage() {
               {/* Badge de descuento */}
               {!isPackDisabled(selectedPack._id) ? (
                 <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
-                  {Math.round((1 - selectedPack.price / selectedPack.originalPrice) * 100)}% OFF
+                  10% OFF
                 </div>
               ) : (
                 <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-20">
