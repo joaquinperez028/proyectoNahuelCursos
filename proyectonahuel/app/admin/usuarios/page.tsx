@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from '@/models/User';
 import UsersTable from './components/UsersTable';
 import AssignCourseButton from '@/components/AssignCourseButton';
+import AssignPackButton from '@/components/AssignPackButton';
 
 // Esta función verificará si el usuario actual es administrador
 async function getAdminStatus() {
@@ -36,9 +37,10 @@ export default async function AdminUsersPage() {
           </p>
         </div>
         
-        {/* Botón para asignar cursos */}
-        <div className="mb-6">
+        {/* Botones para asignar cursos y packs */}
+        <div className="mb-6 flex gap-4">
           <AssignCourseButton />
+          <AssignPackButton />
         </div>
         
         {/* Componente Cliente para la tabla de usuarios con filtros y ordenación */}
