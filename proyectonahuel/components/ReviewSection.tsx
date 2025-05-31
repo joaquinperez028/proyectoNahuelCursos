@@ -248,8 +248,8 @@ const ReviewSection = ({ courseId, reviews }: ReviewSectionProps) => {
                       <div className="w-10 h-10 bg-[var(--primary)] rounded-full flex items-center justify-center">
                         <span className="text-[var(--neutral-100)]">
                           {review.isFakeUser 
-                            ? review.fakeUserName?.charAt(0) 
-                            : review.userId?.name.charAt(0)
+                            ? review.fakeUserName?.charAt(0).toUpperCase() 
+                            : review.userId?.name.charAt(0).toUpperCase()
                           }
                         </span>
                       </div>

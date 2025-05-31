@@ -62,7 +62,7 @@ interface ReviewType {
   _id: string;
   rating: number;
   comment: string;
-  userId: {
+  userId?: {
     _id: string;
     name: string;
     image?: string;
@@ -70,6 +70,9 @@ interface ReviewType {
   courseId: string;
   createdAt: string;
   updatedAt: string;
+  // Campos para usuarios falsos
+  isFakeUser?: boolean;
+  fakeUserName?: string;
 }
 
 interface CourseType {
@@ -195,14 +198,16 @@ async function getCourse(id: string): Promise<CourseType | null> {
         _id: review._id.toString(),
         rating: review.rating || 0,
         comment: review.comment || '',
-        userId: {
+        userId: review.isFakeUser ? undefined : {
           _id: review.userId?._id ? review.userId._id.toString() : '',
           name: review.userId?.name || '',
           image: review.userId?.image || ''
         },
         courseId: review.courseId.toString(),
         createdAt: review.createdAt ? new Date(review.createdAt).toISOString() : new Date().toISOString(),
-        updatedAt: review.updatedAt ? new Date(review.updatedAt).toISOString() : new Date().toISOString()
+        updatedAt: review.updatedAt ? new Date(review.updatedAt).toISOString() : new Date().toISOString(),
+        isFakeUser: review.isFakeUser || false,
+        fakeUserName: review.fakeUserName || ''
       })),
       
       onSale: courseDoc.onSale || false,
