@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     // Obtener detalles de los cursos
     const courses = await Course.find({
       _id: { $in: courseIds }
-    }).populate('createdBy', 'name').lean();
+    }).populate('createdBy', 'name image').lean();
     
     // Formatear los cursos para la respuesta
     const formattedCourses = courses.map((course: any) => ({
@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
       duration: course.duration || 0,
       createdBy: course.createdBy ? {
         _id: course.createdBy._id ? course.createdBy._id.toString() : '',
-        name: course.createdBy.name || 'Desconocido.'
+        name: course.createdBy.name || 'Desconocido.',
+        image: course.createdBy.image || ''
       } : null,
       createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: course.updatedAt ? new Date(course.updatedAt).toISOString() : new Date().toISOString()

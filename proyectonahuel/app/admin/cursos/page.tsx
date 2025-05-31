@@ -18,6 +18,7 @@ interface CourseType {
   createdBy: {
     _id: string;
     name: string;
+    image: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -34,7 +35,7 @@ async function getAdminStatus() {
 async function getCourses(): Promise<CourseType[]> {
   try {
     await connectToDatabase();
-    const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name').lean();
+    const courses = await Course.find({}).sort({ createdAt: -1 }).populate('createdBy', 'name image').lean();
     
     return courses.map((course: any) => ({
       ...course,
@@ -42,7 +43,8 @@ async function getCourses(): Promise<CourseType[]> {
       createdBy: {
         ...course.createdBy,
         _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
-        name: course.createdBy?.name || ''
+        name: course.createdBy?.name || '',
+        image: course.createdBy?.image || ''
       },
       title: course.title || '',
       description: course.description || '',

@@ -18,6 +18,7 @@ interface CourseCardProps {
     createdBy: {
       _id: string;
       name: string;
+      image?: string;
     };
     reviews: any[];
     averageRating?: number;
@@ -209,8 +210,18 @@ const CourseCard = ({ course }: CourseCardProps) => {
         
         <div className="flex items-center text-sm text-[var(--neutral-400)] mb-4">
           <div className="flex items-center">
-            <div className="w-6 h-6 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--neutral-100)] mr-2 text-xs">
-              {course.createdBy?.name?.charAt(0) || 'I'}
+            <div className="w-6 h-6 rounded-full bg-[var(--primary)] flex items-center justify-center text-[var(--neutral-100)] mr-2 text-xs overflow-hidden">
+              {course.createdBy?.image ? (
+                <Image
+                  src={course.createdBy.image}
+                  alt={course.createdBy.name || 'Instructor'}
+                  width={24}
+                  height={24}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                course.createdBy?.name?.charAt(0) || 'I'
+              )}
             </div>
             <span>{course.createdBy?.name || 'Instructor.'}</span>
           </div>

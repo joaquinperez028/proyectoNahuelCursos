@@ -13,7 +13,7 @@ export async function GET() {
     
     const courses = await Course.find()
       .sort({ createdAt: -1 })
-      .populate('createdBy', 'name')
+      .populate('createdBy', 'name image')
       .lean();
     
     return NextResponse.json(courses);
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     // Crear el curso en la base de datos
     const newCourse = await Course.create(courseData);
     
-    await newCourse.populate('createdBy', 'name');
+    await newCourse.populate('createdBy', 'name image');
     
     return NextResponse.json(newCourse, { status: 201 });
   } catch (error) {

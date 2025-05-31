@@ -88,6 +88,7 @@ interface CourseType {
   createdBy: {
     _id: string;
     name: string;
+    image?: string;
   };
   reviews: ReviewType[];
   createdAt: string;
@@ -131,7 +132,7 @@ async function getCourse(id: string): Promise<CourseType | null> {
     await connectToDatabase();
     
     // Obtener el curso como documento completo
-    const courseDoc = await Course.findById(id).populate('createdBy', 'name');
+    const courseDoc = await Course.findById(id).populate('createdBy', 'name image');
     
     if (!courseDoc) {
       return null;
@@ -156,7 +157,8 @@ async function getCourse(id: string): Promise<CourseType | null> {
       introVideoId: courseDoc.introVideoId || '',
       createdBy: {
         _id: courseDoc.createdBy?._id ? courseDoc.createdBy._id.toString() : '',
-        name: courseDoc.createdBy?.name || ''
+        name: courseDoc.createdBy?.name || '',
+        image: courseDoc.createdBy?.image || ''
       },
       createdAt: courseDoc.createdAt ? new Date(courseDoc.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: courseDoc.updatedAt ? new Date(courseDoc.updatedAt).toISOString() : new Date().toISOString(),

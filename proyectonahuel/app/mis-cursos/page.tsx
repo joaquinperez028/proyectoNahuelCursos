@@ -19,6 +19,7 @@ interface CourseType {
   createdBy: {
     _id: string;
     name: string;
+    image: string;
   };
   reviews: any[];
   createdAt: string;
@@ -45,7 +46,7 @@ async function getUserCourses(): Promise<CourseType[] | null> {
     
     const courses = await Course.find({
       _id: { $in: courseIds }
-    }).populate('createdBy', 'name').lean();
+    }).populate('createdBy', 'name image').lean();
     
     return courses.map((course: any) => ({
       _id: course._id ? course._id.toString() : '',
@@ -57,7 +58,8 @@ async function getUserCourses(): Promise<CourseType[] | null> {
       videoId: course.videoId || '',
       createdBy: {
         _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
-        name: course.createdBy?.name || ''
+        name: course.createdBy?.name || '',
+        image: course.createdBy?.image || ''
       },
       reviews: course.reviews || [],
       createdAt: course.createdAt ? new Date(course.createdAt).toISOString() : new Date().toISOString(),

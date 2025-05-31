@@ -39,6 +39,7 @@ interface CourseType {
   createdBy: {
     _id: string;
     name: string;
+    image?: string;
   };
   reviews: any[];
   createdAt: string;
@@ -112,7 +113,7 @@ async function getCourses(categoria?: string, page: number = 1): Promise<Paginat
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(COURSES_PER_PAGE)
-      .populate('createdBy', 'name')
+      .populate('createdBy', 'name image')
       .lean();
     
     // Obtener reseñas solo para los cursos de esta página
@@ -159,7 +160,8 @@ async function getCourses(categoria?: string, page: number = 1): Promise<Paginat
         discountedPrice: course.discountedPrice || null,
         createdBy: {
           _id: course.createdBy && course.createdBy._id ? course.createdBy._id.toString() : '',
-          name: course.createdBy?.name || ''
+          name: course.createdBy?.name || '',
+          image: course.createdBy?.image || ''
         },
         // Simplificar reviews a solo lo necesario
         reviews: Array(courseReviews.count).fill({}).map((_, index) => ({
