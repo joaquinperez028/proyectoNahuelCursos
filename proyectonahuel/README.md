@@ -1,4 +1,4 @@
-# Plataforma de Cursos Online
+# Plataforma de Cursos Online.
 
 Esta plataforma permite la venta de cursos en línea con manejo de usuarios, roles de administrador, reseñas y reproducción de videos.
 
