@@ -98,10 +98,16 @@ export default function AssignCourseButton() {
         throw new Error(data.error || 'Error al asignar curso');
       }
 
-      if (data.alreadyHasAccess) {
-        showNotification('El usuario ya tiene acceso a este curso', 'info');
+      // Si la respuesta es exitosa, verificar el contenido
+      if (data.success) {
+        if (data.alreadyHasAccess) {
+          showNotification('El usuario ya tiene acceso a este curso', 'info');
+        } else {
+          showNotification(data.message || 'Curso asignado correctamente', 'success');
+        }
       } else {
-        showNotification('Curso asignado correctamente', 'success');
+        // Si success no está presente o es false, es un error
+        throw new Error(data.error || 'Error al asignar curso');
       }
       
       // Cerrar modal y reiniciar valores
@@ -112,7 +118,7 @@ export default function AssignCourseButton() {
       setSearchCourse('');
     } catch (error) {
       console.error('Error al asignar curso:', error);
-      showNotification('Error al asignar curso. Inténtalo de nuevo.', 'error');
+      showNotification(error instanceof Error ? error.message : 'Error al asignar curso. Inténtalo de nuevo.', 'error');
     } finally {
       setSubmitting(false);
     }
