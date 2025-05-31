@@ -54,8 +54,14 @@ export async function GET(request: NextRequest) {
     const ownedCourses = pack.courses.filter((course: any) => 
       userCourseIds.includes(course._id.toString())
     );
+
+    // Encontrar cursos que le faltan
+    const coursesToBuy = pack.courses.filter((course: any) => 
+      !userCourseIds.includes(course._id.toString())
+    );
     
-    const isEligible = ownedCourses.length === 0;
+    // Es elegible si le faltan cursos por comprar (no tiene todos)
+    const isEligible = coursesToBuy.length > 0;
     
     return NextResponse.json({
       isEligible,
@@ -63,9 +69,16 @@ export async function GET(request: NextRequest) {
         _id: course._id,
         title: course.title
       })),
+      coursesToBuy: coursesToBuy.map((course: any) => ({
+        _id: course._id,
+        title: course.title
+      })),
       message: isEligible 
-        ? 'El usuario puede comprar este pack' 
-        : 'No podés comprar un pack de cursos si ya poseés uno de los cursos incluidos.'
+        ? (ownedCourses.length > 0 
+          ? `Podés comprar este pack con descuento. Ya tenés ${ownedCourses.length} de ${pack.courses.length} cursos.`
+          : 'El usuario puede comprar este pack'
+        )
+        : 'Ya tenés acceso a todos los cursos de este pack.'
     });
     
   } catch (error) {

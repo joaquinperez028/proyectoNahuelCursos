@@ -40,6 +40,7 @@ interface PackType {
 interface EligibilityInfo {
   isEligible: boolean;
   ownedCourses: { _id: string; title: string }[];
+  coursesToBuy: { _id: string; title: string }[];
   message: string;
 }
 
@@ -168,10 +169,11 @@ export default function PacksPage() {
       return;
     }
 
+    // Con el nuevo sistema, solo no puede comprar si ya tiene TODOS los cursos
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      // Mostrar notificación en lugar de alerta
-      showToast('No podés comprar un pack si ya poseés uno de los contenidos incluidos.');
+      // Solo bloquear si ya tiene todos los cursos del pack
+      showToast('Ya tenés acceso a todos los cursos de este pack.');
       return;
     }
 
@@ -184,10 +186,10 @@ export default function PacksPage() {
       return;
     }
 
-    // Verificar elegibilidad antes de proceder con la compra
+    // Con el nuevo sistema, solo no puede comprar si ya tiene TODOS los cursos
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      showToast('No podés comprar un pack si ya poseés uno de los contenidos incluidos.');
+      showToast('Ya tenés acceso a todos los cursos de este pack.');
       setShowPaymentModal(null);
       return;
     }
@@ -212,6 +214,7 @@ export default function PacksPage() {
   const isPackDisabled = (packId: string) => {
     if (!session) return false;
     const eligibility = eligibilityMap[packId];
+    // Solo deshabilitar si ya tiene TODOS los cursos del pack
     return eligibility && !eligibility.isEligible;
   };
 
@@ -219,7 +222,8 @@ export default function PacksPage() {
     if (!session) return null;
     const eligibility = eligibilityMap[packId];
     if (eligibility && !eligibility.isEligible) {
-      return 'Ya poseés uno de los contenidos incluidos en este pack';
+      // Solo mostrar mensaje si ya tiene todos los cursos
+      return 'Ya tenés acceso a todos los cursos de este pack';
     }
     return null;
   };
